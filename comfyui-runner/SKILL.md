@@ -14,16 +14,19 @@ Use the bundled `scripts/run_workflow.py` script to submit a workflow to a local
 ### Usage
 
 ```bash
-python3 scripts/run_workflow.py path/to/workflow.json --server "10.0.6.136:8188" --outdir "./output"
+python3 scripts/run_workflow.py path/to/workflow.json --server "10.0.6.136:8188" --outdir "./output" [--cookie "your_cookie_string"]
 ```
 
 Arguments:
-- `workflow.json`: The path to the ComfyUI API workflow JSON file.
+- `workflow.json`: The path to the ComfyUI API workflow JSON file. MUST be in API format (not Web UI format).
 - `--server`: (Optional) The address of the ComfyUI server. Defaults to `10.0.6.136:8188` which is the user's specific local instance.
 - `--outdir`: (Optional) The directory to save generated output files. Defaults to `./output`.
+- `--cookie`: (Optional) Pass a Cookie string in HTTP headers for requests. Useful for workflows containing nodes that require external authentication or user sessions (e.g., custom web integration nodes).
 
 ### Troubleshooting
 
+- **Format Errors:** If the script detects a "Web UI format" JSON, it will exit and provide instructions on how the user can export an "API Format" JSON from ComfyUI (Settings -> Enable Dev mode Options -> Save (API Format)). 
+- **Execution Errors:** If the workflow fails during execution, the script will automatically parse the server's history and print the exact Node ID, Node Type, Exception Message, and Traceback. Review this to help the user fix their workflow JSON.
 - **Server Connection Errors:** Ensure the ComfyUI server is running and accessible at the specified address.
 - **Missing Nodes:** If the server rejects the workflow due to missing custom nodes, inform the user to install them in their ComfyUI manager.
 - **Missing Checkpoints/Models:** If the workflow fails due to missing models, you may need to update the `ckpt_name` or `unet_name` values in the workflow JSON to match models actually available on the user's server.
