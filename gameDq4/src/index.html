@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勇者斗恶龙4 - 第一章：王宫的战士们</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="ui-layer">
+            <!-- 状态菜单 -->
+            <div id="status-menu" class="hidden">
+                <h3>状态 (Status)</h3>
+                <p>名称: <span id="stat-name">莱安</span></p>
+                <p>等级: <span id="stat-lv">1</span></p>
+                <p>HP: <span id="stat-hp">35/35</span></p>
+                <p>MP: <span id="stat-mp">0/0</span></p>
+                <p>力量: <span id="stat-str">12</span></p>
+                <p>守备: <span id="stat-def">6</span></p>
+                <p>EXP: <span id="stat-exp">0</span></p>
+                <p>金币: <span id="stat-gold">50 G</span></p>
+            </div>
+
+            <!-- 对话框 -->
+            <div id="dialogue-box" class="hidden">
+                <p id="dialogue-text"></p>
+                <div class="next-indicator">▼</div>
+            </div>
+
+            <!-- 战斗界面 -->
+            <div id="battle-screen" class="hidden">
+                <div id="battle-monster-container">
+                    <div id="monster-sprite"></div>
+                    <p id="monster-name"></p>
+                </div>
+                <div id="battle-log">
+                    <p id="battle-text">出现了 史莱姆！</p>
+                </div>
+                <div id="battle-commands">
+                    <button class="battle-btn" data-cmd="attack">攻击 (A)</button>
+                    <button class="battle-btn" data-cmd="defend">防御 (D)</button>
+                    <button class="battle-btn" data-cmd="item">道具 (I)</button>
+                    <button class="battle-btn" data-cmd="run">逃跑 (R)</button>
+                </div>
+                <div id="battle-player-status">
+                    <span>莱安 HP: <span id="battle-hp">35</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

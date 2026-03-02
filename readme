@@ -1,0 +1,3 @@
+ say -o hello.aiff "你好呀，我是米络星小玲玲"
+afconvert -f WAVE -d LEI16@44100 -c 1 hello.aiff hello.wav
+

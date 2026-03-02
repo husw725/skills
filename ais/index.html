@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>知识小勇士 - 二年级大冒险</title>
+    <style>
+        body { 
+            font-family: 'Comic Sans MS', 'PingFang SC', 'Microsoft YaHei', sans-serif; 
+            text-align: center; 
+            background-color: #81d4fa; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+            touch-action: manipulation; 
+        }
+        #app { 
+            width: 100%; 
+            max-width: 500px; 
+            height: 100%; 
+            max-height: 800px; 
+            background: #ffffff; 
+            display: flex; 
+            flex-direction: column; 
+            position: relative; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.2); 
+        }
+        .header { 
+            background: #ffca28; 
+            padding: 10px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            color: #d84315; 
+            border-bottom: 4px solid #ffb300; 
+        }
+        .hearts { color: #f44336; letter-spacing: 2px;}
+        .scene { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-start; 
+            align-items: center; 
+            position: relative; 
+            background: linear-gradient(#b3e5fc, #e1f5fe); 
+            padding-top: 20px; 
+        }
+        .battle-area { 
+            display: flex; 
+            justify-content: space-around; 
+            width: 100%; 
+            align-items: flex-end; 
+            margin-bottom: 20px; 
+            height: 120px; 
+        }
+        .character { font-size: 5rem; user-select: none; }
+        .hero { animation: bounce 1s infinite alternate; }
+        .monster { animation: shake 0.5s infinite alternate; }
+        .attack-anim { animation: attack 0.3s ease-in-out; }
+        .monster-attack-anim { animation: monster-attack 0.3s ease-in-out; }
+        .hurt-anim { animation: hurt 0.3s ease-in-out; filter: grayscale(100%); opacity: 0.7;}
+        
+        .question-box { 
+            background: #fff9c4; 
+            border: 4px solid #ff9800; 
+            border-radius: 15px; 
+            padding: 20px; 
+            margin: 10px 20px; 
+            font-size: 1.4rem; 
+            font-weight: bold; 
+            color: #333; 
+            box-shadow: 0 4px 0 #ff9800; 
+            min-height: 80px; 
+            width: 80%;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            flex-direction: column; 
+        }
+        #subject-tag {
+            font-size: 1rem; 
+            color: white; 
+            background: #ff9800; 
+            padding: 4px 12px; 
+            border-radius: 15px; 
+            margin-bottom: 10px;
+        }
+        .options { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 15px; 
+            padding: 10px 20px; 
+            margin-bottom: 20px; 
+            width: 90%;
+        }
+        .option-btn { 
+            background: #4fc3f7; 
+            color: white; 
+            border: none; 
+            border-bottom: 4px solid #0288d1; 
+            border-radius: 12px; 
+            padding: 15px; 
+            font-size: 1.3rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            flex: 1 1 40%; 
+            min-width: 120px; 
+            transition: all 0.1s; 
+        }
+        .option-btn:active, .option-btn.pressed { 
+            transform: translateY(4px); 
+            border-bottom: 0px; 
+            margin-top: 4px; 
+            margin-bottom: 0px;
+        }
+        .feedback { 
+            font-size: 2rem; 
+            font-weight: bold; 
+            position: absolute; 
+            top: 30%; 
+            opacity: 0; 
+            pointer-events: none; 
+            transition: all 0.5s; 
+            z-index: 5; 
+        }
+        .feedback.show { opacity: 1; transform: translateY(-50px); }
+        .correct-text { color: #4caf50; text-shadow: 2px 2px 0 #fff; }
+        .wrong-text { color: #f44336; text-shadow: 2px 2px 0 #fff; }
+        
+        .overlay { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(255,255,255,0.95); 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 10; 
+        }
+        .title { font-size: 3rem; color: #ff5722; text-shadow: 2px 2px 0px #ffe0b2; margin-bottom: 20px; font-weight: 900;}
+        .subtitle { font-size: 1.2rem; color: #555; margin-bottom: 40px; padding: 0 20px; line-height: 1.6;}
+        .big-btn { 
+            background: #ff5252; 
+            color: white; 
+            border: none; 
+            border-bottom: 6px solid #d32f2f; 
+            border-radius: 20px; 
+            padding: 20px 50px; 
+            font-size: 2rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            animation: pulse 1.5s infinite; 
+        }
+        .big-btn:active { transform: translateY(6px); border-bottom: 0; margin-top: 6px; }
+        
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-15px); } }
+        @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px) rotate(-5deg); } 75% { transform: translateX(5px) rotate(5deg); } 100% { transform: translateX(0); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes attack { 0% { transform: translateX(0); } 50% { transform: translateX(50px) scale(1.2); } 100% { transform: translateX(0); } }
+        @keyframes monster-attack { 0% { transform: translateX(0); } 50% { transform: translateX(-50px) scale(1.2); } 100% { transform: translateX(0); } }
+        @keyframes hurt { 0% { transform: translateX(0); } 25% { transform: translateX(-10px); } 50% { transform: translateX(10px); } 75% { transform: translateX(-10px); } 100% { transform: translateX(0); } }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="app">
+                <!-- Start Screen -->
+                <div id="start-screen" class="overlay">
+                    <div class="title">⚔️ 知识小勇士</div>
+                    <div class="subtitle">二年级大冒险<br><br>选择你要挑战的关卡，打败小怪兽，成为知识小达人！</div>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+                        <button class="big-btn" style="background: #4caf50; border-bottom-color: #388e3c;" onclick="startGame('数学')">🧮 奇妙数学</button>
+                        <button class="big-btn" style="background: #ff9800; border-bottom-color: #f57c00;" onclick="startGame('语文')">📖 趣味语文</button>
+                    </div>
+                </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="overlay hidden">
+            <div class="title" id="end-title">游戏结束</div>
+            <div class="subtitle" id="end-score" style="font-size: 2.5rem; color: #ff9800; font-weight: bold;">得分: 0</div>
+            <button class="big-btn" onclick="returnToMenu()">返回主菜单</button>
+        </div>
+
+        <!-- Main Game UI -->
+        <div class="header">
+            <div>⭐ 分数: <span id="score">0</span></div>
+            <div class="hearts" id="hp">❤️❤️❤️</div>
+        </div>
+        
+        <div class="scene">
+            <div class="battle-area">
+                <div class="character hero" id="hero">🧑‍🎓</div>
+                <div class="character monster" id="monster">👾</div>
+            </div>
+            
+            <div id="feedback" class="feedback">✅ 太棒啦！</div>
+
+            <div class="question-box">
+                <span id="subject-tag">语文</span>
+                <div id="question-text">加载中...</div>
+            </div>
+            
+            <div class="options" id="options-container">
+                <!-- Options will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            // 数学 (Math)
+            { subject: '数学', text: '25 + 14 = ?', options: ['39', '29', '49', '38'], answer: 0 },
+            { subject: '数学', text: '60 - 23 = ?', options: ['37', '47', '27', '43'], answer: 0 },
+            { subject: '数学', text: '3 × 4 = ?', options: ['12', '7', '15', '14'], answer: 0 },
+            { subject: '数学', text: '5 × 6 = ?', options: ['30', '25', '35', '11'], answer: 0 },
+            { subject: '数学', text: '买一个本子2元，买4个需要多少元？', options: ['8元', '6元', '10元', '4元'], answer: 0 },
+            { subject: '数学', text: '8 × 2 = ?', options: ['16', '10', '18', '14'], answer: 0 },
+            { subject: '数学', text: '小明有15个苹果，吃掉6个，还剩几个？', options: ['9个', '8个', '10个', '11个'], answer: 0 },
+            { subject: '数学', text: '54 + 28 = ?', options: ['82', '72', '84', '74'], answer: 0 },
+            { subject: '数学', text: '1米 = ( )厘米', options: ['100', '10', '50', '1000'], answer: 0 },
+            { subject: '数学', text: '角有( )个顶点', options: ['1', '2', '3', '0'], answer: 0 },
+            { subject: '数学', text: '7 × 3 = ?', options: ['21', '24', '10', '28'], answer: 0 },
+            { subject: '数学', text: '一个正方形有( )条边。', options: ['4', '3', '5', '6'], answer: 0 },
+            
+            // 语文 (Chinese)
+            { subject: '语文', text: '白日依山( )，黄河入海流。', options: ['尽', '进', '近', '金'], answer: 0 },
+            { subject: '语文', text: '“高兴”的反义词是？', options: ['难过', '快乐', '开心', '生气'], answer: 0 },
+            { subject: '语文', text: '“葡萄”的“葡”读音是？', options: ['pú', 'pū', 'pǔ', 'pù'], answer: 0 },
+            { subject: '语文', text: '下面哪个词语是描写春天的？', options: ['春暖花开', '冰天雪地', '秋高气爽', '骄阳似火'], answer: 0 },
+            { subject: '语文', text: '“狐假虎威”中“假”的意思是？', options: ['借用', '假的', '放假', '不是真的'], answer: 0 },
+            { subject: '语文', text: '举头望明月，( )。', options: ['低头思故乡', '疑是地上霜', '春风吹又生', '处处闻啼鸟'], answer: 0 },
+            { subject: '语文', text: '“一( )水牛”，括号里应填？', options: ['头', '只', '匹', '条'], answer: 0 },
+            { subject: '语文', text: '下面哪个字是半包围结构？', options: ['过', '木', '国', '林'], answer: 0 },
+            { subject: '语文', text: '“漂亮”的近义词是？', options: ['美丽', '难看', '丑陋', '奇怪'], answer: 0 },
+            { subject: '语文', text: '《咏鹅》的作者是？', options: ['骆宾王', '李白', '杜甫', '白居易'], answer: 0 },
+            { subject: '语文', text: '夜来风雨声，花落知( )。', options: ['多少', '冬夏', '大小', '春秋'], answer: 0 },
+            { subject: '语文', text: '“明”字是由哪两个字组成的？', options: ['日和月', '白和水', '目和月', '口和十'], answer: 0 }
+        ];
+
+        let currentScore = 0;
+        let currentHp = 3;
+        let currentQuestion = null;
+        let isAnimating = false;
+        let currentMode = '数学';
+
+        const monsters = ['👾', '🐉', '👹', '👻', '🦇', '🕷️', '🦂', '🦖', '🐍', '🦅'];
+
+        function startGame(mode) {
+            currentMode = mode;
+            currentScore = 0;
+            currentHp = 3;
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            updateUI();
+            nextQuestion();
+        }
+
+        function returnToMenu() {
+            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = currentScore;
+            // Draw hearts (Red for remaining, empty/white heart for lost)
+            let heartsHtml = '';
+            for(let i=0; i<3; i++) {
+                if(i < currentHp) heartsHtml += '❤️';
+                else heartsHtml += '🤍';
+            }
+            document.getElementById('hp').innerText = heartsHtml;
+        }
+
+        function nextQuestion() {
+            // Pick a random monster
+            document.getElementById('monster').innerText = monsters[Math.floor(Math.random() * monsters.length)];
+            
+            // Filter questions by mode
+            const filteredQuestions = questions.filter(q => q.subject === currentMode);
+            // Pick a random question
+            const qIndex = Math.floor(Math.random() * filteredQuestions.length);
+            const q = filteredQuestions[qIndex];
+            currentQuestion = q;
+            
+            const subjectTag = document.getElementById('subject-tag');
+            subjectTag.innerText = q.subject;
+            subjectTag.style.background = q.subject === '语文' ? '#ff9800' : '#4caf50';
+            
+            document.getElementById('question-text').innerText = q.text;
+            
+            // Shuffle options
+            const optionsWithIndices = q.options.map((opt, index) => ({ text: opt, isCorrect: index === q.answer }));
+            for (let i = optionsWithIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [optionsWithIndices[i], optionsWithIndices[j]] = [optionsWithIndices[j], optionsWithIndices[i]];
+            }
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            optionsWithIndices.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt.text;
+                btn.onclick = () => checkAnswer(opt.isCorrect, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(isCorrect, btn) {
+            if (isAnimating) return;
+            isAnimating = true;
+            btn.classList.add('pressed');
+            
+            const hero = document.getElementById('hero');
+            const monster = document.getElementById('monster');
+            const feedback = document.getElementById('feedback');
+            
+            if (isCorrect) {
+                // Correct Answer
+                currentScore += 10;
+                updateUI();
+                btn.style.background = '#4caf50';
+                
+                // Hero Attack Animation
+                hero.classList.add('attack-anim');
+                setTimeout(() => {
+                    monster.classList.add('hurt-anim');
+                    feedback.innerText = '✅ 答对啦！';
+                    feedback.className = 'feedback show correct-text';
+                }, 150);
+                
+                setTimeout(() => {
+                    hero.classList.remove('attack-anim');
+                    monster.classList.remove('hurt-anim');
+                    feedback.className = 'feedback';
+                    isAnimating = false;
+                    nextQuestion();
+                }, 1200);
+                
+            } else {
+                // Wrong Answer
+                currentHp -= 1;
+                updateUI();
+                btn.style.background = '#f44336';
+                
+                // Show Correct Answer on buttons
+                const buttons = document.querySelectorAll('.option-btn');
+                buttons.forEach(b => {
+                    if(b.innerText === currentQuestion.options[currentQuestion.answer]) {
+                        b.style.background = '#4caf50';
+                    }
+                });
+                
+                // Monster Attack Animation
+                monster.classList.add('monster-attack-anim');
+                setTimeout(() => {
+                    hero.classList.add('hurt-anim');
+                    feedback.innerText = '❌ 答错啦！';
+                    feedback.className = 'feedback show wrong-text';
+                }, 150);
+                
+                setTimeout(() => {
+                    monster.classList.remove('monster-attack-anim');
+                    hero.classList.remove('hurt-anim');
+                    feedback.className = 'feedback';
+                    
+                    if (currentHp <= 0) {
+                        gameOver();
+                    } else {
+                        isAnimating = false;
+                        nextQuestion();
+                    }
+                }, 1500);
+            }
+        }
+
+        function gameOver() {
+            isAnimating = false;
+            document.getElementById('end-score').innerText = '得分: ' + currentScore;
+            const endTitle = document.getElementById('end-title');
+            if(currentScore >= 100) {
+                endTitle.innerText = '🏆 知识大宗师！';
+            } else if (currentScore >= 50) {
+                endTitle.innerText = '🌟 知识小达人！';
+            } else {
+                endTitle.innerText = '💪 继续加油哦！';
+            }
+            document.getElementById('game-over-screen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

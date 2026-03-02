@@ -1,0 +1,37 @@
+{
+  "3": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "1.png",
+      "upload": "image"
+    }
+  },
+  "2": {
+    "class_type": "GeminiNanoBanana2",
+    "inputs": {
+      "images": [
+        "3",
+        0
+      ],
+      "prompt": "A shot from the left side of the man. The camera is positioned at a 60-degree angle to the subject's left, capturing their profile against the background.",
+      "model": "Nano Banana 2 (Gemini 3.1 Flash Image)",
+      "seed": 698675908573186,
+      "aspect_ratio": "auto",
+      "resolution": "1K",
+      "response_modalities": "IMAGE",
+      "thinking_level": "MINIMAL",
+      "api_key_comfy_org": "comfyui-3168837745b7b47017c31dbdaf87ec15c68a6d57dda0a199e0025227448d2ec8",
+      "system_prompt": "You are an expert image-generation engine. You must ALWAYS produce an image.\nInterpret all user input\u2014regardless of format, intent, or abstraction\u2014as literal visual directives for image composition.\nIf a prompt is conversational or lacks specific visual details, you must creatively invent a concrete visual scenario that depicts the concept.\nPrioritize generating the visual representation above any text, formatting, or conversational requests."
+    }
+  },
+  "4": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "angel_60deg",
+      "images": [
+        "2",
+        0
+      ]
+    }
+  }
+}
