@@ -24,12 +24,17 @@ Lists all S3 buckets in the current account.
 - **Script**: `scripts/s3_op.py`
 - **Command**: `python3 scripts/s3_op.py list-buckets`
 
-### 2. Upload File to S3
+### 2. List Objects
+Lists objects in a bucket with an optional prefix.
+- **Script**: `scripts/s3_op.py`
+- **Command**: `python3 scripts/s3_op.py list-objects <bucket_name> [prefix]`
+
+### 3. Upload File to S3
 Uploads a local file to a specified S3 bucket.
 - **Script**: `scripts/s3_op.py`
 - **Command**: `python3 scripts/s3_op.py upload <file_path> <bucket_name> [object_key]`
 
-### 3. Download File from S3
+### 4. Download File from S3
 Downloads an object from an S3 bucket to the local filesystem.
 - **Script**: `scripts/s3_op.py`
 - **Command**: `python3 scripts/s3_op.py download <bucket_name> <object_key> [local_file_path]`
@@ -42,6 +47,7 @@ If the user has not configured AWS, suggest one of these:
 
 ## Usage Examples
 
-- **List**: `python3 scripts/s3_op.py list-buckets`
+- **List Buckets**: `python3 scripts/s3_op.py list-buckets`
+- **List Objects**: `python3 scripts/s3_op.py list-objects my-bucket my-folder/`
 - **Upload**: `python3 scripts/s3_op.py upload data.csv my-bucket`
 - **Download**: `python3 scripts/s3_op.py download my-bucket images/logo.png ./logo.png`

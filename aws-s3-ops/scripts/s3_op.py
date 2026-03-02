@@ -61,10 +61,38 @@ def list_buckets():
     except ClientError as e:
         print(f"Error: {e}")
 
+def list_objects(bucket, prefix=None):
+    s3_client = boto3.client('s3')
+    try:
+        kwargs = {'Bucket': bucket}
+        if prefix:
+            kwargs['Prefix'] = prefix
+        
+        response = s3_client.list_objects_v2(**kwargs)
+        
+        if 'Contents' in response:
+            print(f"Objects in {bucket}/{prefix or ''}:")
+            for obj in response['Contents']:
+                print(f"  {obj['Key']}")
+        else:
+            print(f"No objects found in {bucket}/{prefix or ''}")
+            
+    except NoCredentialsError:
+        print("Error: AWS credentials not found.")
+        print("\nPlease configure your credentials using one of these methods:")
+        print("1. Run 'aws configure' (requires AWS CLI)")
+        print("2. Set environment variables:")
+        print("   export AWS_ACCESS_KEY_ID=your_key")
+        print("   export AWS_SECRET_ACCESS_KEY=your_secret")
+        print("   export AWS_DEFAULT_REGION=your_region")
+    except ClientError as e:
+        print(f"Error: {e}")
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage:")
         print("  python s3_op.py list-buckets")
+        print("  python s3_op.py list-objects <bucket> [prefix]")
         print("  python s3_op.py upload <file_name> <bucket> [object_name]")
         print("  python s3_op.py download <bucket> <object_name> [file_name]")
         sys.exit(1)
@@ -72,6 +100,13 @@ if __name__ == "__main__":
     command = sys.argv[1]
     if command == "list-buckets":
         list_buckets()
+    elif command == "list-objects":
+        if len(sys.argv) < 3:
+            print("Usage: python s3_op.py list-objects <bucket> [prefix]")
+            sys.exit(1)
+        bucket = sys.argv[2]
+        prefix = sys.argv[3] if len(sys.argv) > 3 else None
+        list_objects(bucket, prefix)
     elif command == "upload":
         if len(sys.argv) < 4:
             print("Usage: python s3_op.py upload <file_name> <bucket> [object_name]")
