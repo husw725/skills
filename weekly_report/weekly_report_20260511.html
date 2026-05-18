@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AIGC 技术团队周报 (2026-05-18)</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; --card: #ffffff; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 1rem; line-height: 1.5; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 2rem; border-bottom: 3px solid var(--primary); padding-bottom: 1rem; }
+        header h1 { font-size: 1.5rem; margin: 0; }
+        header p { font-size: 0.9rem; color: #64748b; margin-top: 0.5rem; }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        @media (min-width: 600px) {
+            .grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+            body { padding: 2rem; }
+        }
+        .card { background: var(--card); padding: 1.25rem; border-radius: 12px; box-shadow: 0 2px 4px rgb(0 0 0 / 0.05); }
+        h2 { color: var(--primary); margin-top: 0; font-size: 1.1rem; border-left: 4px solid var(--primary); padding-left: 0.5rem; }
+        ul { padding-left: 1.2rem; margin: 0.5rem 0 0 0; font-size: 0.95rem; }
+        li { margin-bottom: 0.4rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AIGC 技术团队周报</h1>
+            <p>汇报周期：2026-05-11 至 2026-05-17</p>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <h2>后端研发 (生产管理系统)</h2>
+                <ul>
+                    <li><strong>审核系统：</strong>视频关键帧审核后端开发闭环，小说改编短剧系统研发达 80%。</li>
+                    <li><strong>一体机：</strong>完成 MCP Key 管理、任务调度、预签名上传等核心能力接入。</li>
+                    <li><strong>AI 集成：</strong>对接 Grok、HappyHorse、MuleRouter，绘梦上线排期中。</li>
+                    <li><strong>优化：</strong>提升分辨率至 720p，优化 Gemini Key 切换逻辑。</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h2>产品设计</h2>
+                <ul>
+                    <li><strong>短剧审核系统：</strong>完成 Notifications 体系设计（站内/邮件/短信），利用 Vibe Coding 实现前端功能交互优化。</li>
+                    <li><strong>本周重点：</strong>深化审核系统细节；开展软硬一体机 PPT 产品宣讲物料制作。</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h2>App 开发 (智能一体机)</h2>
+                <ul>
+                    <li><strong>核心接入：</strong>成功接入 MCP 协议，完成资源生成调试。</li>
+                    <li><strong>终端功能：</strong>完成资产库界面逻辑与设置中心全功能开发。</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h2>效能优化 & QA</h2>
+                <ul>
+                    <li><strong>编剧/工作流：</strong>完成编剧技能优化与龙虾工作流专项提效。</li>
+                    <li><strong>测试保障：</strong>完成 JMeter 工具链学习，推进 UI 自动化与接口测试实战验证。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
