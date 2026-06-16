@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIGC 技术团队周报 - 20260615</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #0f172a;
+            --bg2: #0b1220;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --accent-be: #60a5fa;   /* 后端 */
+            --accent-web: #34d399;   /* Web/产品 */
+            --accent-app: #f472b6;   /* App/QA */
+            --accent-road: #fbbf24;  /* Roadmap */
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: radial-gradient(1200px 600px at 70% -10%, #1e3a8a33, transparent), var(--bg);
+            color: var(--text); margin: 0; padding: 0; overflow: hidden;
+        }
+
+        /* 顶部进度条 */
+        .progress { position: fixed; top: 0; left: 0; height: 4px; background: linear-gradient(90deg, var(--primary), #60a5fa); width: 0; z-index: 200; transition: width .35s ease; }
+
+        .slide {
+            position: absolute; inset: 0; padding: clamp(1rem, 4vw, 3rem);
+            display: flex; flex-direction: column; justify-content: center;
+            opacity: 0; visibility: hidden; transform: translateY(12px);
+            transition: opacity .35s ease, transform .35s ease, visibility .35s;
+            overflow-y: auto;  /* 防裁切兜底 */
+        }
+        .slide.active { opacity: 1; visibility: visible; transform: translateY(0); }
+
+        .card {
+            background: linear-gradient(180deg, #1e293b, #18222f);
+            padding: clamp(1.2rem, 3vw, 2.2rem); border-radius: 18px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.35); border: 1px solid #ffffff12;
+            max-width: 1000px; width: 100%; margin: 0 auto;
+            border-top: 4px solid var(--slide-accent, var(--primary));
+        }
+
+        h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); color: #60a5fa; margin: 0 0 .6rem; }
+        h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); border-left: 5px solid var(--slide-accent, var(--primary)); padding-left: .8rem; margin: 0 0 1.4rem; }
+        ul { font-size: clamp(.95rem, 1.6vw, 1.1rem); line-height: 1.85; padding-left: 1.2rem; margin: 0; }
+        li { margin-bottom: .55rem; }
+        .sub { color: var(--muted); }
+        .tag { display: inline-block; font-size: .8em; padding: .1em .55em; border-radius: 6px; font-weight: 700; vertical-align: middle; }
+        .tag.done { background: #16653433; color: #4ade80; }
+        .tag.wip  { background: #78350f33; color: #fbbf24; }
+        .tag.test { background: #1e3a8a33; color: #60a5fa; }
+
+        /* 进度条数据可视化 */
+        .bar { margin: .4rem 0 .9rem; }
+        .bar .label { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: .25rem; }
+        .bar .track { height: 9px; background: #334155; border-radius: 6px; overflow: hidden; }
+        .bar .fill { height: 100%; border-radius: 6px; width: 0; transition: width .9s cubic-bezier(.2,.8,.2,1); background: linear-gradient(90deg, var(--slide-accent, #60a5fa), #93c5fd); }
+
+        /* 里程碑网格 */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .9rem; margin-top: .4rem; }
+        .mile { background: #0f172a80; border: 1px solid #ffffff10; border-radius: 12px; padding: 1rem; }
+        .mile .ic { font-size: 1.4rem; } .mile h3 { margin: .4rem 0 .3rem; font-size: 1rem; color: #cbd5e1; }
+        .mile p { margin: 0; font-size: .88rem; color: var(--muted); line-height: 1.5; }
+
+        .cover-meta { color: var(--muted); margin-top: .3rem; }
+        .cover-tip { color: #475569; margin-top: 1.6rem; font-size: .9rem; }
+        .roadmap li { margin-bottom: .9rem; }
+
+        /* 控制区 */
+        .controls { position: fixed; bottom: 1.4rem; right: 1.4rem; display: flex; align-items: center; gap: .6rem; z-index: 100; }
+        .pageno { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9rem; min-width: 3.2em; text-align: center; }
+        button { padding: .7rem 1.1rem; border-radius: 10px; border: none; background: var(--primary); color: #fff; cursor: pointer; font-size: .9rem; font-weight: 600; touch-action: manipulation; transition: opacity .2s, transform .1s; }
+        button:hover { opacity: .9; } button:active { transform: scale(.96); }
+        button:disabled { opacity: .35; cursor: not-allowed; }
+        .fsbtn { position: fixed; top: 1rem; right: 1.2rem; background: #1e293bcc; z-index: 100; }
+        .hint { position: fixed; bottom: 1.5rem; left: 1.5rem; color: #475569; font-size: .8rem; z-index: 100; }
+    </style>
+</head>
+<body>
+
+<div class="progress" id="bar"></div>
+<button class="fsbtn" onclick="fs()">⛶ 全屏</button>
+
+<div id="slides">
+
+    <!-- 1. 封面 -->
+    <div class="slide active" style="--slide-accent: var(--primary)">
+        <div class="card" style="text-align:center;">
+            <h1>AIGC 技术团队周报</h1>
+            <p class="cover-meta">汇报周期：2026-06-09 ~ 2026-06-15 · 研发团队</p>
+            <p class="cover-meta">主题：审核系统深化与多端协同攻坚</p>
+            <p class="cover-tip">← → / 空格翻页 · 点击右下角按钮 · 手机可左右滑动</p>
+        </div>
+    </div>
+
+    <!-- 2. 本周核心里程碑 -->
+    <div class="slide" style="--slide-accent: var(--accent-road)">
+        <div class="card">
+            <h2>📅 本周核心里程碑</h2>
+            <div class="grid">
+                <div class="mile"><div class="ic">🛡️</div><h3>成片审核多集化</h3><p>Final cut 成片审核改造为支持上传多集审核，开发完成。</p></div>
+                <div class="mile"><div class="ic">🖌️</div><h3>画笔批注上线</h3><p>AIGC CRM 图片/视频审核画笔批注工具正式上线。</p></div>
+                <div class="mile"><div class="ic">🧱</div><h3>Studio 攻坚 95%</h3><p>Studio 模块开发推进至 95%，通知模块达 80%。</p></div>
+                <div class="mile"><div class="ic">🌐</div><h3>运营体系重构</h3><p>看板精简、结算改季度结算，联动 CRM 分成比例改造。</p></div>
+                <div class="mile"><div class="ic">⚙️</div><h3>Seedance 上线</h3><p>AITask 切换 Seedance 上线，短剧审核系统问题修复。</p></div>
+                <div class="mile"><div class="ic">🤝</div><h3>多端协同</h3><p>App 团队深度参与后端开发（Avatar / 成本预算 / IP Pick）。</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 后端 -->
+    <div class="slide" style="--slide-accent: var(--accent-be)">
+        <div class="card">
+            <h2>⚙️ 后端研发进展</h2>
+            <ul>
+                <li><strong>小说改编短剧审核系统：</strong>Final cut 成片审核支持多集上传 <span class="tag done">完成</span>；剧本/图片 AI 审核 <span class="tag wip">开发中</span>。</li>
+            </ul>
+            <div class="bar"><div class="label"><span>Studio 模块</span><span>95%</span></div><div class="track"><div class="fill" data-w="95"></div></div></div>
+            <div class="bar"><div class="label"><span>通知模块</span><span>80%</span></div><div class="track"><div class="fill" data-w="80"></div></div></div>
+            <ul>
+                <li><strong>优化与修复：</strong>AITask 切换 Seedance <span class="tag done">已上线</span>；短剧审核系统问题修复。</li>
+                <li class="sub">🚀 下周：持续推进生产管理系统、审核系统及功能优化。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 4. Web 与产品 -->
+    <div class="slide" style="--slide-accent: var(--accent-web)">
+        <div class="card">
+            <h2>🌐 Web 与产品进展</h2>
+            <ul>
+                <li>🌐 <strong>Web 重构：</strong>看板精简（保留 4 项）、短剧统计更换、上传优化；结算改<strong>季度结算</strong>并联动 CRM 分成比例改造。</li>
+                <li>🖌️ <strong>AIGC CRM：</strong>图片/视频审核画笔批注 <span class="tag done">已上线</span>；翻译、时钟、表单优化项 <span class="tag test">测试中</span>。</li>
+                <li>🎨 <strong>产品设计：</strong>Review 体验细节优化（画笔/AI审核/成本估算/翻译）；经营模拟页面完成初稿。</li>
+                <li class="sub">📅 下周：视频评审版本对比功能；继续 Review / Studio / 经营模拟设计。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 5. App 与 QA -->
+    <div class="slide" style="--slide-accent: var(--accent-app)">
+        <div class="card">
+            <h2>📱 App 与 QA 进展</h2>
+            <ul>
+                <li>📱 <strong>App 开发：</strong>本周深度参与系统后端开发——
+                    <ul>
+                        <li>Avatar 相关页面功能开发</li>
+                        <li>成本预算相关页面功能开发</li>
+                        <li>IP Pick 相关页面功能开发</li>
+                    </ul>
+                </li>
+                <li>🧪 <strong>QA 测试：</strong>完成 Avatar、Review 系统功能测试。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 6. 下周核心计划 -->
+    <div class="slide" style="--slide-accent: var(--accent-road)">
+        <div class="card">
+            <h2>🚀 下周核心计划</h2>
+            <ul class="roadmap">
+                <li><strong>审核系统闭环：</strong>推进剧本/图片 AI 审核落地，Studio 模块 95% → 100%，完成通知模块。</li>
+                <li><strong>Web 评审升级：</strong>开发视频评审版本对比功能，完成 CRM 季度结算与分成比例改造。</li>
+                <li><strong>产品设计深化：</strong>继续推进 Review / Studio / 经营模拟设计与体验优化。</li>
+                <li><strong>质量跟进：</strong>对 Avatar、Review 等系统新优化项跟进测试与验收。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 7. 结尾 -->
+    <div class="slide" style="--slide-accent: var(--primary)">
+        <div class="card" style="text-align:center;">
+            <h1>谢谢观看！</h1>
+            <p class="cover-meta">提问与交流 (Q&amp;A)</p>
+            <p style="margin-top:1.2rem; color:#cbd5e1;">AIGC 技术团队：深化审核闭环，强化多端协同创作。</p>
+        </div>
+    </div>
+
+</div>
+
+<div class="hint">← → 翻页 · F 全屏</div>
+<div class="controls">
+    <button id="prevBtn" onclick="prev()">上一页</button>
+    <span class="pageno" id="pageno">1 / 7</span>
+    <button id="nextBtn" onclick="next()">下一页</button>
+</div>
+
+<script>
+    let current = 0;
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+
+    function show() {
+        slides.forEach((s, i) => s.classList.toggle('active', i === current));
+        document.getElementById('pageno').textContent = (current + 1) + ' / ' + total;
+        document.getElementById('bar').style.width = ((current) / (total - 1) * 100) + '%';
+        document.getElementById('prevBtn').disabled = current === 0;
+        document.getElementById('nextBtn').disabled = current === total - 1;
+        // 进入页时触发该页进度条动画
+        slides[current].querySelectorAll('.fill').forEach(f => { f.style.width = '0'; requestAnimationFrame(() => f.style.width = f.dataset.w + '%'); });
+    }
+    function next() { if (current < total - 1) { current++; show(); } }
+    function prev() { if (current > 0) { current--; show(); } }
+    function fs() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+        else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+        else if (e.key === 'f' || e.key === 'F') fs();
+        else if (e.key === 'Home') { current = 0; show(); }
+        else if (e.key === 'End') { current = total - 1; show(); }
+    });
+
+    // 手机左右滑动
+    let sx = 0;
+    document.addEventListener('touchstart', e => sx = e.changedTouches[0].clientX, { passive: true });
+    document.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].clientX - sx;
+        if (Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+    }, { passive: true });
+
+    show();
+</script>
+</body>
+</html>
