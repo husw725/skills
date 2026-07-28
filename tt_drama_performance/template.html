@@ -71,6 +71,11 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
 
   <div class="card"><h2>核心洞察</h2><ul class="insights" id="insights"></ul></div>
 
+  <div class="card" id="aiCard" style="display:none">
+    <h2>AI 深度洞察 · Claude</h2>
+    <ul class="insights" id="aiInsights"></ul>
+  </div>
+
   <div class="kpis" id="kpis" style="margin-bottom:16px"></div>
 
   <div class="card">
@@ -88,7 +93,8 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
   </div>
 
   <div class="card" id="wowCard">
-    <h2>周环比（近7日 vs 前7日）</h2>
+    <h2 id="wowTitle">周期环比</h2>
+    <div class="datebar" id="wowPeriodBar"></div>
     <div class="tbl-scroll" id="wow"></div>
   </div>
 
@@ -214,11 +220,29 @@ const s2 = [
 lineChart(document.getElementById('c2'), labels, s2, (v) => fmtP(v));
 legend('lg2', s2); dataTable('t2', labels, s2, v => fmtP(v));
 
-/* WoW */
-if (DATA.wow.length) {
-  document.getElementById('wow').innerHTML = '<table><tr><th>指标</th><th>近7日</th><th>前7日</th><th>环比</th></tr>' +
-    DATA.wow.map(r => `<tr><td>${r.metric}</td><td>${r.w1}</td><td>${r.w0}</td>
-      <td class="${r.chg >= 0 ? 'delta-up' : 'delta-down'}">${r.chg >= 0 ? '+' : ''}${fmtP(r.chg)}</td></tr>`).join('') + '</table>';
+/* AI insights (present only when claude CLI produced them) */
+if (DATA.aiInsights && DATA.aiInsights.length) {
+  document.getElementById('aiCard').style.display = '';
+  document.getElementById('aiInsights').innerHTML = DATA.aiInsights.map(i => `<li>${esc(i)}</li>`).join('');
+}
+
+/* period-over-period with 7d/30d switcher */
+const WP = DATA.wowPeriods || [];
+if (WP.length) {
+  let wowSel = 0;
+  const renderWow = () => {
+    const p = WP[wowSel];
+    document.getElementById('wowTitle').textContent =
+      `${p.n === 7 ? '周' : p.n === 30 ? '月' : ''}环比（${p.label} vs 前${p.n}日）`;
+    document.getElementById('wowPeriodBar').innerHTML = WP.length > 1 ? WP.map((x, i) =>
+      `<button class="datechip${i === wowSel ? ' on' : ''}" data-i="${i}">${x.label}</button>`).join('') : '';
+    document.getElementById('wow').innerHTML = `<table><tr><th>指标</th><th>${p.label}</th><th>前${p.n}日</th><th>环比</th></tr>` +
+      p.rows.map(r => `<tr><td>${r.metric}</td><td>${r.w1}</td><td>${r.w0}</td>
+        <td class="${r.chg >= 0 ? 'delta-up' : 'delta-down'}">${r.chg >= 0 ? '+' : ''}${fmtP(r.chg)}</td></tr>`).join('') + '</table>';
+    document.querySelectorAll('#wowPeriodBar .datechip').forEach(b =>
+      b.addEventListener('click', () => { wowSel = +b.dataset.i; renderWow(); }));
+  };
+  renderWow();
 } else document.getElementById('wowCard').style.display = 'none';
 
 /* Top-10 horizontal bars */

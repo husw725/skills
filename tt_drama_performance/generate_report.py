@@ -7,7 +7,7 @@ Data sources:
 
 Per-drama daily increments = diff between consecutive snapshots.
 """
-import json, glob, os, re, html
+import json, glob, os, re, html, shutil, subprocess
 from datetime import datetime
 
 import openpyxl
@@ -69,6 +69,49 @@ def safe_div(a, b):
     return a / b if b else None
 
 
+def ai_insights(payload):
+    """config.json 里 ai_insights=true 且本机装了 claude CLI 时，让 Claude 写深度洞察；
+    任何失败都静默回退（返回 None，报告只保留规则式洞察）。"""
+    try:
+        cfg = json.load(open(os.path.join(BASE, 'config.json'), encoding='utf-8'))
+    except FileNotFoundError:
+        return None
+    if not cfg.get('ai_insights'):
+        return None
+    exe = shutil.which('claude')
+    if not exe:
+        print('claude CLI 未找到，跳过 AI 洞察')
+        return None
+    digest = dict(
+        数据截至=payload['dataThrough'],
+        最近14天=[{'日期': r['date'], '总播放': r['vv'], '合格播放': r['qv'], '完播': r['finish'],
+                  '点赞': r['likes'], '收藏': r['favs'], '分享': r['shares']} for r in payload['daily'][-14:]],
+        周期环比=[{p['label']: p['rows']} for p in payload['wowPeriods']],
+        剧目Top8=[{'剧目': d['name'], '累计合格播放': d['qv'], '累计总播放': d['tv'],
+                  '合格率': d['qratio'], '互动率': d['engage'], '人均时长s': d['dur']}
+                 for d in payload['dramas'][:8]],
+        最新单日剧目增量=payload['moversSeries'][-1] if payload['moversSeries'] else None,
+    )
+    prompt = (
+        '你是一名资深短剧行业 BI 分析师。基于下面的 TikTok 短剧运营数据(JSON)，'
+        '写 4-6 条深度洞察。要求：每条 1-2 句话、必须引用具体数字、'
+        '聚焦趋势拐点/结构变化/内容集中度/互动质量/异常点，并尽量给出可执行建议；'
+        '不要复述表面数字，要给判断。'
+        '只输出一个 JSON 字符串数组（如 ["洞察1","洞察2"]），不要 markdown 代码块，不要其他文字。\n\n'
+        + json.dumps(digest, ensure_ascii=False, default=str)
+    )
+    try:
+        r = subprocess.run([exe, '-p', prompt], capture_output=True, text=True, timeout=300)
+        out = r.stdout.strip()
+        items = json.loads(out[out.index('['):out.rindex(']') + 1])
+        items = [str(x) for x in items if isinstance(x, str) and x.strip()][:8]
+        print(f'AI 洞察 {len(items)} 条')
+        return items or None
+    except Exception as e:
+        print(f'AI 洞察失败（{e.__class__.__name__}: {e}），使用规则式洞察')
+        return None
+
+
 def build():
     daily = load_daily()
     snaps = load_snapshots()
@@ -107,13 +150,23 @@ def build():
              sub=f"7日均 {wsum(w1,'playDur')/wsum(w1,'vv'):.1f}s" if wsum(w1, 'vv') else ''),
     ]
 
-    # ---- WoW table ----
-    wow_rows = []
-    if len(w0) == 7:
-        for k, lab in [('vv', '总播放'), ('qv', '合格播放'), ('finish', '完播量'),
-                       ('likes', '点赞'), ('comments', '评论'), ('favs', '收藏'), ('shares', '分享')]:
-            a, b = wsum(w1, k), wsum(w0, k)
-            wow_rows.append(dict(metric=lab, w1=fmt(a), w0=fmt(b), chg=safe_div(a - b, b)))
+    # ---- Period-over-period tables (7d = 周环比, 30d = 月环比), shown when data suffices ----
+    METRIC_LABELS = [('vv', '总播放'), ('qv', '合格播放'), ('finish', '完播量'),
+                     ('likes', '点赞'), ('comments', '评论'), ('favs', '收藏'), ('shares', '分享')]
+
+    def period_rows(n):
+        a, b = daily[-n:], daily[-2 * n:-n]
+        if len(a) < n or len(b) < n:
+            return None
+        rows = []
+        for k, lab in METRIC_LABELS:
+            s1, s0 = sum(r[k] for r in a), sum(r[k] for r in b)
+            rows.append(dict(metric=lab, w1=fmt(s1), w0=fmt(s0), chg=safe_div(s1 - s0, s0)))
+        return rows
+
+    wow_periods = [dict(label=f'近{n}日', n=n, rows=period_rows(n)) for n in (7, 30)]
+    wow_periods = [p for p in wow_periods if p['rows']]
+    wow_rows = wow_periods[0]['rows'] if wow_periods else []
 
     # ---- Drama table (latest snapshot), with user-defined grouping ----
     try:
@@ -213,10 +266,11 @@ def build():
     payload = dict(
         generated=datetime.now().strftime('%Y-%m-%d %H:%M'),
         dataThrough=daily[-1]['date'], snapDate=snap_dates[-1],
-        daily=daily, kpis=kpis, wow=wow_rows, dramas=dramas,
+        daily=daily, kpis=kpis, wow=wow_rows, wowPeriods=wow_periods, dramas=dramas,
         moversSeries=movers_series,
         insights=ins, top3Share=top3_share,
     )
+    payload['aiInsights'] = ai_insights(payload)
 
     tpl = open(os.path.join(BASE, 'template.html'), encoding='utf-8').read()
     out = tpl.replace('/*__DATA__*/null', json.dumps(payload, ensure_ascii=False, default=str))
