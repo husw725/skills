@@ -33,6 +33,8 @@ if errorlevel 1 echo WARNING: first run had errors ^(see messages above^). Task 
 echo [5/5] Creating daily task at 15:00...
 schtasks /create /f /tn "TTDramaDaily" /tr "\"%~dp0run_daily.bat\"" /sc daily /st 15:00
 if errorlevel 1 (echo schtasks failed - open PowerShell as Administrator and re-run install.bat & pause & exit /b 3)
+rem If the PC was off at 15:00, run the missed task on next boot
+powershell -NoProfile -Command "Set-ScheduledTask -TaskName TTDramaDaily -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)" >nul 2>&1
 
 echo.
 echo DONE. Daily update runs at 15:00. Log: daily_update.log
