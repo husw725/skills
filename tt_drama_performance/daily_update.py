@@ -19,6 +19,12 @@ DATA = os.path.join(BASE, 'data')
 PROFILE = os.path.join(BASE, 'browser_profile')
 URL = 'https://www.tiktokdramacenter.com/analytics/content-performance'
 
+CFG = {'dingtalk_webhook': '', 'git_push': True, 'headless': False}
+try:
+    CFG.update(json.load(open(os.path.join(BASE, 'config.json'), encoding='utf-8')))
+except FileNotFoundError:
+    pass
+
 # 从 React fiber 状态提取机构级每日指标（与 scripts/extract_daily.js 同源）
 EXTRACT_JS = """
 () => {
@@ -51,6 +57,23 @@ EXTRACT_JS = """
 
 def log(msg):
     print(f"[{datetime.datetime.now():%H:%M:%S}] {msg}", flush=True)
+
+
+def notify(text):
+    """钉钉通知。webhook 配在 config.json（仓库公开，该文件不入库）；未配置则跳过。"""
+    wh = CFG.get('dingtalk_webhook', '').strip()
+    if not wh.startswith('https://'):
+        return
+    try:
+        import urllib.request
+        payload = json.dumps({'msgtype': 'text', 'text': {'content': text}}).encode('utf-8')
+        req = urllib.request.Request(wh, data=payload,
+                                     headers={'Content-Type': 'application/json; charset=utf-8'})
+        r = json.loads(urllib.request.urlopen(req, timeout=10).read())
+        if r.get('errcode') != 0:
+            log(f'钉钉通知被拒: {r.get("errmsg")}')
+    except Exception as e:
+        log(f'钉钉通知失败: {e}')
 
 
 def open_page(p, headless):
@@ -97,6 +120,8 @@ def run(push, headless):
         try:
             if not logged_in(page):
                 log('登录态失效：请先运行  python daily_update.py --login')
+                notify('【TikTok短剧日报】登录态失效，今日数据未更新。'
+                       '请到 Windows 机器上双击 login.bat 重新登录一次即可恢复。')
                 return 2
 
             # 1) 导出 xlsx（直接接住下载，不经过下载目录）
@@ -107,6 +132,7 @@ def run(push, headless):
                 dl.value.save_as(xlsx)
             except PWTimeout:
                 log('导出失败：点击 Export Data 后 30 秒内没有产生下载。')
+                notify('【TikTok短剧日报】导出失败（页面可能改版），今日数据未更新，请人工检查。')
                 return 3
             if os.path.getsize(xlsx) < 1000:
                 log(f'导出文件异常（{os.path.getsize(xlsx)} bytes），中止。')
@@ -158,4 +184,4 @@ if __name__ == '__main__':
     if a.login:
         with sync_playwright() as p:
             sys.exit(do_login(p))
-    sys.exit(run(a.push, a.headless))
+    sys.exit(run(a.push or CFG['git_push'], a.headless or CFG['headless']))

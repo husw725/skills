@@ -10,8 +10,23 @@ cd skills\tt_drama_performance
 .\install.bat
 ```
 
-`install.bat` 一次完成：建 venv 装依赖 → 弹浏览器窗口让你登录一次 →
+`install.bat` 一次完成：建 venv 装依赖 → 生成 config.json → 弹浏览器窗口让你登录一次 →
 跑一遍完整更新验证 → 注册每天 15:00 的计划任务。全程按提示走即可。
+
+## 配置文件 config.json（install.bat 会从 config.example.json 自动生成）
+
+```json
+{
+  "dingtalk_webhook": "https://oapi.dingtalk.com/robot/send?access_token=你的token",
+  "git_push": true,
+  "headless": false
+}
+```
+
+- `dingtalk_webhook`：登录失效/导出失败时发钉钉提醒；留空则不发。
+  **仓库是公开的，config.json 已被 .gitignore 排除，别把 webhook 写进任何会提交的文件。**
+- `git_push`：更新完是否自动 git 提交推送。
+- `headless`：true 则不弹浏览器窗口（登录态已保存时可用）。
 
 登录态保存在 `browser_profile\`（.gitignore 已排除），长期复用；
 日志在 `daily_update.log`；手动触发测试：`schtasks /run /tn TTDramaDaily`。

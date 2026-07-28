@@ -17,12 +17,17 @@ python -m venv .venv || (echo venv failed & pause & exit /b 1)
 .venv\Scripts\pip install --quiet playwright openpyxl || (echo pip install failed & pause & exit /b 1)
 .venv\Scripts\playwright install chromium || (echo chromium download failed & pause & exit /b 1)
 
+if not exist config.json (
+  copy config.example.json config.json >nul
+  echo NOTE: config.json created - edit it to set your DingTalk webhook ^(optional^).
+)
+
 echo [3/5] First-time login: a browser window will open. Log in to tiktokdramacenter.com ^(waits up to 5 min^)...
 .venv\Scripts\python daily_update.py --login
 if errorlevel 1 (echo Login not completed - re-run install.bat to retry. & pause & exit /b 2)
 
 echo [4/5] First full run ^(export + report + git push^)...
-.venv\Scripts\python daily_update.py --push
+.venv\Scripts\python daily_update.py
 if errorlevel 1 echo WARNING: first run had errors ^(see messages above^). Task will still be scheduled; fix and test with run_daily.bat.
 
 echo [5/5] Creating daily task at 15:00...
