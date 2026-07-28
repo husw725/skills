@@ -130,6 +130,29 @@ def do_login(p):
     return 2
 
 
+def sync_pages_repo(today):
+    """把 report.html 作为 index.html 同步到独立的 GitHub Pages 仓库（config: pages_repo_dir）。
+    未配置或目录不存在则跳过；失败不影响主流程。"""
+    d = CFG.get('pages_repo_dir', '').strip()
+    if not d:
+        return
+    if not os.path.isabs(d):
+        d = os.path.normpath(os.path.join(BASE, d))
+    if not os.path.isdir(os.path.join(d, '.git')):
+        log(f'pages_repo_dir 不是 git 仓库，跳过分享页同步: {d}')
+        return
+    import shutil
+    shutil.copyfile(os.path.join(BASE, 'report.html'), os.path.join(d, 'index.html'))
+    for cmd in (['git', 'add', 'index.html'],
+                ['git', 'commit', '-m', f'daily report {today}'],
+                ['git', 'push']):
+        r = subprocess.run(cmd, cwd=d, capture_output=True, text=True)
+        if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
+            log(f'分享页同步失败: {" ".join(cmd)} -> {r.stderr.strip()[:200]}')
+            return
+    log('分享页(tt-drama-report)已同步。')
+
+
 def run(push, headless):
     today = datetime.date.today().isoformat()
     os.makedirs(DATA, exist_ok=True)
@@ -189,6 +212,7 @@ def run(push, headless):
                 log(f'git 失败: {" ".join(cmd)}\n{r.stderr.strip()}')
                 return 4
         log('已推送到远端。')
+        sync_pages_repo(today)
     log('完成。')
     return 0
 

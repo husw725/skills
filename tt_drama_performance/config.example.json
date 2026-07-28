@@ -5,5 +5,7 @@
  "headless": false,
  "browser_channel": "chrome",
  "ai_insights": false,
- "_ai说明": "ai_insights=true 时每次生成报告会调用本机 claude CLI 写深度洞察（需已安装并登录 claude），失败自动回退"
+ "_ai说明": "ai_insights=true 时每次生成报告会调用本机 claude CLI 写深度洞察（需已安装并登录 claude），失败自动回退",
+ "pages_repo_dir": "",
+ "_pages说明": "分享页仓库的本地路径(相对本目录或绝对路径)。配置后每次推送会把 report.html 复制成 index.html 推过去，保持 github.io 分享链接最新；留空跳过"
 }
