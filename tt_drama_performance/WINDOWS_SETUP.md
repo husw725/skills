@@ -1,41 +1,31 @@
 # Windows 每日自动更新配置（不依赖任何 AI agent）
 
-一次性配置约 5 分钟，之后每天 15:00 自动：导出数据 → 更新 report.html → 推送 git。
+## 快速安装（推荐）
 
-## 1. 安装依赖（PowerShell，装过 Python 3.9+ 即可）
+前置：装好 Python 3.9+（安装时勾选 "Add to PATH"）和 git（配好 GitHub 推送凭证）。
 
 ```powershell
 git clone https://github.com/husw725/skills.git
 cd skills\tt_drama_performance
-pip install playwright openpyxl
-playwright install chromium
+.\install.bat
 ```
 
-## 2. 首次登录（只需一次）
+`install.bat` 一次完成：建 venv 装依赖 → 弹浏览器窗口让你登录一次 →
+跑一遍完整更新验证 → 注册每天 15:00 的计划任务。全程按提示走即可。
+
+登录态保存在 `browser_profile\`（.gitignore 已排除），长期复用；
+日志在 `daily_update.log`；手动触发测试：`schtasks /run /tn TTDramaDaily`。
+
+## 手动配置（install.bat 出问题时的备选）
 
 ```powershell
-python daily_update.py --login
+python -m venv .venv
+.venv\Scripts\pip install playwright openpyxl
+.venv\Scripts\playwright install chromium
+.venv\Scripts\python daily_update.py --login   # 弹窗人工登录一次
+.venv\Scripts\python daily_update.py --push    # 验证完整流程
+schtasks /create /f /tn "TTDramaDaily" /tr "\"<仓库完整路径>\tt_drama_performance\run_daily.bat\"" /sc daily /st 15:00
 ```
-
-会弹出一个浏览器窗口，人工登录 tiktokdramacenter.com。
-登录态保存在 `browser_profile\` 目录（已被 .gitignore 排除，不会提交），之后长期复用。
-
-## 3. 手动跑一次验证
-
-```powershell
-python daily_update.py --push
-```
-
-看到 `完成。` 且 GitHub 上出现 `data: daily update <日期>` 提交即成功。
-（`--push` 需要本机 git 已配置好 GitHub 凭证；只想本地更新就去掉 `--push`。）
-
-## 4. 建定时任务（管理员 PowerShell）
-
-```powershell
-schtasks /create /tn "TTDramaDaily" /tr "\"<仓库完整路径>\tt_drama_performance\run_daily.bat\"" /sc daily /st 15:00
-```
-
-日志在 `daily_update.log`。手动触发测试：`schtasks /run /tn TTDramaDaily`。
 
 ## 故障排查
 

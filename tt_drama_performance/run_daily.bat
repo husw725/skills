@@ -1,5 +1,4 @@
 @echo off
-rem TikTok 短剧日报 - Windows 定时任务入口
-rem 修改下面这行为你本机的仓库路径
+rem TikTok Drama Daily Report - scheduled task entry (installed by install.bat)
 cd /d %~dp0
-python daily_update.py --push >> daily_update.log 2>&1
+.venv\Scripts\python daily_update.py --push >> daily_update.log 2>&1
