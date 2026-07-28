@@ -161,16 +161,14 @@ def build():
     total_qv = sum(d['qv'] for d in dramas)
     top3_share = safe_div(sum(d['qv'] for d in dramas[:3]), total_qv)
 
-    # ---- Per-drama movers (needs >=2 snapshots), aggregated by group ----
-    movers = []
-    mover_span = None
-    if len(snap_dates) >= 2:
-        d0 = datetime.strptime(snap_dates[-2], '%Y-%m-%d')
-        d1 = datetime.strptime(snap_dates[-1], '%Y-%m-%d')
-        mover_span = dict(frm=snap_dates[-2], to=snap_dates[-1], days=(d1 - d0).days)
-        prev_snap = snaps[snap_dates[-2]]
+    # ---- Per-drama movers: one entry per consecutive snapshot pair ----
+    movers_series = []
+    for i in range(1, len(snap_dates)):
+        d0 = datetime.strptime(snap_dates[i - 1], '%Y-%m-%d')
+        d1 = datetime.strptime(snap_dates[i], '%Y-%m-%d')
+        prev_snap, cur_snap = snaps[snap_dates[i - 1]], snaps[snap_dates[i]]
         agg = {}
-        for did, r in latest_snap.items():
+        for did, r in cur_snap.items():
             p = prev_snap.get(did)
             if not p:
                 continue
@@ -180,7 +178,9 @@ def build():
             e['d_tv'] += r['tv'] - p['tv']
             e['d_like'] += r['like'] - p['like']
             e['d_fav'] += r['fav'] - p['fav']
-        movers = sorted(agg.values(), key=lambda m: -m['d_qv'])
+        movers_series.append(dict(
+            frm=snap_dates[i - 1], to=snap_dates[i], days=(d1 - d0).days,
+            rows=sorted(agg.values(), key=lambda m: -m['d_qv'])[:10]))
 
     # ---- Auto insights (senior-BI voice) ----
     ins = []
@@ -213,8 +213,8 @@ def build():
     payload = dict(
         generated=datetime.now().strftime('%Y-%m-%d %H:%M'),
         dataThrough=daily[-1]['date'], snapDate=snap_dates[-1],
-        daily=daily, kpis=kpis, wow=wow_rows, dramas=dramas, movers=movers[:10],
-        moverSpan=mover_span,
+        daily=daily, kpis=kpis, wow=wow_rows, dramas=dramas,
+        moversSeries=movers_series,
         insights=ins, top3Share=top3_share,
     )
 
