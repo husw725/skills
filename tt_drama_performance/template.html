@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TikTok 短剧数据日报</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb;
+  --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.10);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --up: #006300; --down: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --up: #0ca30c; --down: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19;
+  --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --up: #0ca30c; --down: #e66767;
+}
+* { box-sizing: border-box; margin: 0; }
+body { background: var(--page); color: var(--ink); font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px 16px 64px; }
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1 { font-size: 22px; }
+.meta { color: var(--muted); font-size: 12px; margin: 4px 0 20px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
+.card h2 { font-size: 15px; margin-bottom: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.kpi .lab { color: var(--ink2); font-size: 12px; }
+.kpi .val { font-size: 24px; font-weight: 650; margin: 2px 0; }
+.kpi .sub { font-size: 12px; color: var(--muted); }
+.delta-up { color: var(--up); } .delta-down { color: var(--down); }
+ul.insights { padding-left: 20px; }
+ul.insights li { margin: 6px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+th { color: var(--ink2); font-weight: 550; }
+th:first-child, td:first-child { text-align: left; }
+.tbl-scroll { overflow-x: auto; }
+details { margin-top: 8px; }
+summary { color: var(--muted); font-size: 12px; cursor: pointer; }
+.legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink2); margin-bottom: 6px; }
+.legend .chip { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.chart { position: relative; }
+svg text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+svg .dl { fill: var(--ink2); font-size: 11px; font-weight: 600; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  display: none; z-index: 9; min-width: 140px; }
+#tip .d { color: var(--muted); margin-bottom: 3px; }
+#tip .row { display: flex; justify-content: space-between; gap: 12px; }
+.foot { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TikTok 短剧数据日报</h1>
+  <div class="meta" id="meta"></div>
+
+  <div class="card"><h2>核心洞察</h2><ul class="insights" id="insights"></ul></div>
+
+  <div class="kpis" id="kpis" style="margin-bottom:16px"></div>
+
+  <div class="card">
+    <h2>每日播放趋势</h2>
+    <div class="legend" id="lg1"></div>
+    <div class="chart" id="c1"></div>
+    <details><summary>查看数据表</summary><div class="tbl-scroll" id="t1"></div></details>
+  </div>
+
+  <div class="card">
+    <h2>流量质量趋势（合格率 / 完播率）</h2>
+    <div class="legend" id="lg2"></div>
+    <div class="chart" id="c2"></div>
+    <details><summary>查看数据表</summary><div class="tbl-scroll" id="t2"></div></details>
+  </div>
+
+  <div class="card" id="wowCard">
+    <h2>周环比（近7日 vs 前7日）</h2>
+    <div class="tbl-scroll" id="wow"></div>
+  </div>
+
+  <div class="card">
+    <h2>剧目表现 Top 10（按累计合格播放）</h2>
+    <div class="chart" id="cbar"></div>
+  </div>
+
+  <div class="card" id="moversCard" style="display:none">
+    <h2>剧目单日增长榜（最新快照日增量）</h2>
+    <div class="tbl-scroll" id="movers"></div>
+  </div>
+
+  <div class="card">
+    <h2>剧目全量明细（累计）</h2>
+    <div class="tbl-scroll" id="dramaTbl"></div>
+  </div>
+
+  <div class="foot">
+    指标口径：合格播放 = 平台判定的有效观看（Qualified Views）；合格率 = 合格播放/总播放；完播率 = 完播量/总播放；
+    互动率 = (点赞+评论+收藏+分享)/总播放；剧目互动率 = (点赞+评论+收藏)/累计总播放。
+    数据来源：TikTok Drama Center，每日 15:00 自动抓取更新。
+  </div>
+</div>
+<div id="tip"></div>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+const fmtN = n => {
+  if (n == null) return '-';
+  const a = Math.abs(n), s = n < 0 ? '-' : '';
+  if (a >= 1e8) return s + (a/1e8).toFixed(2) + '亿';
+  if (a >= 1e4) return s + (a/1e4).toFixed(1) + '万';
+  return s + Math.round(a).toLocaleString();
+};
+const fmtP = (x, d=1) => x == null ? '-' : (x*100).toFixed(d) + '%';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+document.getElementById('meta').textContent =
+  `数据截至 ${DATA.dataThrough}（趋势） / ${DATA.snapDate}（剧目快照） · 生成于 ${DATA.generated}`;
+
+/* insights */
+document.getElementById('insights').innerHTML = DATA.insights.map(i => `<li>${i}</li>`).join('');
+
+/* KPIs */
+document.getElementById('kpis').innerHTML = DATA.kpis.map(k => {
+  let d = '';
+  if (k.delta != null) {
+    const cls = k.delta >= 0 ? 'delta-up' : 'delta-down';
+    d += `<span class="${cls}">${k.delta >= 0 ? '▲' : '▼'} ${fmtP(Math.abs(k.delta))}</span> 日环比`;
+  }
+  if (k.wow != null) d += `${d ? ' · ' : ''}周环比 ${fmtP(k.wow)}`;
+  if (k.sub) d += `${d ? ' · ' : ''}${k.sub}`;
+  return `<div class="kpi"><div class="lab">${k.label}</div><div class="val">${k.value}</div><div class="sub">${d || '&nbsp;'}</div></div>`;
+}).join('');
+
+/* ---- tiny SVG line chart with crosshair + tooltip ---- */
+const tip = document.getElementById('tip');
+function lineChart(el, labels, series, yfmt) {
+  const W = Math.min(el.clientWidth || 1040, 1040), H = 260,
+        P = {l: 60, r: 74, t: 10, b: 24},
+        iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const max = Math.max(...series.flatMap(s => s.values)) * 1.08 || 1;
+  const x = i => P.l + iw * (labels.length === 1 ? .5 : i / (labels.length - 1));
+  const y = v => P.t + ih * (1 - v / max);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">`;
+  for (let i = 0; i <= 4; i++) {
+    const gy = P.t + ih * i / 4;
+    g += `<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="var(--grid)"/>`;
+    g += `<text x="${P.l-6}" y="${gy+4}" text-anchor="end">${yfmt(max*(1-i/4))}</text>`;
+  }
+  const step = Math.ceil(labels.length / 7);
+  labels.forEach((d, i) => { if (i % step === 0)
+    g += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${d.slice(5)}</text>`; });
+  series.forEach(s => {
+    g += `<path d="M${s.values.map((v,i)=>`${x(i)},${y(v)}`).join('L')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+    const li = s.values.length - 1;
+    g += `<circle cx="${x(li)}" cy="${y(s.values[li])}" r="3.5" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
+    g += `<text class="dl" x="${x(li)+7}" y="${y(s.values[li])+4}">${s.name}</text>`;
+  });
+  g += `<line id="xh" x1="0" y1="${P.t}" x2="0" y2="${P.t+ih}" stroke="var(--axis)" stroke-dasharray="3 3" visibility="hidden"/>`;
+  g += `<rect x="${P.l}" y="${P.t}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
+  el.innerHTML = g;
+  const svg = el.querySelector('svg'), xh = el.querySelector('#xh');
+  svg.addEventListener('mousemove', e => {
+    const r = svg.getBoundingClientRect(), sx = W / r.width;
+    const px = (e.clientX - r.left) * sx;
+    const i = Math.max(0, Math.min(labels.length-1, Math.round((px - P.l) / iw * (labels.length-1))));
+    xh.setAttribute('x1', x(i)); xh.setAttribute('x2', x(i)); xh.setAttribute('visibility', 'visible');
+    tip.style.display = 'block';
+    tip.style.left = Math.min(e.clientX + 14, innerWidth - 180) + 'px';
+    tip.style.top = (e.clientY + 14) + 'px';
+    tip.innerHTML = `<div class="d">${labels[i]}</div>` + series.map(s =>
+      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${yfmt(s.values[i], true)}</b></div>`).join('');
+  });
+  svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
+}
+
+function legend(el, series) {
+  document.getElementById(el).innerHTML = series.map(s =>
+    `<span><span class="chip" style="background:${s.color}"></span>${s.name}</span>`).join('');
+}
+
+function dataTable(el, labels, series, yfmt) {
+  document.getElementById(el).innerHTML = `<table><tr><th>日期</th>${series.map(s=>`<th>${s.name}</th>`).join('')}</tr>` +
+    labels.map((d,i) => `<tr><td>${d}</td>${series.map(s=>`<td>${yfmt(s.values[i], true)}</td>`).join('')}</tr>`).join('') + '</table>';
+}
+
+const days = DATA.daily, labels = days.map(r => r.date);
+const s1 = [
+  {name: '总播放', color: 'var(--s1)', values: days.map(r => r.vv)},
+  {name: '合格播放', color: 'var(--s2)', values: days.map(r => r.qv)},
+];
+lineChart(document.getElementById('c1'), labels, s1, (v, exact) => exact ? fmtN(v) : fmtN(v));
+legend('lg1', s1); dataTable('t1', labels, s1, v => fmtN(v));
+
+const s2 = [
+  {name: '合格率', color: 'var(--s2)', values: days.map(r => r.vv ? r.qv/r.vv : 0)},
+  {name: '完播率', color: 'var(--s3)', values: days.map(r => r.vv ? r.finish/r.vv : 0)},
+];
+lineChart(document.getElementById('c2'), labels, s2, (v) => fmtP(v));
+legend('lg2', s2); dataTable('t2', labels, s2, v => fmtP(v));
+
+/* WoW */
+if (DATA.wow.length) {
+  document.getElementById('wow').innerHTML = '<table><tr><th>指标</th><th>近7日</th><th>前7日</th><th>环比</th></tr>' +
+    DATA.wow.map(r => `<tr><td>${r.metric}</td><td>${r.w1}</td><td>${r.w0}</td>
+      <td class="${r.chg >= 0 ? 'delta-up' : 'delta-down'}">${r.chg >= 0 ? '+' : ''}${fmtP(r.chg)}</td></tr>`).join('') + '</table>';
+} else document.getElementById('wowCard').style.display = 'none';
+
+/* Top-10 horizontal bars */
+(function() {
+  const top = DATA.dramas.slice(0, 10), el = document.getElementById('cbar');
+  const W = Math.min(el.clientWidth || 1040, 1040), rowH = 30, P = {l: 230, r: 90, t: 4, b: 4};
+  const H = P.t + P.b + top.length * rowH;
+  const max = Math.max(...top.map(d => d.qv)) || 1;
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">`;
+  top.forEach((d, i) => {
+    const bw = Math.max(2, (W - P.l - P.r) * d.qv / max), by = P.t + i * rowH + 6, bh = rowH - 12;
+    const name = String(d.name).length > 18 ? String(d.name).slice(0, 17) + '…' : d.name;
+    g += `<text x="${P.l-8}" y="${by+bh/2+4}" text-anchor="end">${esc(name)}</text>`;
+    g += `<path d="M${P.l},${by} h${bw-4} a4,4 0 0 1 4,4 v${bh-8} a4,4 0 0 1 -4,4 h-${bw-4} z" fill="var(--s1)" data-i="${i}"/>`;
+    g += `<text class="dl" x="${P.l+bw+6}" y="${by+bh/2+4}">${fmtN(d.qv)}</text>`;
+  });
+  g += '</svg>';
+  el.innerHTML = g;
+  el.querySelectorAll('path').forEach(p => {
+    p.addEventListener('mousemove', e => {
+      const d = top[+p.dataset.i];
+      tip.style.display = 'block';
+      tip.style.left = Math.min(e.clientX + 14, innerWidth - 200) + 'px';
+      tip.style.top = (e.clientY + 14) + 'px';
+      tip.innerHTML = `<div class="d">${esc(d.name)}</div>
+        <div class="row"><span>合格播放</span><b>${fmtN(d.qv)}</b></div>
+        <div class="row"><span>总播放</span><b>${fmtN(d.tv)}</b></div>
+        <div class="row"><span>合格率</span><b>${fmtP(d.qratio)}</b></div>
+        <div class="row"><span>互动率</span><b>${fmtP(d.engage, 2)}</b></div>`;
+    });
+    p.addEventListener('mouseleave', () => tip.style.display = 'none');
+  });
+})();
+
+/* movers */
+if (DATA.movers.length) {
+  document.getElementById('moversCard').style.display = '';
+  document.getElementById('movers').innerHTML =
+    '<table><tr><th>剧目</th><th>合格播放 +</th><th>总播放 +</th><th>点赞 +</th><th>收藏 +</th></tr>' +
+    DATA.movers.map(m => `<tr><td>${esc(m.name)}</td><td>${fmtN(m.d_qv)}</td><td>${fmtN(m.d_tv)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`).join('') + '</table>';
+}
+
+/* full drama table */
+document.getElementById('dramaTbl').innerHTML =
+  '<table><tr><th>#</th><th>剧目</th><th>合格播放</th><th>总播放</th><th>合格率</th><th>人均时长(s)</th><th>点赞</th><th>收藏</th><th>评论</th><th>互动率</th><th>收藏/千播放</th></tr>' +
+  DATA.dramas.map((d, i) => `<tr><td>${i+1}</td><td>${esc(d.name)}</td><td>${fmtN(d.qv)}</td><td>${fmtN(d.tv)}</td>
+    <td>${fmtP(d.qratio)}</td><td>${d.dur}</td><td>${fmtN(d.like)}</td><td>${fmtN(d.fav)}</td><td>${fmtN(d.com)}</td>
+    <td>${fmtP(d.engage, 2)}</td><td>${d.fav1k == null ? '-' : d.fav1k.toFixed(1)}</td></tr>`).join('') + '</table>';
+</script>
+</body>
+</html>
