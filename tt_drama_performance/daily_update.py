@@ -77,11 +77,18 @@ def notify(text):
 
 
 def open_page(p, headless):
-    ctx = p.chromium.launch_persistent_context(
-        PROFILE, headless=headless,
-        args=['--disable-blink-features=AutomationControlled'],
-        viewport={'width': 1440, 'height': 900}, locale='en-US',
-        accept_downloads=True)
+    kw = dict(headless=headless,
+              args=['--disable-blink-features=AutomationControlled'],
+              viewport={'width': 1440, 'height': 900}, locale='en-US',
+              accept_downloads=True)
+    ch = CFG.get('browser_channel', 'chrome')
+    try:
+        # channel='chrome' 用系统已装的 Google Chrome，无需 playwright install chromium
+        ctx = p.chromium.launch_persistent_context(PROFILE, channel=ch, **kw) if ch \
+            else p.chromium.launch_persistent_context(PROFILE, **kw)
+    except Exception as e:
+        log(f'系统 Chrome 启动失败（{e.__class__.__name__}），回退到 Playwright 自带 Chromium…')
+        ctx = p.chromium.launch_persistent_context(PROFILE, **kw)
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
     page.goto(URL, wait_until='domcontentloaded', timeout=60000)
     return ctx, page
