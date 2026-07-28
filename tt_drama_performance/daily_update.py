@@ -10,7 +10,7 @@
 退出码: 0 成功 / 2 登录态失效（需重跑 --login）/ 3 导出失败 / 4 其他错误
 依赖: pip install playwright openpyxl && playwright install chromium
 """
-import argparse, datetime, json, os, subprocess, sys
+import argparse, datetime, json, os, subprocess, sys, time
 
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
@@ -109,12 +109,23 @@ def do_login(p):
         log('当前已是登录状态，无需操作。')
         ctx.close()
         return 0
-    log('未登录：请在打开的浏览器窗口中完成登录（最多等 5 分钟）…')
-    if logged_in(page, timeout=300000):
-        log('登录成功，登录态已保存到 browser_profile/，以后无需再登录。')
-        ctx.close()
-        return 0
-    log('5 分钟内未检测到登录成功。')
+    log('未登录：请在打开的浏览器窗口中完成登录（每 5 秒自动检测，最多等 10 分钟）…')
+    deadline = time.time() + 600
+    while time.time() < deadline:
+        if logged_in(page, timeout=4000):
+            log('登录成功，登录态已保存到 browser_profile/，以后无需再登录。')
+            ctx.close()
+            return 0
+        u = page.url
+        # 登录成功后站点常跳去首页，Export Data 按钮不在那里——拉回数据页再检测。
+        # 正在登录页（login/passport）时不要动，避免打断用户输入。
+        if 'login' not in u and 'passport' not in u and '/analytics/content-performance' not in u:
+            try:
+                page.goto(URL, wait_until='domcontentloaded', timeout=30000)
+            except Exception:
+                pass
+        time.sleep(1)
+    log('10 分钟内未检测到登录成功。')
     ctx.close()
     return 2
 
