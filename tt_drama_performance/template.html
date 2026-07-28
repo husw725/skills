@@ -49,6 +49,13 @@ svg .dl { fill: var(--ink2); font-size: 11px; font-weight: 600; }
 #tip .d { color: var(--muted); margin-bottom: 3px; }
 #tip .row { display: flex; justify-content: space-between; gap: 12px; }
 .foot { color: var(--muted); font-size: 11px; letter-spacing: .05em; margin-top: 28px; }
+tr.grp { cursor: pointer; }
+tr.grp:hover td { background: rgba(216,178,92,.05); }
+.arr { color: var(--gold-dim); display: inline-block; width: 12px; }
+.badge { color: var(--gold-dim); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 11px; padding: 0 6px; margin-left: 4px; white-space: nowrap; }
+tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
+.subname { padding-left: 22px !important; }
 </style>
 </head>
 <body>
@@ -248,12 +255,26 @@ if (DATA.movers.length) {
     DATA.movers.map(m => `<tr><td>${esc(m.name)}</td><td>${fmtN(m.d_qv)}</td><td>${fmtN(m.d_tv)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`).join('') + '</table>';
 }
 
-/* full drama table */
+/* full drama table (grouped rows expand to member versions) */
+const cells = d => `<td>${fmtN(d.qv)}</td><td>${fmtN(d.tv)}</td><td>${fmtP(d.qratio)}</td><td>${d.dur}</td>
+  <td>${fmtN(d.like)}</td><td>${fmtN(d.fav)}</td><td>${fmtN(d.com)}</td>
+  <td>${fmtP(d.engage, 2)}</td><td>${d.fav1k == null ? '-' : d.fav1k.toFixed(1)}</td>`;
 document.getElementById('dramaTbl').innerHTML =
   '<table><tr><th>#</th><th>剧目</th><th>合格播放</th><th>总播放</th><th>合格率</th><th>人均时长(s)</th><th>点赞</th><th>收藏</th><th>评论</th><th>互动率</th><th>收藏/千播放</th></tr>' +
-  DATA.dramas.map((d, i) => `<tr><td>${i+1}</td><td>${esc(d.name)}</td><td>${fmtN(d.qv)}</td><td>${fmtN(d.tv)}</td>
-    <td>${fmtP(d.qratio)}</td><td>${d.dur}</td><td>${fmtN(d.like)}</td><td>${fmtN(d.fav)}</td><td>${fmtN(d.com)}</td>
-    <td>${fmtP(d.engage, 2)}</td><td>${d.fav1k == null ? '-' : d.fav1k.toFixed(1)}</td></tr>`).join('') + '</table>';
+  DATA.dramas.map((d, i) => {
+    const n = d.members ? d.members.length : 0;
+    let rows = `<tr${n ? ` class="grp" data-g="${i}"` : ''}><td>${i+1}</td>
+      <td>${n ? `<span class="arr" id="arr${i}">▸</span> ` : ''}${esc(d.name)}${n ? ` <span class="badge">${n} 个版本</span>` : ''}</td>${cells(d)}</tr>`;
+    if (n) rows += d.members.map(m =>
+      `<tr class="sub sub${i}" style="display:none"><td></td><td class="subname">└ ${esc(m.name)}</td>${cells(m)}</tr>`).join('');
+    return rows;
+  }).join('') + '</table>';
+document.querySelectorAll('tr.grp').forEach(tr => tr.addEventListener('click', () => {
+  const g = tr.dataset.g, arr = document.getElementById('arr' + g);
+  const open = arr.textContent === '▾';
+  arr.textContent = open ? '▸' : '▾';
+  document.querySelectorAll('.sub' + g).forEach(r => r.style.display = open ? 'none' : '');
+}));
 </script>
 </body>
 </html>

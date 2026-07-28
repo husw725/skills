@@ -115,31 +115,68 @@ def build():
             a, b = wsum(w1, k), wsum(w0, k)
             wow_rows.append(dict(metric=lab, w1=fmt(a), w0=fmt(b), chg=safe_div(a - b, b)))
 
-    # ---- Drama table (latest snapshot) ----
-    dramas = []
+    # ---- Drama table (latest snapshot), with user-defined grouping ----
+    try:
+        groups = {k: v for k, v in
+                  json.load(open(os.path.join(BASE, 'groups.json'), encoding='utf-8')).items()
+                  if not k.startswith('_')}
+    except FileNotFoundError:
+        groups = {}
+    member2group = {str(m): g for g, ms in groups.items() for m in ms}
+
+    raw = []
     for did, r in latest_snap.items():
-        dramas.append(dict(
+        raw.append(dict(
             id=did, name=r['name'], qv=r['qv'], tv=r['tv'], dur=r['dur'],
             fav=r['fav'], com=r['com'], like=r['like'],
             qratio=safe_div(r['qv'], r['tv']),
             engage=safe_div(r['like'] + r['com'] + r['fav'], r['tv']),
             fav1k=safe_div(r['fav'] * 1000, r['tv']),
         ))
+
+    def group_of(d):
+        return member2group.get(d['id']) or member2group.get(str(d['name']))
+
+    merged = {}
+    for d in sorted(raw, key=lambda d: -d['qv']):
+        g = group_of(d)
+        key = g or d['id']
+        e = merged.setdefault(key, dict(id=key, name=g or d['name'], qv=0, tv=0,
+                                        fav=0, com=0, like=0, _durw=0, members=[]))
+        for k in ('qv', 'tv', 'fav', 'com', 'like'):
+            e[k] += d[k]
+        e['_durw'] += (d['dur'] or 0) * (d['tv'] or 0)
+        e['members'].append(d)
+    dramas = []
+    for e in merged.values():
+        e['dur'] = round(e['_durw'] / e['tv']) if e['tv'] else 0
+        del e['_durw']
+        e['qratio'] = safe_div(e['qv'], e['tv'])
+        e['engage'] = safe_div(e['like'] + e['com'] + e['fav'], e['tv'])
+        e['fav1k'] = safe_div(e['fav'] * 1000, e['tv'])
+        if len(e['members']) == 1:
+            e['members'] = []
+        dramas.append(e)
     dramas.sort(key=lambda d: -d['qv'])
     total_qv = sum(d['qv'] for d in dramas)
     top3_share = safe_div(sum(d['qv'] for d in dramas[:3]), total_qv)
 
-    # ---- Per-drama movers (needs >=2 snapshots) ----
+    # ---- Per-drama movers (needs >=2 snapshots), aggregated by group ----
     movers = []
     if len(snap_dates) >= 2:
         prev_snap = snaps[snap_dates[-2]]
+        agg = {}
         for did, r in latest_snap.items():
             p = prev_snap.get(did)
             if not p:
                 continue
-            movers.append(dict(name=r['name'], d_qv=r['qv'] - p['qv'], d_tv=r['tv'] - p['tv'],
-                               d_like=r['like'] - p['like'], d_fav=r['fav'] - p['fav']))
-        movers.sort(key=lambda m: -m['d_qv'])
+            g = member2group.get(did) or member2group.get(str(r['name'])) or r['name']
+            e = agg.setdefault(g, dict(name=g, d_qv=0, d_tv=0, d_like=0, d_fav=0))
+            e['d_qv'] += r['qv'] - p['qv']
+            e['d_tv'] += r['tv'] - p['tv']
+            e['d_like'] += r['like'] - p['like']
+            e['d_fav'] += r['fav'] - p['fav']
+        movers = sorted(agg.values(), key=lambda m: -m['d_qv'])
 
     # ---- Auto insights (senior-BI voice) ----
     ins = []
