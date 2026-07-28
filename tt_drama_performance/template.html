@@ -6,49 +6,34 @@
 <title>TikTok 短剧数据日报</title>
 <style>
 :root {
-  color-scheme: light;
-  --page: #f9f9f7; --surface: #fcfcfb;
-  --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
-  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.10);
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
-  --up: #006300; --down: #d03b3b;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --page: #0d0d0d; --surface: #1a1a19;
-    --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
-    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
-    --up: #0ca30c; --down: #e66767;
-  }
-}
-:root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #0d0d0d; --surface: #1a1a19;
-  --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
-  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
-  --up: #0ca30c; --down: #e66767;
+  --page: #0a0806; --surface: #14100a; --surface2: #1c1710;
+  --ink: #f2ead8; --ink2: #b3a78e; --muted: #7d745f;
+  --grid: #2a251c; --axis: #3a3428; --border: rgba(216,178,92,.16);
+  --gold: #d8b25c; --gold-dim: #a98a44;
+  --s1: #3987e5; --s2: #c98500; --s3: #199e70;
+  --up: #3fae63; --down: #e66767;
+  --serif: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 * { box-sizing: border-box; margin: 0; }
-body { background: var(--page); color: var(--ink); font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px 16px 64px; }
+body { background: var(--page); color: var(--ink); font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 28px 16px 64px; }
 .wrap { max-width: 1080px; margin: 0 auto; }
-h1 { font-size: 22px; }
-.meta { color: var(--muted); font-size: 12px; margin: 4px 0 20px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
-.card h2 { font-size: 15px; margin-bottom: 12px; }
+.kicker { color: var(--gold-dim); font-size: 11px; letter-spacing: .28em; text-transform: uppercase; margin-bottom: 6px; }
+h1 { font-family: var(--serif); font-size: 30px; font-weight: 500; letter-spacing: .01em; }
+.meta { color: var(--muted); font-size: 12px; letter-spacing: .06em; margin: 8px 0 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; }
+.card h2 { color: var(--gold); font-size: 12px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; margin-bottom: 14px; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
-.kpi .lab { color: var(--ink2); font-size: 12px; }
-.kpi .val { font-size: 24px; font-weight: 650; margin: 2px 0; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.kpi .lab { color: var(--ink2); font-size: 12px; letter-spacing: .04em; }
+.kpi .val { font-family: var(--serif); font-size: 26px; font-weight: 550; margin: 3px 0; color: var(--ink); }
 .kpi .sub { font-size: 12px; color: var(--muted); }
 .delta-up { color: var(--up); } .delta-down { color: var(--down); }
 ul.insights { padding-left: 20px; }
 ul.insights li { margin: 6px 0; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
-th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
-th { color: var(--ink2); font-weight: 550; }
+th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+th { color: var(--gold-dim); font-weight: 600; font-size: 11px; letter-spacing: .08em; }
 th:first-child, td:first-child { text-align: left; }
 .tbl-scroll { overflow-x: auto; }
 details { margin-top: 8px; }
@@ -58,16 +43,17 @@ summary { color: var(--muted); font-size: 12px; cursor: pointer; }
 .chart { position: relative; }
 svg text { fill: var(--muted); font-size: 11px; font-family: inherit; }
 svg .dl { fill: var(--ink2); font-size: 11px; font-weight: 600; }
-#tip { position: fixed; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.15);
+#tip { position: fixed; pointer-events: none; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5);
   display: none; z-index: 9; min-width: 140px; }
 #tip .d { color: var(--muted); margin-bottom: 3px; }
 #tip .row { display: flex; justify-content: space-between; gap: 12px; }
-.foot { color: var(--muted); font-size: 12px; margin-top: 24px; }
+.foot { color: var(--muted); font-size: 11px; letter-spacing: .05em; margin-top: 28px; }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="kicker">Analytics · Daily Report</div>
   <h1>TikTok 短剧数据日报</h1>
   <div class="meta" id="meta"></div>
 
@@ -233,7 +219,7 @@ if (DATA.wow.length) {
     const bw = Math.max(2, (W - P.l - P.r) * d.qv / max), by = P.t + i * rowH + 6, bh = rowH - 12;
     const name = String(d.name).length > 18 ? String(d.name).slice(0, 17) + '…' : d.name;
     g += `<text x="${P.l-8}" y="${by+bh/2+4}" text-anchor="end">${esc(name)}</text>`;
-    g += `<path d="M${P.l},${by} h${bw-4} a4,4 0 0 1 4,4 v${bh-8} a4,4 0 0 1 -4,4 h-${bw-4} z" fill="var(--s1)" data-i="${i}"/>`;
+    g += `<path d="M${P.l},${by} h${bw-4} a4,4 0 0 1 4,4 v${bh-8} a4,4 0 0 1 -4,4 h-${bw-4} z" fill="var(--s2)" data-i="${i}"/>`;
     g += `<text class="dl" x="${P.l+bw+6}" y="${by+bh/2+4}">${fmtN(d.qv)}</text>`;
   });
   g += '</svg>';
