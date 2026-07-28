@@ -11,8 +11,14 @@
 1. **导出剧目快照 xlsx**
    - 用浏览器工具打开 `https://www.tiktokdramacenter.com/analytics/content-performance`，等待加载完成。
    - 截图确认页面正常，找到 "Drama Details" 卡片右上角的 **Export Data** 按钮并点击（无需改日期范围——导出内容是全量累计快照，与日期范围无关，已验证）。
-   - 文件会下载到 `~/Downloads/content_performance_YYYY-MM-DD*.xlsx`（YYYY-MM-DD 为当天日期，重复下载会带 `(n)` 后缀）。
-   - 把**最新**的那个文件复制为 `data/content_performance_<当天日期>.xlsx`（覆盖同名文件即可）。
+   - 文件名为 `content_performance_YYYY-MM-DD*.xlsx`（YYYY-MM-DD 为当天日期，重复下载会带 `(n)` 后缀），
+     落在浏览器的下载目录：本机浏览器为 `~/Downloads`；
+     若在 WSL 里通过 CDP 驱动 Windows Chrome，则为 `/mnt/c/Users/<Windows用户名>/Downloads`；
+     自动化浏览器（如 Playwright）则为其配置的下载目录。
+   - 把**修改时间最新**的那个文件复制为 `data/content_performance_<当天日期>.xlsx`（覆盖同名文件即可）。
+
+   > 首次在新机器上跑：需要先在所用浏览器里人工登录一次 tiktokdramacenter.com，
+   > 之后登录态保存在浏览器 profile 里即可长期复用。
 
 2. **抓取每日趋势数据（React 状态）**
    - 在同一页面用 javascript_tool 执行 `scripts/extract_daily.js` 的完整内容。
