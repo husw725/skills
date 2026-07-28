@@ -15,8 +15,7 @@ echo [2/5] Creating venv + installing dependencies...
 python -m venv .venv || (echo venv failed & pause & exit /b 1)
 .venv\Scripts\python -m pip install --quiet --upgrade pip
 .venv\Scripts\pip install --quiet playwright openpyxl || (echo pip install failed & pause & exit /b 1)
-rem Uses your installed Google Chrome (browser_channel=chrome); the download below is only a fallback and may fail safely.
-.venv\Scripts\playwright install chromium 2>nul || echo NOTE: chromium download skipped - will use system Chrome.
+rem No browser download: uses your installed Google Chrome (browser_channel=chrome in config.json).
 
 if not exist config.json (
   copy config.example.json config.json >nul

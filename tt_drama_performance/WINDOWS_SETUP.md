@@ -50,5 +50,6 @@ schtasks /create /f /tn "TTDramaDaily" /tr "\"<仓库完整路径>\tt_drama_perf
 | 退出码 3 / 导出失败 | 页面按钮可能改版，打开页面人工确认 Export Data 按钮还在 |
 | 趋势数据提取警告 | 页面前端结构变了，xlsx 快照仍正常，找维护者更新 EXTRACT_JS |
 | git push 失败 | 本机跑一次 `git push` 按提示配置凭证 |
+| 系统没装 Chrome / 启动失败 | 手动跑 `.venv\Scripts\playwright install chromium` 下载自带浏览器（程序会自动回退用它） |
 
 任务默认带浏览器窗口运行（更稳，闪一下就关）。确认稳定后可把 bat 里命令加 `--headless`。
