@@ -163,7 +163,11 @@ def build():
 
     # ---- Per-drama movers (needs >=2 snapshots), aggregated by group ----
     movers = []
+    mover_span = None
     if len(snap_dates) >= 2:
+        d0 = datetime.strptime(snap_dates[-2], '%Y-%m-%d')
+        d1 = datetime.strptime(snap_dates[-1], '%Y-%m-%d')
+        mover_span = dict(frm=snap_dates[-2], to=snap_dates[-1], days=(d1 - d0).days)
         prev_snap = snaps[snap_dates[-2]]
         agg = {}
         for did, r in latest_snap.items():
@@ -210,6 +214,7 @@ def build():
         generated=datetime.now().strftime('%Y-%m-%d %H:%M'),
         dataThrough=daily[-1]['date'], snapDate=snap_dates[-1],
         daily=daily, kpis=kpis, wow=wow_rows, dramas=dramas, movers=movers[:10],
+        moverSpan=mover_span,
         insights=ins, top3Share=top3_share,
     )
 

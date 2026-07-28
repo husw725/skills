@@ -93,7 +93,7 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
   </div>
 
   <div class="card" id="moversCard" style="display:none">
-    <h2>剧目单日增长榜（最新快照日增量）</h2>
+    <h2 id="moversTitle">剧目增长榜</h2>
     <div class="tbl-scroll" id="movers"></div>
   </div>
 
@@ -250,6 +250,10 @@ if (DATA.wow.length) {
 /* movers */
 if (DATA.movers.length) {
   document.getElementById('moversCard').style.display = '';
+  const sp = DATA.moverSpan;
+  document.getElementById('moversTitle').textContent = sp && sp.days > 1
+    ? `剧目增长榜（${sp.frm} ~ ${sp.to} 共${sp.days}天合计，期间有缺采）`
+    : `剧目单日增长榜（${sp ? sp.to : ''}）`;
   document.getElementById('movers').innerHTML =
     '<table><tr><th>剧目</th><th>合格播放 +</th><th>总播放 +</th><th>点赞 +</th><th>收藏 +</th></tr>' +
     DATA.movers.map(m => `<tr><td>${esc(m.name)}</td><td>${fmtN(m.d_qv)}</td><td>${fmtN(m.d_tv)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`).join('') + '</table>';
