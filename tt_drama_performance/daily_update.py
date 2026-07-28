@@ -74,7 +74,12 @@ def logged_in(page, timeout=20000):
 
 def do_login(p):
     ctx, page = open_page(p, headless=False)
-    log('请在打开的浏览器窗口中完成登录（最多等 5 分钟）…')
+    log('正在检测登录状态…')
+    if logged_in(page, timeout=15000):
+        log('当前已是登录状态，无需操作。')
+        ctx.close()
+        return 0
+    log('未登录：请在打开的浏览器窗口中完成登录（最多等 5 分钟）…')
     if logged_in(page, timeout=300000):
         log('登录成功，登录态已保存到 browser_profile/，以后无需再登录。')
         ctx.close()
