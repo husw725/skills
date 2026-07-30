@@ -230,9 +230,8 @@ def build():
         prev_snap, cur_snap = snaps[snap_dates[i - 1]], snaps[snap_dates[i]]
         agg = {}
         for did, r in cur_snap.items():
-            p = prev_snap.get(did)
-            if not p:
-                continue
+            # 新上的剧在前一份快照里没有记录：基线记 0，首日增量=首日累计，榜上标"新"
+            p = prev_snap.get(did) or dict(qv=0, tv=0, like=0, fav=0)
             g = member2group.get(did) or member2group.get(str(r['name'])) or r['name']
             e = agg.setdefault(g, dict(name=g, d_qv=0, d_tv=0, d_like=0, d_fav=0, tv0=0, tv1=0))
             e['d_qv'] += r['qv'] - p['qv']
