@@ -234,11 +234,13 @@ def build():
             if not p:
                 continue
             g = member2group.get(did) or member2group.get(str(r['name'])) or r['name']
-            e = agg.setdefault(g, dict(name=g, d_qv=0, d_tv=0, d_like=0, d_fav=0))
+            e = agg.setdefault(g, dict(name=g, d_qv=0, d_tv=0, d_like=0, d_fav=0, tv0=0, tv1=0))
             e['d_qv'] += r['qv'] - p['qv']
             e['d_tv'] += r['tv'] - p['tv']
             e['d_like'] += r['like'] - p['like']
             e['d_fav'] += r['fav'] - p['fav']
+            e['tv0'] += p['tv']   # 起始累计总播放（涨幅分母）
+            e['tv1'] += r['tv']   # 期末累计总播放
         movers_series.append(dict(
             frm=snap_dates[i - 1], to=snap_dates[i], days=(d1 - d0).days,
             rows=sorted(agg.values(), key=lambda m: -m['d_qv'])[:10]))
