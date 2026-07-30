@@ -31,7 +31,8 @@ echo [4/5] First full run ^(export + report + git push^)...
 if errorlevel 1 echo WARNING: first run had errors ^(see messages above^). Task will still be scheduled; fix and test with run_daily.bat.
 
 echo [5/5] Creating daily task at 15:00...
-schtasks /create /f /tn "TTDramaDaily" /tr "\"%~dp0run_daily.bat\"" /sc daily /st 15:00
+rem 3 runs/day, 8h apart (07:00 15:00 23:00) - platform refresh time is irregular
+schtasks /create /f /tn "TTDramaDaily" /tr "\"%~dp0run_daily.bat\"" /sc daily /st 07:00 /ri 480 /du 16:01
 if errorlevel 1 (echo schtasks failed - open PowerShell as Administrator and re-run install.bat & pause & exit /b 3)
 rem If the PC was off at 15:00, run the missed task on next boot
 powershell -NoProfile -Command "Set-ScheduledTask -TaskName TTDramaDaily -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)" >nul 2>&1
