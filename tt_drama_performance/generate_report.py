@@ -47,6 +47,14 @@ def load_snapshots():
             rows[str(r[0])] = dict(name=r[1], qv=r[2] or 0, tv=r[3] or 0, dur=r[4] or 0,
                                    fav=r[5] or 0, com=r[6] or 0, like=r[7] or 0)
         snaps[m.group(1)] = rows
+    # 平台数据滞后且偶尔跳更：内容完全相同的相邻快照是同一批数据，只留最早那份，
+    # 避免增长榜出现全 0 的假日期档位。
+    prev = None
+    for d in sorted(snaps):
+        if snaps[d] == prev:
+            del snaps[d]
+        else:
+            prev = snaps[d]
     return snaps
 
 

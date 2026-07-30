@@ -10,7 +10,7 @@
 退出码: 0 成功 / 2 登录态失效（需重跑 --login）/ 3 导出失败 / 4 其他错误
 依赖: pip install playwright openpyxl && playwright install chromium
 """
-import argparse, datetime, json, os, subprocess, sys, time
+import argparse, datetime, json, os, re, subprocess, sys, time
 
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
@@ -153,6 +153,18 @@ def sync_pages_repo(today):
     log('分享页(tt-drama-report)已同步。')
 
 
+def data_date(page):
+    """页面顶部官方标注 'data updated to YYYY-MM-DD' = 本次导出数据的真实截止日。
+    平台数据滞后 2~3 天且偶尔跳更，快照必须按数据日期归档，不能按导出日期。"""
+    try:
+        m = re.search(r'data updated to (\d{4}-\d{2}-\d{2})', page.inner_text('body'))
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+    return None
+
+
 def run(push, headless):
     today = datetime.date.today().isoformat()
     os.makedirs(DATA, exist_ok=True)
@@ -165,8 +177,18 @@ def run(push, headless):
                        '请到 Windows 机器上双击 login.bat 重新登录一次即可恢复。')
                 return 2
 
+            dd = data_date(page)
+            if not dd:
+                log('警告：页面上没找到 "data updated to" 标注，退回用导出日期命名。')
+                dd = today
+            elif os.path.exists(os.path.join(DATA, f'content_performance_{dd}.xlsx')):
+                log(f'平台数据未刷新（仍截止 {dd}，快照已存在），本次跳过。')
+                return 0
+            else:
+                log(f'平台数据截止日: {dd}')
+
             # 1) 导出 xlsx（直接接住下载，不经过下载目录）
-            xlsx = os.path.join(DATA, f'content_performance_{today}.xlsx')
+            xlsx = os.path.join(DATA, f'content_performance_{dd}.xlsx')
             try:
                 with page.expect_download(timeout=30000) as dl:
                     page.get_by_text('Export Data').first.click()
@@ -185,7 +207,7 @@ def run(push, headless):
             if not daily:
                 log('警告：未能从页面状态提取每日趋势（页面结构可能变了），跳过该数据源。')
             else:
-                jf = os.path.join(DATA, f'daily_stats_{today}.json')
+                jf = os.path.join(DATA, f'daily_stats_{dd}.json')
                 json.dump({'daily': daily}, open(jf, 'w'), ensure_ascii=False, indent=1)
                 log(f'趋势数据 {len(daily)} 天 -> {os.path.basename(jf)}'
                     f'（{daily[0]["eventDate"]} ~ {daily[-1]["eventDate"]}）')
@@ -198,14 +220,15 @@ def run(push, headless):
     print(r.stdout, r.stderr)
     if r.returncode != 0:
         return 4
-    # 数据校验：报告必须包含今天的快照日期
-    if today not in open(os.path.join(BASE, 'report.html'), encoding='utf-8').read():
-        log('警告：report.html 中未找到今天的快照日期。')
+    # 数据校验：报告必须包含本次快照的数据日期
+    if dd not in open(os.path.join(BASE, 'report.html'), encoding='utf-8').read():
+        log(f'警告：report.html 中未找到本次数据日期 {dd}。')
 
-    # 4) 可选推送
+    # 4) 可选推送（先 pull --rebase，避免和别的机器互相顶掉）
     if push:
-        for cmd in (['git', 'add', 'data', 'report.html'],
-                    ['git', 'commit', '-m', f'data: daily update {today}'],
+        for cmd in (['git', 'pull', '--rebase', '--autostash'],
+                    ['git', 'add', 'data', 'report.html'],
+                    ['git', 'commit', '-m', f'data: snapshot {dd} (exported {today})'],
                     ['git', 'push']):
             r = subprocess.run(cmd, cwd=BASE, capture_output=True, text=True)
             if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
