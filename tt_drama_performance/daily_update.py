@@ -154,14 +154,18 @@ def sync_pages_repo(today):
 
 
 def data_date(page):
-    """页面顶部官方标注 'data updated to YYYY-MM-DD' = 本次导出数据的真实截止日。
-    平台数据滞后 2~3 天且偶尔跳更，快照必须按数据日期归档，不能按导出日期。"""
-    try:
-        m = re.search(r'data updated to (\d{4}-\d{2}-\d{2})', page.inner_text('body'))
-        if m:
-            return m.group(1)
-    except Exception:
-        pass
+    """页面顶部官方标注 'data updated to YYYY-MM-DD'（中文界面为"数据更新至"）
+    = 本次导出数据的真实截止日。平台数据滞后 2~3 天且偶尔跳更，
+    快照必须按数据日期归档，不能按导出日期。"""
+    for _ in range(3):
+        try:
+            m = re.search(r'(?:data updated to|数据更新至)\s*(\d{4}-\d{2}-\d{2})',
+                          page.inner_text('body'))
+            if m:
+                return m.group(1)
+        except Exception:
+            pass
+        time.sleep(2)
     return None
 
 
@@ -178,8 +182,12 @@ def run(push, headless):
                 return 2
 
             dd = data_date(page)
+            daily = page.evaluate(EXTRACT_JS)
+            if not dd and daily:
+                dd = daily[-1]['eventDate']  # 趋势最后一天=数据截止日，语言无关的兜底
+                log(f'未找到 "data updated to" 标注，用趋势最后一天兜底: {dd}')
             if not dd:
-                log('警告：页面上没找到 "data updated to" 标注，退回用导出日期命名。')
+                log('警告：标注和趋势都没拿到，退回用导出日期命名。')
                 dd = today
             elif os.path.exists(os.path.join(DATA, f'content_performance_{dd}.xlsx')):
                 log(f'平台数据未刷新（仍截止 {dd}，快照已存在），本次跳过。')
@@ -202,8 +210,7 @@ def run(push, headless):
                 return 3
             log(f'快照已保存 {os.path.basename(xlsx)} ({os.path.getsize(xlsx)} bytes)')
 
-            # 2) 抓每日趋势（React 状态，一次拿全量，无需分块）
-            daily = page.evaluate(EXTRACT_JS)
+            # 2) 每日趋势（上面已顺带提取）
             if not daily:
                 log('警告：未能从页面状态提取每日趋势（页面结构可能变了），跳过该数据源。')
             else:
