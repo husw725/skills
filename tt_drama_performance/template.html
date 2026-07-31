@@ -291,7 +291,7 @@ if (MS.length) {
       `<button class="datechip${i === moverSel ? ' on' : ''}" data-i="${i}" title="${x.frm} → ${x.to}">${x.to.slice(5)}${x.days > 1 ? ' *' : ''}</button>`).join('');
     document.getElementById('movers').innerHTML =
       '<table><tr><th>剧目</th><th>合格播放 +</th><th>总播放 +</th><th>涨幅</th><th>累计总播放</th><th>点赞 +</th><th>收藏 +</th></tr>' +
-      s.rows.map(m => `<tr><td>${esc(m.name)}</td><td>${fmtN(m.d_qv)}</td><td>${fmtN(m.d_tv)}</td><td>${
+      s.rows.map(m => `<tr><td>${esc(m.name)}${m.new7 ? ' <span class="badge">新</span>' : ''}</td><td>${fmtN(m.d_qv)}</td><td>${fmtN(m.d_tv)}</td><td>${
         m.tv0 > 0 ? (m.d_tv > 0 ? '+' : '') + (m.d_tv / m.tv0 * 100).toFixed(1) + '%' : '新'
       }</td><td>${fmtN(m.tv1)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`).join('') + '</table>';
     document.querySelectorAll('.datechip').forEach(b =>
