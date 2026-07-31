@@ -185,10 +185,16 @@ def build():
         groups = {}
     member2group = {str(m): g for g, ms in groups.items() for m in ms}
 
+    try:
+        dmeta = json.load(open(os.path.join(DATA, 'drama_meta.json'), encoding='utf-8'))
+    except FileNotFoundError:
+        dmeta = {}
+
     raw = []
     for did, r in latest_snap.items():
         raw.append(dict(
             id=did, name=r['name'], qv=r['qv'], tv=r['tv'], dur=r['dur'],
+            launch=dmeta.get(str(did), {}).get('launch'),
             fav=r['fav'], com=r['com'], like=r['like'],
             qratio=safe_div(r['qv'], r['tv']),
             engage=safe_div(r['like'] + r['com'] + r['fav'], r['tv']),
@@ -212,6 +218,8 @@ def build():
     for e in merged.values():
         e['dur'] = round(e['_durw'] / e['tv']) if e['tv'] else 0
         del e['_durw']
+        # 合并组的上线时间取最新成员的（"最近上新"视角，配合默认按上线排序）
+        e['launch'] = max((m['launch'] for m in e['members'] if m.get('launch')), default=None)
         e['qratio'] = safe_div(e['qv'], e['tv'])
         e['engage'] = safe_div(e['like'] + e['com'] + e['fav'], e['tv'])
         e['fav1k'] = safe_div(e['fav'] * 1000, e['tv'])

@@ -153,6 +153,72 @@ def sync_pages_repo(today):
     log('分享页(tt-drama-report)已同步。')
 
 
+# 从剧目明细表（React 状态）提取合同级元信息：上线时间/集数/版本。表格分页，需配合翻页调用。
+META_JS = """
+() => {
+  const rootEl = [...document.querySelectorAll('*')].find(el => Object.keys(el).some(k => k.startsWith('__reactContainer$')));
+  if (!rootEl) return null;
+  const rootKey = Object.keys(rootEl).find(k => k.startsWith('__reactContainer$'));
+  let queue = [rootEl[rootKey]], seen = new Set(), best = null, n = 0;
+  const isRows = a => Array.isArray(a) && a.length && a[0] && a[0].contractInfo;
+  while (queue.length && n < 60000) {
+    const f = queue.shift(); n++;
+    if (!f || seen.has(f)) continue; seen.add(f);
+    try {
+      for (const c of [f.memoizedProps, f.memoizedState]) {
+        if (!c || typeof c !== 'object') continue;
+        for (const v of [c, ...Object.values(c).filter(x => x && typeof x === 'object')]) {
+          for (const cand of [v, ...(typeof v === 'object' ? Object.values(v) : [])]) {
+            if (isRows(cand) && (!best || cand.length > best.length)) best = cand;
+          }
+        }
+      }
+    } catch (e) {}
+    if (f.child) queue.push(f.child);
+    if (f.sibling) queue.push(f.sibling);
+  }
+  return (best || []).map(r => ({id: r.contractID, title: (r.contractInfo||{}).contractTitle,
+    pub: (r.contractInfo||{}).publishTimeSec, eps: (r.contractInfo||{}).episodeNum,
+    cols: (r.collections||[]).map(c => c.collectionID)}));
+}
+"""
+
+NEXT_PAGE_JS = """
+(n) => {
+  const el = [...document.querySelectorAll('.semi-page-item')].find(e => e.textContent.trim() === String(n));
+  if (!el) return false;
+  el.click();
+  return true;
+}
+"""
+
+
+def collect_meta(page):
+    """翻遍剧目明细表，合并写 data/drama_meta.json（上线日期用 UTC，与平台显示一致）。失败不影响主流程。"""
+    mf = os.path.join(DATA, 'drama_meta.json')
+    try:
+        meta = json.load(open(mf, encoding='utf-8'))
+    except Exception:
+        meta = {}
+    got = 0
+    for pageno in range(2, 12):  # 先抓当前页，再点 2..N
+        rows = page.evaluate(META_JS) or []
+        for r in rows:
+            if not r.get('id') or not r.get('pub'):
+                continue
+            meta[str(r['id'])] = {
+                'title': r['title'], 'pub': int(r['pub']),
+                'launch': datetime.datetime.utcfromtimestamp(int(r['pub'])).date().isoformat(),
+                'episodes': r['eps'], 'collections': r['cols']}
+            got += 1
+        if not page.evaluate(NEXT_PAGE_JS, pageno):
+            break
+        time.sleep(2)
+    if got:
+        json.dump(meta, open(mf, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        log(f'剧目元信息 {got} 条（含上线时间）-> drama_meta.json')
+
+
 def data_date(page):
     """页面顶部官方标注 'data updated to YYYY-MM-DD'（中文界面为"数据更新至"）
     = 本次导出数据的真实截止日。平台数据滞后 2~3 天且偶尔跳更，
@@ -208,7 +274,26 @@ def run(push, headless):
             if os.path.getsize(xlsx) < 1000:
                 log(f'导出文件异常（{os.path.getsize(xlsx)} bytes），中止。')
                 return 3
+            # 平台刷新不是原子的：刚翻到新数据日时导出可能只含一部分剧（实测出现过 22->14）。
+            # 剧目数比上一份快照少 2 部以上视为残缺，丢弃本次，等下一轮定时重试。
+            import glob as _g
+            import openpyxl as _o
+            def _rows(f):
+                return sum(1 for r in _o.load_workbook(f).active.iter_rows(min_row=2, values_only=True) if r[0])
+            prev = sorted(f for f in _g.glob(os.path.join(DATA, 'content_performance_*.xlsx')) if f != xlsx)
+            if prev:
+                n_new, n_prev = _rows(xlsx), _rows(prev[-1])
+                if n_new <= n_prev - 2:
+                    os.remove(xlsx)
+                    log(f'导出疑似残缺（{n_new} 部剧，上一份 {n_prev} 部），已丢弃，下一轮自动重试。')
+                    notify(f'【TikTok短剧日报】{dd} 的导出只有 {n_new} 部剧（上次 {n_prev} 部），'
+                           '平台可能正在刷新中，本次未入库，下一轮定时任务会自动重试。')
+                    return 3
             log(f'快照已保存 {os.path.basename(xlsx)} ({os.path.getsize(xlsx)} bytes)')
+            try:
+                collect_meta(page)
+            except Exception as e:
+                log(f'剧目元信息抓取失败（不影响主流程）: {e}')
 
             # 2) 每日趋势（上面已顺带提取）
             if not daily:
