@@ -57,6 +57,9 @@ svg .dl { fill: var(--ink2); font-size: 11px; font-weight: 600; }
 tr.grp { cursor: pointer; }
 tr.grp:hover td { background: rgba(216,178,92,.05); }
 .arr { color: var(--gold-dim); display: inline-block; width: 12px; }
+tr.cut td { color: var(--gold-dim); font-size: 11px; text-align: center; padding: 4px 8px;
+  border-top: 1px dashed var(--gold-dim); opacity: .8; }
+tr.tail td { background: rgba(216,178,92,.05); opacity: .8; }
 .badge { color: var(--gold-dim); border: 1px solid var(--border); border-radius: 8px;
   font-size: 11px; padding: 0 6px; margin-left: 4px; white-space: nowrap; }
 tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
@@ -290,10 +293,14 @@ if (MS.length) {
     document.getElementById('moverDates').innerHTML = MS.map((x, i) =>
       `<button class="datechip${i === moverSel ? ' on' : ''}" data-i="${i}" title="${x.frm} → ${x.to}">${x.to.slice(5)}${x.days > 1 ? ' *' : ''}</button>`).join('');
     document.getElementById('movers').innerHTML =
-      '<table><tr><th>剧目</th><th>合格播放 +</th><th>总播放 +</th><th>涨幅</th><th>累计总播放</th><th>点赞 +</th><th>收藏 +</th></tr>' +
-      s.rows.map(m => `<tr><td>${esc(m.name)}${m.new7 ? ' <span class="badge">新</span>' : ''}</td><td>${fmtN(m.d_qv)}</td><td>${fmtN(m.d_tv)}</td><td>${
-        m.tv0 > 0 ? (m.d_tv > 0 ? '+' : '') + (m.d_tv / m.tv0 * 100).toFixed(1) + '%' : '新'
-      }</td><td>${fmtN(m.tv1)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`).join('') + '</table>';
+      '<table><tr><th>#</th><th>剧目</th><th>合格播放 +</th><th>总播放 +</th><th>涨幅</th><th>累计总播放</th><th>点赞 +</th><th>收藏 +</th></tr>' +
+      s.rows.map((m, i) => {
+        const tail = i >= 10;   // 榜尾追加的7天内新剧（未进前10）
+        return (tail && i === 10 ? '<tr class="cut"><td colspan="8">以下为上线 7 天内新剧，未进增长前 10，仅供跟踪</td></tr>' : '') +
+          `<tr${tail ? ' class="tail"' : ''}><td>${tail ? '—' : i + 1}</td><td>${esc(m.name)}${m.new7 ? ' <span class="badge">新</span>' : ''}</td><td>${fmtN(m.d_qv)}</td><td>${fmtN(m.d_tv)}</td><td>${
+            m.tv0 > 0 ? (m.d_tv > 0 ? '+' : '') + (m.d_tv / m.tv0 * 100).toFixed(1) + '%' : '新'
+          }</td><td>${fmtN(m.tv1)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`;
+      }).join('') + '</table>';
     document.querySelectorAll('.datechip').forEach(b =>
       b.addEventListener('click', () => { moverSel = +b.dataset.i; renderMovers(); }));
   };
