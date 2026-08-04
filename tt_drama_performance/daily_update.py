@@ -235,6 +235,31 @@ def data_date(page):
     return None
 
 
+def sync_s3(today):
+    """report.html 推到团队 S3 固定 key（config: s3_report_path，相对 aigc/drama/）。
+    覆盖同一 key，外部引用链接保持不变。凭证用 config.json 的 s3_ak/s3_sk
+    或环境变量 S3_UPLOAD_AK/S3_UPLOAD_SK。未配置则跳过，失败不影响主流程。"""
+    rel = CFG.get('s3_report_path', '').strip().strip('/')
+    if not rel:
+        return
+    try:
+        import boto3
+        from botocore.config import Config as BotoConfig
+        ak = CFG.get('s3_ak') or os.environ.get('S3_UPLOAD_AK')
+        sk = CFG.get('s3_sk') or os.environ.get('S3_UPLOAD_SK')
+        kw = {'aws_access_key_id': ak, 'aws_secret_access_key': sk} if ak and sk else {}
+        s3 = boto3.client('s3', region_name='us-east-1',
+                          config=BotoConfig(signature_version='s3v4'), **kw)
+        key = f'aigc/drama/{rel}/report.html'
+        # ContentType 不设会被当附件下载；no-cache 保证每天刷新后立即生效
+        s3.upload_file(os.path.join(BASE, 'report.html'), 'starlitshorts', key,
+                       ExtraArgs={'ContentType': 'text/html; charset=utf-8',
+                                  'CacheControl': 'no-cache'})
+        log(f'S3 已同步 s3://starlitshorts/{key}')
+    except Exception as e:
+        log(f'S3 同步失败（不影响主流程）: {e}')
+
+
 def run(push, headless):
     today = datetime.date.today().isoformat()
     os.makedirs(DATA, exist_ok=True)
@@ -328,6 +353,7 @@ def run(push, headless):
                 return 4
         log('已推送到远端。')
         sync_pages_repo(today)
+        sync_s3(today)
     log('完成。')
     return 0
 

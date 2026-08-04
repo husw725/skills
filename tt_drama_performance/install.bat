@@ -14,7 +14,7 @@ if errorlevel 1 (
 echo [2/5] Creating venv + installing dependencies...
 python -m venv .venv || (echo venv failed & pause & exit /b 1)
 .venv\Scripts\python -m pip install --quiet --upgrade pip
-.venv\Scripts\pip install --quiet playwright openpyxl || (echo pip install failed & pause & exit /b 1)
+.venv\Scripts\pip install --quiet playwright openpyxl boto3 || (echo pip install failed & pause & exit /b 1)
 rem No browser download: uses your installed Google Chrome (browser_channel=chrome in config.json).
 
 if not exist config.json (
