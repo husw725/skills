@@ -120,6 +120,7 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
     <h2 style="display:flex;align-items:center;gap:12px">单剧每日增长趋势
       <select id="dtrendSel"></select></h2>
     <div class="chart" id="dtrend"></div>
+    <div id="dtrendNote" style="font-size:11px;color:var(--gold-dim);margin-top:6px"></div>
   </div>
 
   <div class="card">
@@ -327,11 +328,17 @@ if (Object.keys(DT).length) {
   sel.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
   const drawTrend = () => {
     const pts = (DT[sel.value] || []).slice(-30);   // 只展示最近30天
+    // 平台跳更导致的多天合并区间：画日均值，避免图上出现虚假尖峰；下方标注说明
+    const avg = p => p.days > 1 ? 1 / p.days : 1;
     lineChart(document.getElementById('dtrend'),
       pts.map(p => p.d),
-      [{name: '总播放 +', color: 'var(--s1)', values: pts.map(p => p.tv)},
-       {name: '合格播放 +', color: 'var(--s2)', values: pts.map(p => p.qv)}],
+      [{name: '总播放 +', color: 'var(--s1)', values: pts.map(p => Math.round(p.tv * avg(p)))},
+       {name: '合格播放 +', color: 'var(--s2)', values: pts.map(p => Math.round(p.qv * avg(p)))}],
       v => fmtN(v));
+    const gaps = pts.filter(p => p.days > 1);
+    document.getElementById('dtrendNote').textContent = gaps.length
+      ? `注：${gaps.map(p => `${p.d.slice(5)}（含前${p.days}天）`).join('、')} 为平台跳更合并区间，图中取日均值`
+      : '';
   };
   sel.addEventListener('change', drawTrend);
   drawTrend();
