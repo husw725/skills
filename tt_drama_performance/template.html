@@ -57,6 +57,10 @@ svg .dl { fill: var(--ink2); font-size: 11px; font-weight: 600; }
 tr.grp { cursor: pointer; }
 tr.grp:hover td { background: rgba(216,178,92,.05); }
 .arr { color: var(--gold-dim); display: inline-block; width: 12px; }
+#dtrendSel { background: var(--page); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 10px; font-size: 13px; font-family: inherit;
+  letter-spacing: normal; text-transform: none; }
+#dtrendSel:focus { outline: none; border-color: var(--gold-dim); }
 tr.cut td { color: var(--gold-dim); font-size: 11px; text-align: center; padding: 4px 8px;
   border-top: 1px dashed var(--gold-dim); opacity: .8; }
 tr.tail td { background: rgba(216,178,92,.05); opacity: .8; }
@@ -110,6 +114,12 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
     <h2 id="moversTitle">剧目增长榜</h2>
     <div class="datebar" id="moverDates"></div>
     <div class="tbl-scroll" id="movers"></div>
+  </div>
+
+  <div class="card" id="dtrendCard" style="display:none">
+    <h2 style="display:flex;align-items:center;gap:12px">单剧每日增长趋势
+      <select id="dtrendSel"></select></h2>
+    <div class="chart" id="dtrend"></div>
   </div>
 
   <div class="card">
@@ -305,6 +315,26 @@ if (MS.length) {
       b.addEventListener('click', () => { moverSel = +b.dataset.i; renderMovers(); }));
   };
   renderMovers();
+}
+
+/* per-drama daily growth trend: one drama at a time, dropdown to switch */
+const DT = DATA.dramaTrends || {};
+if (Object.keys(DT).length) {
+  document.getElementById('dtrendCard').style.display = '';
+  const sel = document.getElementById('dtrendSel');
+  // 下拉顺序 = 累计合格播放降序（与 Top10 柱图一致），确保都有趋势数据
+  const names = DATA.dramas.map(d => d.name).filter(n => DT[n] && DT[n].length);
+  sel.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  const drawTrend = () => {
+    const pts = DT[sel.value] || [];
+    lineChart(document.getElementById('dtrend'),
+      pts.map(p => p.d),
+      [{name: '总播放 +', color: 'var(--s1)', values: pts.map(p => p.tv)},
+       {name: '合格播放 +', color: 'var(--s2)', values: pts.map(p => p.qv)}],
+      v => fmtN(v));
+  };
+  sel.addEventListener('change', drawTrend);
+  drawTrend();
 }
 
 /* full drama table: sortable headers, default = launch date desc; grouped rows expand */

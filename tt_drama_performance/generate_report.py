@@ -232,6 +232,7 @@ def build():
 
     # ---- Per-drama movers: one entry per consecutive snapshot pair ----
     movers_series = []
+    drama_trends = {}   # 组名 -> [{d, qv, tv, days}]，单剧趋势图数据源
     for i in range(1, len(snap_dates)):
         d0 = datetime.strptime(snap_dates[i - 1], '%Y-%m-%d')
         d1 = datetime.strptime(snap_dates[i], '%Y-%m-%d')
@@ -251,6 +252,9 @@ def build():
             e['d_fav'] += r['fav'] - p['fav']
             e['tv0'] += p['tv']   # 起始累计总播放（涨幅分母）
             e['tv1'] += r['tv']   # 期末累计总播放
+        for m in agg.values():
+            drama_trends.setdefault(m['name'], []).append(
+                dict(d=snap_dates[i], qv=m['d_qv'], tv=m['d_tv'], days=(d1 - d0).days))
         ranked = sorted(agg.values(), key=lambda m: -m['d_qv'])
         cutoff = (d1 - timedelta(days=7)).date().isoformat()
         for m in ranked:
@@ -292,7 +296,7 @@ def build():
         generated=datetime.now().strftime('%Y-%m-%d %H:%M'),
         dataThrough=daily[-1]['date'], snapDate=snap_dates[-1],
         daily=daily, kpis=kpis, wow=wow_rows, wowPeriods=wow_periods, dramas=dramas,
-        moversSeries=movers_series,
+        moversSeries=movers_series, dramaTrends=drama_trends,
         insights=ins, top3Share=top3_share,
     )
     payload['aiInsights'] = ai_insights(payload)
