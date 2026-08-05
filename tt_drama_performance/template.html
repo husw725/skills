@@ -326,7 +326,7 @@ if (Object.keys(DT).length) {
   const names = DATA.dramas.map(d => d.name).filter(n => DT[n] && DT[n].length);
   sel.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
   const drawTrend = () => {
-    const pts = DT[sel.value] || [];
+    const pts = (DT[sel.value] || []).slice(-30);   // 只展示最近30天
     lineChart(document.getElementById('dtrend'),
       pts.map(p => p.d),
       [{name: '总播放 +', color: 'var(--s1)', values: pts.map(p => p.tv)},
