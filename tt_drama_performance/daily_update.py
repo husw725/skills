@@ -341,8 +341,10 @@ def run(push, headless):
     if dd not in open(os.path.join(BASE, 'report.html'), encoding='utf-8').read():
         log(f'警告：report.html 中未找到本次数据日期 {dd}。')
 
-    # 4) 可选推送（先 pull --rebase，避免和别的机器互相顶掉）
+    # 4) 分发。S3 优先（业务系统的消费口），git/分享页其次——三路互不阻塞，
+    #    GitHub 偶发连不上时 S3 照常更新。
     if push:
+        sync_s3(dd)
         for cmd in (['git', 'pull', '--rebase', '--autostash'],
                     ['git', 'add', 'data', 'report.html'],
                     ['git', 'commit', '-m', f'data: snapshot {dd} (exported {today})'],
@@ -350,12 +352,12 @@ def run(push, headless):
             r = subprocess.run(cmd, cwd=BASE, capture_output=True, text=True)
             if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
                 log(f'git 失败: {" ".join(cmd)}\n{r.stderr.strip()}')
-                notify(f'【TikTok短剧日报】{dd} 数据已采集并在本地生成报告，但 git 推送失败'
-                       f'（{cmd[1]}），线上报告未更新，请检查 daily_update.log。')
+                notify(f'【TikTok短剧日报】{dd} 数据已采集（S3 分发不受影响，结果见日志）；'
+                       f'但 git 推送失败（{cmd[1]}），GitHub 报告和数据备份未更新，'
+                       '下次采到新数据时会一并补推，持续失败请检查 daily_update.log。')
                 return 4
         log('已推送到远端。')
         sync_pages_repo(today)
-        sync_s3(today)
     log('完成。')
     return 0
 
