@@ -350,6 +350,8 @@ def run(push, headless):
             r = subprocess.run(cmd, cwd=BASE, capture_output=True, text=True)
             if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
                 log(f'git 失败: {" ".join(cmd)}\n{r.stderr.strip()}')
+                notify(f'【TikTok短剧日报】{dd} 数据已采集并在本地生成报告，但 git 推送失败'
+                       f'（{cmd[1]}），线上报告未更新，请检查 daily_update.log。')
                 return 4
         log('已推送到远端。')
         sync_pages_repo(today)
