@@ -303,17 +303,23 @@ def run(push, headless):
             # 剧目数比上一份快照少 2 部以上视为残缺，丢弃本次，等下一轮定时重试。
             import glob as _g
             import openpyxl as _o
-            def _rows(f):
-                return sum(1 for r in _o.load_workbook(f).active.iter_rows(min_row=2, values_only=True) if r[0])
+            def _vals(f):
+                return sorted(tuple(r) for r in _o.load_workbook(f).active.iter_rows(min_row=2, values_only=True) if r[0])
             prev = sorted(f for f in _g.glob(os.path.join(DATA, 'content_performance_*.xlsx')) if f != xlsx)
             if prev:
-                n_new, n_prev = _rows(xlsx), _rows(prev[-1])
-                if n_new <= n_prev - 2:
+                new_v, prev_v = _vals(xlsx), _vals(prev[-1])
+                if len(new_v) <= len(prev_v) - 2:
                     os.remove(xlsx)
-                    log(f'导出疑似残缺（{n_new} 部剧，上一份 {n_prev} 部），已丢弃，下一轮自动重试。')
-                    notify(f'【TikTok短剧日报】{dd} 的导出只有 {n_new} 部剧（上次 {n_prev} 部），'
+                    log(f'导出疑似残缺（{len(new_v)} 部剧，上一份 {len(prev_v)} 部），已丢弃，下一轮自动重试。')
+                    notify(f'【TikTok短剧日报】{dd} 的导出只有 {len(new_v)} 部剧（上次 {len(prev_v)} 部），'
                            '平台可能正在刷新中，本次未入库，下一轮定时任务会自动重试。')
                     return 3
+                if new_v == prev_v:
+                    # 平台"数据更新至"标注先行、剧目数据未刷：内容与上一份逐行相同，
+                    # 不能占用新数据日期的文件名，否则真数据来了会被跳过逻辑挡住。
+                    os.remove(xlsx)
+                    log(f'平台标注已到 {dd}，但剧目数据与上一份快照完全相同（尚未真正刷新），本次不入库。')
+                    return 0
             log(f'快照已保存 {os.path.basename(xlsx)} ({os.path.getsize(xlsx)} bytes)')
             try:
                 collect_meta(page)
