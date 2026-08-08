@@ -208,7 +208,7 @@ def collect_meta(page):
                 continue
             meta[str(r['id'])] = {
                 'title': r['title'], 'pub': int(r['pub']),
-                'launch': datetime.datetime.utcfromtimestamp(int(r['pub'])).date().isoformat(),
+                'launch': datetime.datetime.fromtimestamp(int(r['pub']), datetime.timezone.utc).date().isoformat(),
                 'episodes': r['eps'], 'collections': r['cols']}
             got += 1
         if not page.evaluate(NEXT_PAGE_JS, pageno):
@@ -320,6 +320,19 @@ def run(push, headless):
                     os.remove(xlsx)
                     log(f'平台标注已到 {dd}，但剧目数据与上一份快照完全相同（尚未真正刷新），本次不入库。')
                     return 0
+                # 对账守卫：快照差值总和应≈官方趋势区间和（历史实测偏差<0.5%）。
+                # 偏差过大=平台只刷了部分剧目行（混合日期快照），入库但告警提醒复核。
+                if daily:
+                    tm = {r['eventDate']: int(r['metrics'].get('vv', 0)) for r in daily}
+                    prev_dd = re.search(r'(\d{4}-\d{2}-\d{2})', os.path.basename(prev[-1])).group(1)
+                    tsum = sum(v for d, v in tm.items() if prev_dd < d <= dd)
+                    sdiff = sum((r[3] or 0) for r in new_v) - sum((r[3] or 0) for r in prev_v)
+                    if tsum > 0 and abs(sdiff - tsum) / tsum > 0.05:
+                        dev = abs(sdiff - tsum) / tsum
+                        log(f'对账警告：快照差值 {sdiff:,} vs 趋势区间和 {tsum:,}，偏差 {dev:.1%}')
+                        notify(f'【TikTok短剧日报】{dd} 数据对账偏差 {dev:.0%}'
+                               f'（剧目快照增量 {sdiff:,} vs 官方趋势 {tsum:,}）。'
+                               '可能有部分剧目行未刷新，数据已入库，建议人工复核增长榜。')
             log(f'快照已保存 {os.path.basename(xlsx)} ({os.path.getsize(xlsx)} bytes)')
             try:
                 collect_meta(page)
