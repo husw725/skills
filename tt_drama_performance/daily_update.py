@@ -142,6 +142,11 @@ def sync_pages_repo(today):
         log(f'pages_repo_dir 不是 git 仓库，跳过分享页同步: {d}')
         return
     import shutil
+    # 先 pull：另一台机器可能刚推过，不拉直接推会被 non-fast-forward 拒掉
+    r = subprocess.run(['git', 'pull', '--rebase', '--autostash'],
+                       cwd=d, capture_output=True, text=True)
+    if r.returncode != 0:
+        subprocess.run(['git', 'rebase', '--abort'], cwd=d, capture_output=True)
     shutil.copyfile(os.path.join(BASE, 'report.html'), os.path.join(d, 'index.html'))
     for cmd in (['git', 'add', 'index.html'],
                 ['git', 'commit', '-m', f'daily report {today}'],
@@ -149,6 +154,8 @@ def sync_pages_repo(today):
         r = subprocess.run(cmd, cwd=d, capture_output=True, text=True)
         if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
             log(f'分享页同步失败: {" ".join(cmd)} -> {r.stderr.strip()[:200]}')
+            notify(f'【TikTok短剧日报】分享页(tt-drama-report)同步失败（{cmd[1]}），'
+                   'github.io 短链暂未更新，下次数据更新时自动重试。')
             return
     log('分享页(tt-drama-report)已同步。')
 
@@ -263,6 +270,14 @@ def sync_s3(today):
 def run(push, headless):
     today = datetime.date.today().isoformat()
     os.makedirs(DATA, exist_ok=True)
+    if push:
+        # 先同步远端：另一台机器可能已采过同一数据日，pull 后靠"快照已存在"直接跳过，
+        # 避免两台机器各自持有同名未跟踪文件把 git 通道互相顶死
+        r = subprocess.run(['git', 'pull', '--rebase', '--autostash'],
+                           cwd=BASE, capture_output=True, text=True)
+        if r.returncode != 0:
+            subprocess.run(['git', 'rebase', '--abort'], cwd=BASE, capture_output=True)
+            log(f'预同步 pull 失败（继续本地采集）: {r.stderr.strip()[:200]}')
     with sync_playwright() as p:
         ctx, page = open_page(p, headless)
         try:
@@ -280,11 +295,11 @@ def run(push, headless):
             if not dd:
                 log('警告：标注和趋势都没拿到，退回用导出日期命名。')
                 dd = today
-            elif os.path.exists(os.path.join(DATA, f'content_performance_{dd}.xlsx')):
-                log(f'平台数据未刷新（仍截止 {dd}，快照已存在），本次跳过。')
+            # 兜底路径也必须查重：已存在的快照绝不能被覆盖（否则守卫的 os.remove 可能误删好文件）
+            if os.path.exists(os.path.join(DATA, f'content_performance_{dd}.xlsx')):
+                log(f'{dd} 的快照已存在（平台未刷新或本日已采过），本次跳过。')
                 return 0
-            else:
-                log(f'平台数据截止日: {dd}')
+            log(f'平台数据截止日: {dd}')
 
             # 1) 导出 xlsx（直接接住下载，不经过下载目录）
             xlsx = os.path.join(DATA, f'content_performance_{dd}.xlsx')
@@ -297,7 +312,10 @@ def run(push, headless):
                 notify('【TikTok短剧日报】导出失败（页面可能改版），今日数据未更新，请人工检查。')
                 return 3
             if os.path.getsize(xlsx) < 1000:
-                log(f'导出文件异常（{os.path.getsize(xlsx)} bytes），中止。')
+                size = os.path.getsize(xlsx)
+                os.remove(xlsx)  # 坏文件绝不能占据数据日文件名，否则该数据日被永久堵死
+                log(f'导出文件异常（{size} bytes），已丢弃，下一轮自动重试。')
+                notify(f'【TikTok短剧日报】{dd} 导出文件异常（{size} bytes），本次未入库，下一轮自动重试。')
                 return 3
             # 平台刷新不是原子的：刚翻到新数据日时导出可能只含一部分剧（实测出现过 22->14）。
             # 剧目数比上一份快照少 2 部以上视为残缺，丢弃本次，等下一轮定时重试。
@@ -355,6 +373,8 @@ def run(push, headless):
                        capture_output=True, text=True)
     print(r.stdout, r.stderr)
     if r.returncode != 0:
+        notify(f'【TikTok短剧日报】{dd} 数据已采集但报告生成失败（generate_report.py），'
+               '线上报告未更新，请检查 daily_update.log。')
         return 4
     # 数据校验：报告必须包含本次快照的数据日期
     if dd not in open(os.path.join(BASE, 'report.html'), encoding='utf-8').read():
@@ -370,6 +390,9 @@ def run(push, headless):
                     ['git', 'push']):
             r = subprocess.run(cmd, cwd=BASE, capture_output=True, text=True)
             if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
+                if 'pull' in cmd:
+                    # rebase 冲突时把仓库恢复干净，避免后续每轮都卡在 rebase 中间态
+                    subprocess.run(['git', 'rebase', '--abort'], cwd=BASE, capture_output=True)
                 log(f'git 失败: {" ".join(cmd)}\n{r.stderr.strip()}')
                 notify(f'【TikTok短剧日报】{dd} 数据已采集（S3 分发不受影响，结果见日志）；'
                        f'但 git 推送失败（{cmd[1]}），GitHub 报告和数据备份未更新，'
@@ -390,4 +413,15 @@ if __name__ == '__main__':
     if a.login:
         with sync_playwright() as p:
             sys.exit(do_login(p))
-    sys.exit(run(a.push or CFG['git_push'], a.headless or CFG['headless']))
+    try:
+        sys.exit(run(a.push or CFG['git_push'], a.headless or CFG['headless']))
+    except SystemExit:
+        raise
+    except Exception as e:
+        # 总闸：任何未预期异常（浏览器启动失败、goto 超时、解析崩溃…）都必须告警，
+        # 无人值守的管道里静默失败比失败更糟
+        import traceback
+        traceback.print_exc()
+        notify(f'【TikTok短剧日报】运行异常中止：{e.__class__.__name__}: {str(e)[:150]}。'
+               '今日数据可能未更新，请检查 daily_update.log。')
+        sys.exit(4)
