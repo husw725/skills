@@ -256,10 +256,10 @@ def build():
             drama_trends.setdefault(m['name'], []).append(
                 dict(d=snap_dates[i], qv=m['d_qv'], tv=m['d_tv'], days=(d1 - d0).days))
         ranked = sorted(agg.values(), key=lambda m: -m['d_qv'])
-        cutoff = (d1 - timedelta(days=7)).date().isoformat()
+        cutoff = (d1 - timedelta(days=14)).date().isoformat()
         for m in ranked:
             m['new7'] = bool(m['launch'] and m['launch'] >= cutoff)
-        # 7天内新剧即使没进前10也固定追加在榜尾（带"新"标）
+        # 14天内新剧即使没进前10也固定追加在榜尾（带"新"标）
         rows = ranked[:10] + [m for m in ranked[10:] if m['new7']]
         movers_series.append(dict(
             frm=snap_dates[i - 1], to=snap_dates[i], days=(d1 - d0).days, rows=rows))
