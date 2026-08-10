@@ -2,6 +2,9 @@
 
 TikTok 短剧数据日报（建于 2026-07-28），每日更新流程见 PLAYBOOK.md。
 
+## 工作约定
+- 本仓库每 4 小时有 Windows 定时任务自动推送数据提交。**动手改任何东西之前先 `git pull --rebase --autostash`**，改完立即 commit+push，压缩撞车窗口。report.html 冲突时：取 theirs 完成 rebase → 重新跑 generate_report.py → amend。
+
 ## 关键事实（代码里看不出来的坑）
 
 - 页面 Export Data 导出的 xlsx 是**各剧全量累计快照，与页面日期范围无关**（已用单日范围对比验证，两次导出字节一致）。所以剧目级日增量 = 相邻两天快照做差。
