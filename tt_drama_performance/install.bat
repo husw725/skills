@@ -1,6 +1,6 @@
 @echo off
 rem TikTok Drama Daily Report - one-shot installer
-rem Run once after git clone: installs env, logs in, first run, schedules 3 daily runs (07:00 15:00 23:00).
+rem Run once after git clone: installs env, logs in, first run, schedules 6 daily runs (every 4h).
 chcp 65001 >nul
 cd /d %~dp0
 
@@ -30,14 +30,14 @@ echo [4/5] First full run ^(export + report + git push^)...
 .venv\Scripts\python daily_update.py
 if errorlevel 1 echo WARNING: first run had errors ^(see messages above^). Task will still be scheduled; fix and test with run_daily.bat.
 
-echo [5/5] Creating daily task (07:00 / 15:00 / 23:00)...
-rem 3 runs/day, 8h apart (07:00 15:00 23:00) - platform refresh time is irregular
-schtasks /create /f /tn "TTDramaDaily" /tr "\"%~dp0run_daily.bat\"" /sc daily /st 07:00 /ri 480 /du 16:01
+echo [5/5] Creating daily task (every 4h, 03:00-23:00)...
+rem 6 runs/day, 4h apart (03:00-23:00) - platform refresh time is irregular; no-refresh runs exit in ~30s
+schtasks /create /f /tn "TTDramaDaily" /tr "\"%~dp0run_daily.bat\"" /sc daily /st 03:00 /ri 240 /du 20:01
 if errorlevel 1 (echo schtasks failed - open PowerShell as Administrator and re-run install.bat & pause & exit /b 3)
 rem If the PC was off at 15:00, run the missed task on next boot
 powershell -NoProfile -Command "Set-ScheduledTask -TaskName TTDramaDaily -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)" >nul 2>&1
 
 echo.
-echo DONE. Daily update runs at 07:00, 15:00 and 23:00. Log: daily_update.log
+echo DONE. Daily update runs every 4 hours (03:00-23:00). Log: daily_update.log
 echo Manual test anytime: schtasks /run /tn TTDramaDaily
 pause
