@@ -109,7 +109,11 @@ def ai_insights(payload):
         + json.dumps(digest, ensure_ascii=False, default=str)
     )
     try:
-        r = subprocess.run([exe, '-p', prompt], capture_output=True, text=True, timeout=300)
+        # prompt 走 stdin：Windows 上 claude.cmd 经 cmd.exe 执行，命令行上限 8191 字符，
+        # 几 KB 的数据摘要作参数必超限。显式 utf-8 避免 Windows 默认 GBK 解码失败。
+        # 每日定时批量调用，显式用便宜模型。
+        r = subprocess.run([exe, '-p', '--model', 'sonnet'], input=prompt,
+                           capture_output=True, text=True, encoding='utf-8', timeout=300)
         out = r.stdout.strip()
         items = json.loads(out[out.index('['):out.rindex(']') + 1])
         items = [str(x) for x in items if isinstance(x, str) and x.strip()][:8]
