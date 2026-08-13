@@ -34,8 +34,10 @@ echo [5/5] Creating daily task (every 4h, 03:00-23:00)...
 rem 6 runs/day, 4h apart (03:00-23:00) - platform refresh time is irregular; no-refresh runs exit in ~30s
 schtasks /create /f /tn "TTDramaDaily" /tr "\"%~dp0run_daily.bat\"" /sc daily /st 03:00 /ri 240 /du 20:01
 if errorlevel 1 (echo schtasks failed - open PowerShell as Administrator and re-run install.bat & pause & exit /b 3)
-rem If the PC was off at 15:00, run the missed task on next boot
-powershell -NoProfile -Command "Set-ScheduledTask -TaskName TTDramaDaily -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)" >nul 2>&1
+rem The task runs Interactive (headed Chrome needs a desktop), so slots that fall while nobody is
+rem logged on are skipped outright. Add an at-logon trigger (3 min delay) to catch those up, keep
+rem StartWhenAvailable for PC-was-off slots, and drop the battery restrictions.
+powershell -NoProfile -Command "$t=Get-ScheduledTask -TaskName 'TTDramaDaily'; $l=New-ScheduledTaskTrigger -AtLogOn -User ($env:COMPUTERNAME+'\'+$env:USERNAME); $l.Delay='PT3M'; Set-ScheduledTask -TaskName 'TTDramaDaily' -Trigger (@($t.Triggers)+$l) -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 72))" >nul 2>&1
 
 echo.
 echo DONE. Daily update runs every 4 hours (03:00-23:00). Log: daily_update.log

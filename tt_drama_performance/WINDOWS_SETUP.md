@@ -39,7 +39,10 @@ python -m venv .venv
 .venv\Scripts\playwright install chromium
 .venv\Scripts\python daily_update.py --login   # 弹窗人工登录一次
 .venv\Scripts\python daily_update.py --push    # 验证完整流程
-schtasks /create /f /tn "TTDramaDaily" /tr "\"<仓库完整路径>\tt_drama_performance\run_daily.bat\"" /sc daily /st 15:00
+schtasks /create /f /tn "TTDramaDaily" /tr "\"<仓库完整路径>\tt_drama_performance\run_daily.bat\"" /sc daily /st 03:00 /ri 240 /du 20:01
+# 补一个登录触发器（重启后没登录时会跳过定时点）+ 去掉电池限制
+$t=Get-ScheduledTask -TaskName 'TTDramaDaily'; $l=New-ScheduledTaskTrigger -AtLogOn -User ($env:COMPUTERNAME+'\'+$env:USERNAME); $l.Delay='PT3M'
+Set-ScheduledTask -TaskName 'TTDramaDaily' -Trigger (@($t.Triggers)+$l) -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 72))
 ```
 
 ## 故障排查
@@ -49,6 +52,8 @@ schtasks /create /f /tn "TTDramaDaily" /tr "\"<仓库完整路径>\tt_drama_perf
 | 退出码 2 / 日志提示登录失效 | 重跑 `python daily_update.py --login` |
 | 退出码 3 / 导出失败 | 页面按钮可能改版，打开页面人工确认 Export Data 按钮还在 |
 | 趋势数据提取警告 | 页面前端结构变了，xlsx 快照仍正常，找维护者更新 EXTRACT_JS |
+| 退出码 4 / `git push` 报 `schannel: failed to receive handshake` | 间歇性 TLS 抖动，数据和 S3 已同步完、只差推送；手动 `git pull --rebase --autostash && git push` 即可，下一轮也会自己带上 |
+| 任务 State=Ready 但 LastRunTime 停在昨天、NumberOfMissedRuns>0 | 触发点落在没人登录的时段（任务是 Interactive）。已有 at-logon 触发器补跑；确认它还在：`(Get-ScheduledTask TTDramaDaily).Triggers` |
 | git push 失败 | 本机跑一次 `git push` 按提示配置凭证 |
 | 系统没装 Chrome / 启动失败 | 手动跑 `.venv\Scripts\playwright install chromium` 下载自带浏览器（程序会自动回退用它） |
 
