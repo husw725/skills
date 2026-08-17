@@ -57,10 +57,11 @@ svg .dl { fill: var(--ink2); font-size: 11px; font-weight: 600; }
 tr.grp { cursor: pointer; }
 tr.grp:hover td { background: rgba(216,178,92,.05); }
 .arr { color: var(--gold-dim); display: inline-block; width: 12px; }
-#dtrendSel { background: var(--page); color: var(--ink); border: 1px solid var(--border);
+#dtrendSel, .datesel { background: var(--page); color: var(--ink); border: 1px solid var(--border);
   border-radius: 8px; padding: 4px 10px; font-size: 13px; font-family: inherit;
   letter-spacing: normal; text-transform: none; }
-#dtrendSel:focus { outline: none; border-color: var(--gold-dim); }
+#dtrendSel:focus, .datesel:focus { outline: none; border-color: var(--gold-dim); }
+.datesel.on { color: var(--gold); border-color: var(--gold-dim); font-weight: 600; }
 tr.cut td { color: var(--gold-dim); font-size: 11px; text-align: center; padding: 4px 8px;
   border-top: 1px dashed var(--gold-dim); opacity: .8; }
 tr.tail td { background: rgba(216,178,92,.05); opacity: .8; }
@@ -304,8 +305,21 @@ if (MS.length) {
     document.getElementById('moversTitle').textContent = s.days > 1
       ? `剧目增长榜（${s.frm} ~ ${s.to} 共${s.days}天合计，期间有缺采）`
       : `剧目单日增长榜（${s.to}，对比 ${s.frm} 快照）`;
-    document.getElementById('moverDates').innerHTML = MS.map((x, i) =>
-      `<button class="datechip${i === moverSel ? ' on' : ''}" data-i="${i}" title="${x.frm} → ${x.to}">${x.to.slice(5)}${x.days > 1 ? ' *' : ''}</button>`).join('');
+    // 只铺最近10档 chip，更早的收进下拉，避免日期越攒越多挤爆一行
+    const RECENT = 10, cut = Math.max(0, MS.length - RECENT);
+    const older = MS.slice(0, cut);
+    document.getElementById('moverDates').innerHTML =
+      (older.length ? `<select id="moverOlder" class="datesel${moverSel < cut ? ' on' : ''}">
+         <option value="">更早 (${older.length})…</option>` +
+         older.map((x, i) =>
+           `<option value="${i}"${i === moverSel ? ' selected' : ''}>${x.to}${x.days > 1 ? ' *' : ''}</option>`).join('') +
+         '</select>' : '') +
+      MS.slice(cut).map((x, j) => { const i = cut + j;
+        return `<button class="datechip${i === moverSel ? ' on' : ''}" data-i="${i}" title="${x.frm} → ${x.to}">${x.to.slice(5)}${x.days > 1 ? ' *' : ''}</button>`; }).join('');
+    const olderEl = document.getElementById('moverOlder');
+    if (olderEl) olderEl.addEventListener('change', () => {
+      if (olderEl.value !== '') { moverSel = +olderEl.value; renderMovers(); }
+    });
     document.getElementById('movers').innerHTML =
       '<table><tr><th>#</th><th>剧目</th><th>合格播放 +</th><th>总播放 +</th><th>涨幅</th><th>累计总播放</th><th>点赞 +</th><th>收藏 +</th></tr>' +
       s.rows.map((m, i) => {
