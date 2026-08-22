@@ -339,12 +339,31 @@ def run(push, headless):
                     log(f'平台标注已到 {dd}，但剧目数据与上一份快照完全相同（尚未真正刷新），本次不入库。')
                     return 0
                 # 对账守卫：快照差值总和应≈官方趋势区间和（历史实测偏差<0.5%）。
-                # 偏差过大=平台只刷了部分剧目行（混合日期快照），入库但告警提醒复核。
+                # 必须按"同口径"算——只统计两份快照都在的剧。平台会把存量老剧新纳入统计，
+                # 这类剧首现时带的是全量历史累计（实测 +1,730,722），混进对账会把偏差冲爆
+                # （2026-08-18 那次 148.6%），把"老剧一部都没刷新"这个真问题盖掉。
                 if daily:
                     tm = {r['eventDate']: int(r['metrics'].get('vv', 0)) for r in daily}
                     prev_dd = re.search(r'(\d{4}-\d{2}-\d{2})', os.path.basename(prev[-1])).group(1)
                     tsum = sum(v for d, v in tm.items() if prev_dd < d <= dd)
-                    sdiff = sum((r[3] or 0) for r in new_v) - sum((r[3] or 0) for r in prev_v)
+                    pm = {str(r[0]): r for r in prev_v}
+                    nm = {str(r[0]): r for r in new_v}
+                    added = sorted(set(nm) - set(pm))
+                    sdiff = sum((nm[k][3] or 0) - (pm[k][3] or 0) for k in set(nm) & set(pm))
+                    if added:
+                        log(f'新纳入统计 {len(added)} 部剧（首现带全量累计，不计入对账）: '
+                            + '、'.join(str(nm[k][1]) for k in added))
+                    # 同口径增量远低于官方趋势 = 平台只翻了"数据更新至"标注、剧目行还没刷
+                    # （或只刷了一部分）。这种半刷新快照一旦入库就永久错位：占掉当天的档位，
+                    # 还让下一档把两天的量当成一天。丢弃重试，等平台补齐。
+                    if tsum > 0 and sdiff < tsum * 0.5:
+                        os.remove(xlsx)
+                        log(f'平台标注已到 {dd}，但老剧同口径增量仅 {sdiff:,}（趋势区间和 {tsum:,}），'
+                            '判定为剧目行尚未刷新，本次不入库，下一轮自动重试。')
+                        notify(f'【TikTok短剧日报】{dd} 剧目行疑似未刷新'
+                               f'（同口径增量 {sdiff:,} vs 官方趋势 {tsum:,}）。'
+                               '本次未入库，下一轮定时任务会自动重试。')
+                        return 0
                     if tsum > 0 and abs(sdiff - tsum) / tsum > 0.05:
                         dev = abs(sdiff - tsum) / tsum
                         log(f'对账警告：快照差值 {sdiff:,} vs 趋势区间和 {tsum:,}，偏差 {dev:.1%}')
