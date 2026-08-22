@@ -77,6 +77,10 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
   <h1>TikTok 短剧数据日报</h1>
   <div class="meta" id="meta"></div>
 
+  <div class="card" id="gapCard" style="display:none;border-color:var(--gold-dim)">
+    <h2>数据完整性说明</h2><div id="gapBody" style="font-size:13px;line-height:1.7"></div>
+  </div>
+
   <div class="card"><h2>核心洞察</h2><ul class="insights" id="insights"></ul></div>
 
   <div class="card" id="aiCard" style="display:none">
@@ -153,6 +157,22 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 document.getElementById('meta').textContent =
   `数据截至 ${DATA.dataThrough}（趋势） / ${DATA.snapDate}（剧目快照） · 生成于 ${DATA.generated}`;
 
+/* 缺采声明：平台把相邻日合并下发时，剧目级拿不到单日切分。如实标出来，
+   不摊派、不插值——合计值是准的，单日的就是没有。 */
+if ((DATA.gaps || []).length) {
+  document.getElementById('gapCard').style.display = '';
+  document.getElementById('gapBody').innerHTML =
+    '<div>剧目级数据缺以下日期的<b>单日切分</b>（机构级大盘趋势不受影响，仍是逐日完整的）：</div>'
+    + '<ul style="margin:8px 0 0;padding-left:18px">'
+    + DATA.gaps.map(g => `<li><b>${g.missing.join('、')}</b> —— 平台与 ${g.to} 合并下发，`
+        + `${g.frm} → ${g.to} 共 ${g.days} 天合计 总播放 ${fmtN(g.tv)} / 合格播放 ${fmtN(g.qv)}，`
+        + '这个合计是准的，但拆不到单日</li>').join('')
+    + '</ul><div style="margin-top:8px;color:var(--gold-dim)">'
+    + '增长榜对应档位标 * 并注明"共N天合计"；单剧趋势图在这些日期<b>留空断开</b>。'
+    + '按天数平摊会造出不存在的数字，所以不做。平台导出永远是"当前"全量累计、'
+    + '没有按历史日期回查的入口，这些单日切分是永久取不到的。</div>';
+}
+
 /* insights */
 document.getElementById('insights').innerHTML = DATA.insights.map(i => `<li>${i}</li>`).join('');
 
@@ -174,7 +194,9 @@ function lineChart(el, labels, series, yfmt) {
   const W = Math.min(el.clientWidth || 1040, 1040), H = 260,
         P = {l: 60, r: 74, t: 10, b: 24},
         iw = W - P.l - P.r, ih = H - P.t - P.b;
-  const vals = series.flatMap(s => s.values);
+  // null = 该日无数据（平台合并下发，拿不到单日切分）。绝不插值、绝不摊派：
+  // 刻度和折线都跳过它，图上留出可见断口。
+  const vals = series.flatMap(s => s.values).filter(v => v != null);
   const vmax = Math.max(...vals, 0) * 1.08 || 1;
   const vmin = Math.min(...vals, 0);        // 快照差值可为负（平台下修），刻度须容纳
   const span = vmax - vmin || 1;
@@ -190,10 +212,22 @@ function lineChart(el, labels, series, yfmt) {
   labels.forEach((d, i) => { if (i % step === 0)
     g += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${d.slice(5)}</text>`; });
   series.forEach(s => {
-    g += `<path d="M${s.values.map((v,i)=>`${x(i)},${y(v)}`).join('L')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
-    const li = s.values.length - 1;
-    g += `<circle cx="${x(li)}" cy="${y(s.values[li])}" r="3.5" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
-    g += `<text class="dl" x="${x(li)+7}" y="${y(s.values[li])+4}">${s.name}</text>`;
+    // 遇 null 断线：切成多段各自成 path，缺采处自然留空
+    let seg = [];
+    const flush = () => {
+      if (seg.length > 1)
+        g += `<path d="M${seg.join('L')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+      else if (seg.length === 1)   // 孤立单点（两侧都缺采）否则画不出来
+        g += `<circle cx="${seg[0].split(',')[0]}" cy="${seg[0].split(',')[1]}" r="2.5" fill="${s.color}"/>`;
+      seg = [];
+    };
+    s.values.forEach((v, i) => { if (v == null) flush(); else seg.push(`${x(i)},${y(v)}`); });
+    flush();
+    const li = s.values.reduce((a, v, i) => v == null ? a : i, -1);   // 最后一个有值的点
+    if (li >= 0) {
+      g += `<circle cx="${x(li)}" cy="${y(s.values[li])}" r="3.5" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
+      g += `<text class="dl" x="${x(li)+7}" y="${y(s.values[li])+4}">${s.name}</text>`;
+    }
   });
   g += `<line id="xh" x1="0" y1="${P.t}" x2="0" y2="${P.t+ih}" stroke="var(--axis)" stroke-dasharray="3 3" visibility="hidden"/>`;
   g += `<rect x="${P.l}" y="${P.t}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
@@ -208,7 +242,7 @@ function lineChart(el, labels, series, yfmt) {
     tip.style.left = Math.min(e.clientX + 14, innerWidth - 180) + 'px';
     tip.style.top = (e.clientY + 14) + 'px';
     tip.innerHTML = `<div class="d">${labels[i]}</div>` + series.map(s =>
-      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${yfmt(s.values[i], true)}</b></div>`).join('');
+      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${s.values[i] == null ? '缺采' : yfmt(s.values[i], true)}</b></div>`).join('');
   });
   svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
 }
@@ -343,18 +377,27 @@ if (Object.keys(DT).length) {
   // 下拉顺序 = 累计合格播放降序（与 Top10 柱图一致），确保都有趋势数据
   const names = DATA.dramas.map(d => d.name).filter(n => DT[n] && DT[n].length);
   sel.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  const dshift = (d, k) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + k); return t.toISOString().slice(0, 10); };
   const drawTrend = () => {
     const pts = (DT[sel.value] || []).slice(-30);   // 只展示最近30天
-    // 平台跳更导致的多天合并区间：画日均值，避免图上出现虚假尖峰；下方标注说明
-    const avg = p => p.days > 1 ? 1 / p.days : 1;
-    lineChart(document.getElementById('dtrend'),
-      pts.map(p => p.d),
-      [{name: '总播放 +', color: 'var(--s1)', values: pts.map(p => Math.round(p.tv * avg(p)))},
-       {name: '合格播放 +', color: 'var(--s2)', values: pts.map(p => Math.round(p.qv * avg(p)))}],
+    // 多天合并区间（平台跳更/半刷新）：**不做日均摊派**——把一天的量平摊到两天是凭空造数。
+    // 轴按自然日铺开，合并区间内所有日期一律留空，图上留出可见断口，合计写在下方注里。
+    const axis = [];
+    if (pts.length) {
+      const from = dshift(pts[0].d, -(pts[0].days - 1)), to = pts[pts.length-1].d;
+      for (let d = from; d <= to; d = dshift(d, 1)) axis.push(d);
+    }
+    const val = new Map(pts.filter(p => p.days === 1).map(p => [p.d, p]));
+    lineChart(document.getElementById('dtrend'), axis,
+      [{name: '总播放 +', color: 'var(--s1)', values: axis.map(d => val.has(d) ? val.get(d).tv : null)},
+       {name: '合格播放 +', color: 'var(--s2)', values: axis.map(d => val.has(d) ? val.get(d).qv : null)}],
       v => fmtN(v));
     const gaps = pts.filter(p => p.days > 1);
-    document.getElementById('dtrendNote').textContent = gaps.length
-      ? `注：${gaps.map(p => `${p.d.slice(5)}（含前${p.days}天）`).join('、')} 为平台跳更合并区间，图中取日均值`
+    document.getElementById('dtrendNote').innerHTML = gaps.length
+      ? '缺采：' + gaps.map(p => {
+          const miss = []; for (let k = p.days - 1; k >= 0; k--) miss.push(dshift(p.d, -k).slice(5));
+          return `<b>${miss.join('、')}</b> 平台合并下发，${p.days}天合计 总播放 ${fmtN(p.tv)} / 合格播放 ${fmtN(p.qv)}，无法拆到单日`;
+        }).join('；') + '。图中留空，不做日均摊派。'
       : '';
   };
   sel.addEventListener('change', drawTrend);

@@ -59,6 +59,141 @@ def log(msg):
     print(f"[{datetime.datetime.now():%H:%M:%S}] {msg}", flush=True)
 
 
+# ---- 快照验收台账 --------------------------------------------------------
+# 老逻辑的跳过判定只看"这个数据日的文件在不在"，于是一份半刷新快照一旦入库就被永久
+# 冻住、后续每一轮都跳过（2026-08-18 实测因此漏掉 08-19 的单日切分）。现在每份快照都
+# 必须过对账验收并登记在册，只有"验收通过"的数据日才允许跳过。
+AUDIT = os.path.join(DATA, 'snapshot_audit.json')
+QUAR = os.path.join(DATA, '_quarantine')
+# 反推真实截止日的匹配容差。平台日界切分有漂移，实测最大 ±6.8%（08-09/08-10 两天，
+# 且符号相反、两天合计只差 0.04%，属于量在日界间挪动、不是丢数）。而相邻候选区间之间
+# 相差约一整天的量（≈100%），所以 10% 既容得下漂移又不会把两天认混。
+MATCH_TOL = 0.10
+CLEAN_TOL = 0.03      # 这个偏差内记 ok，超了记 smear（已验收但有日界漂移）
+
+
+def snap_rows(f):
+    """{contract_id: row}。row[1]=剧名 row[2]=合格播放 row[3]=总播放（累计）"""
+    import openpyxl as _o
+    return {str(r[0]): r for r in _o.load_workbook(f).active.iter_rows(min_row=2, values_only=True) if r[0]}
+
+
+def audit_load():
+    try:
+        with open(AUDIT, encoding='utf-8') as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def audit_save(a):
+    with open(AUDIT, 'w', encoding='utf-8') as fh:
+        json.dump(a, fh, ensure_ascii=False, indent=1, sort_keys=True)
+
+
+def same_scope_delta(new_rows, prev_rows):
+    """同口径增量（只算两份快照都在的剧）+ 新增/消失名单。
+
+    必须同口径：平台会把存量老剧新纳入统计，这类剧首现带的是全量历史累计
+    （实测 +1,730,722），混进全行求和会把偏差冲爆（08-18 那次 148.6%），
+    反而盖掉"老剧一部都没刷新"这个真问题。
+    """
+    common = set(new_rows) & set(prev_rows)
+    return (sum((new_rows[k][3] or 0) - (prev_rows[k][3] or 0) for k in common),
+            sorted(set(new_rows) - set(prev_rows)),
+            sorted(set(prev_rows) - set(new_rows)),
+            len(common))
+
+
+def true_cutoff(sdiff, tm, prev_dd, dd):
+    """反推快照的真实截止日：同口径增量 ≈ 官方趋势 (prev_dd, X] 区间和 的那个 X。
+
+    平台会先把"数据更新至"翻到 dd、剧目行晚一天才补（2026-08-18 实测），所以标注日
+    不可信，只有对账反推出来的 X 才是这份快照真正覆盖到的日子。按 X 命名文件，
+    页面上那种"标 1 天、实际装两天"的错位就不会再发生。返回 (X, 区间和, 偏差) 或 None。
+    """
+    run = 0
+    for x in sorted(d for d in tm if prev_dd < d <= dd):
+        run += tm[x]
+        if run > 0 and abs(sdiff - run) / run <= MATCH_TOL:
+            return x, run, (sdiff - run) / run
+    return None
+
+
+def audit_all(write=True):
+    """离线全量复查（不开浏览器）：把每一份已入库快照拿去和官方趋势对账，重建台账。
+
+    用途：①一次性给历史快照补验收记录，避免定时任务把它们全部重新导出一遍；
+    ②随时体检——列出所有对不上的区间和缺采日期。返回 (台账, 问题清单)。
+    """
+    import glob as _g
+    snaps = {}
+    for f in sorted(_g.glob(os.path.join(DATA, 'content_performance_*.xlsx'))):
+        if '.candidate.' in os.path.basename(f):
+            continue
+        snaps[re.search(r'(\d{4}-\d{2}-\d{2})', os.path.basename(f)).group(1)] = f
+    try:
+        hist = json.load(open(os.path.join(DATA, 'daily_history.json'), encoding='utf-8'))
+    except Exception:
+        log('daily_history.json 读不到，无法对账。')
+        return {}, []
+    tm = {k: int(v.get('vv', 0)) for k, v in hist.items()}
+    ds = sorted(snaps)
+    au, problems = audit_load(), []
+    log(f'全量复查：{len(ds)} 份快照 {ds[0]} ~ {ds[-1]}，趋势覆盖 {min(tm)} ~ {max(tm)}')
+    for i in range(1, len(ds)):
+        a, b = ds[i - 1], ds[i]
+        prev_r, new_r = snap_rows(snaps[a]), snap_rows(snaps[b])
+        sdiff, added, gone, ncommon = same_scope_delta(new_r, prev_r)
+        days = (datetime.date.fromisoformat(b) - datetime.date.fromisoformat(a)).days
+        tsum = sum(v for d, v in tm.items() if a < d <= b)
+        dev = (sdiff - tsum) / tsum if tsum else None
+        hit = true_cutoff(sdiff, tm, a, b)
+        if dev is None:
+            st = 'unverified'
+        elif hit and hit[0] != b:
+            st = 'mislabelled'    # 文件名的日期不是它真实覆盖到的日子
+        elif not hit:
+            st = 'unresolved'     # 对不上任何一天的区间和 = 半刷新
+        else:
+            st = 'ok' if abs(dev) <= CLEAN_TOL else 'smear'
+        au[b] = dict(status=st, label=b, sdiff=sdiff, tsum=tsum, dev=dev, days=days,
+                     rows=len(new_r), base=a,
+                     checked=datetime.datetime.now().isoformat(timespec='seconds'))
+        mark = '' if st in ('ok', 'smear') else f'   <== {st}'
+        log(f'  {a}->{b} {days}天  同口径 {sdiff:>12,}  趋势 {tsum:>12,}  '
+            f'{dev:+7.2%}  {len(new_r)}部  +{len(added)}/-{len(gone)}  {st}{mark}')
+        if st not in ('ok', 'smear'):
+            problems.append((a, b, st, sdiff, tsum))
+        if days > 1:
+            miss = [(datetime.date.fromisoformat(a) + datetime.timedelta(days=k)).isoformat()
+                    for k in range(1, days)]
+            log(f'      缺采（平台未单独下发，永久取不到）: {"、".join(miss)}')
+    if write:
+        audit_save(au)
+        log(f'台账已写入 {os.path.basename(AUDIT)}（{len(au)} 条）')
+    gaps = [d for d in sorted(tm) if ds[0] < d <= ds[-1] and d not in snaps]
+    log(f'剧目级缺单日切分的日期: {"、".join(gaps) if gaps else "无"}')
+    log(f'对不上的区间: {len(problems)} 个' + (f' -> {problems}' if problems else ''))
+    return au, problems
+
+
+def quarantine(src, dd, why):
+    """驳回的导出不删除，挪进 data/_quarantine/ 留证（本地取证用，已 gitignore）。
+    关键是把数据日文件名腾出来——被坏文件占住的数据日会被跳过逻辑永久堵死。"""
+    os.makedirs(QUAR, exist_ok=True)
+    dst = os.path.join(QUAR, f'{dd}__{datetime.datetime.now():%m%d-%H%M%S}__{why}.xlsx')
+    try:
+        os.replace(src, dst)
+    except OSError:
+        try:
+            os.remove(src)
+        except OSError:
+            pass
+        return None
+    return dst
+
+
 def notify(text):
     """钉钉通知。webhook 配在 config.json（仓库公开，该文件不入库）；未配置则跳过。"""
     wh = CFG.get('dingtalk_webhook', '').strip()
@@ -295,81 +430,124 @@ def run(push, headless):
             if not dd:
                 log('警告：标注和趋势都没拿到，退回用导出日期命名。')
                 dd = today
-            # 兜底路径也必须查重：已存在的快照绝不能被覆盖（否则守卫的 os.remove 可能误删好文件）
-            if os.path.exists(os.path.join(DATA, f'content_performance_{dd}.xlsx')):
-                log(f'{dd} 的快照已存在（平台未刷新或本日已采过），本次跳过。')
+            # ---- 跳过判定：只认"验收通过"的数据日 ----
+            # 绝不能只看文件在不在。一份没过对账的快照必须允许后续轮次重新导出复查，
+            # 否则平台补齐时我们已经跳过去了（2026-08-18 → 漏掉 08-19 单日切分）。
+            au = audit_load()
+            passed = {c for c, v in au.items() if v.get('status') in ('ok', 'smear')}
+            if dd in passed:
+                r = au[dd]
+                log(f'{dd} 已验收通过（同口径偏差 {r["dev"]:+.2%}，{r["days"]}天档），本次跳过。')
                 return 0
             log(f'平台数据截止日: {dd}')
 
             # 1) 导出 xlsx（直接接住下载，不经过下载目录）
-            xlsx = os.path.join(DATA, f'content_performance_{dd}.xlsx')
+            # 一律先落到 .candidate，验收通过才按"真实截止日"改名入库。已入库的好快照
+            # 绝不能被一份未验收的导出覆盖。
+            cand = os.path.join(DATA, f'content_performance_{dd}.candidate.xlsx')
             try:
                 with page.expect_download(timeout=30000) as dl:
                     page.get_by_text('Export Data').first.click()
-                dl.value.save_as(xlsx)
+                dl.value.save_as(cand)
             except PWTimeout:
                 log('导出失败：点击 Export Data 后 30 秒内没有产生下载。')
                 notify('【TikTok短剧日报】导出失败（页面可能改版），今日数据未更新，请人工检查。')
                 return 3
-            if os.path.getsize(xlsx) < 1000:
-                size = os.path.getsize(xlsx)
-                os.remove(xlsx)  # 坏文件绝不能占据数据日文件名，否则该数据日被永久堵死
-                log(f'导出文件异常（{size} bytes），已丢弃，下一轮自动重试。')
+            if os.path.getsize(cand) < 1000:
+                size = os.path.getsize(cand)
+                quarantine(cand, dd, 'tiny')
+                log(f'导出文件异常（{size} bytes），已隔离，下一轮自动重试。')
                 notify(f'【TikTok短剧日报】{dd} 导出文件异常（{size} bytes），本次未入库，下一轮自动重试。')
                 return 3
-            # 平台刷新不是原子的：刚翻到新数据日时导出可能只含一部分剧（实测出现过 22->14）。
-            # 剧目数比上一份快照少 2 部以上视为残缺，丢弃本次，等下一轮定时重试。
+            # ---- 验收：过了才入库，没过就隔离重试 ----
             import glob as _g
-            import openpyxl as _o
-            def _vals(f):
-                return sorted(tuple(r) for r in _o.load_workbook(f).active.iter_rows(min_row=2, values_only=True) if r[0])
-            prev = sorted(f for f in _g.glob(os.path.join(DATA, 'content_performance_*.xlsx')) if f != xlsx)
-            if prev:
-                new_v, prev_v = _vals(xlsx), _vals(prev[-1])
-                if len(new_v) <= len(prev_v) - 2:
-                    os.remove(xlsx)
-                    log(f'导出疑似残缺（{len(new_v)} 部剧，上一份 {len(prev_v)} 部），已丢弃，下一轮自动重试。')
-                    notify(f'【TikTok短剧日报】{dd} 的导出只有 {len(new_v)} 部剧（上次 {len(prev_v)} 部），'
+            stored = sorted(f for f in _g.glob(os.path.join(DATA, 'content_performance_*.xlsx'))
+                            if '.candidate.' not in os.path.basename(f))
+            new_r = snap_rows(cand)
+            xlsx = os.path.join(DATA, f'content_performance_{dd}.xlsx')   # 默认按标注日命名
+            if stored:
+                base_f = stored[-1]
+                base_dd = re.search(r'(\d{4}-\d{2}-\d{2})', os.path.basename(base_f)).group(1)
+                prev_r = snap_rows(base_f)
+                sdiff, added, gone, ncommon = same_scope_delta(new_r, prev_r)
+                if added:
+                    log(f'新纳入统计 {len(added)} 部剧（首现带全量累计，不计入对账）: '
+                        + '、'.join(str(new_r[k][1]) for k in added))
+                if gone:   # 剧目消失是异常，必须留痕，绝不静默少采
+                    log(f'警告：{len(gone)} 部剧在本次导出中消失: '
+                        + '、'.join(str(prev_r[k][1]) for k in gone))
+                # ① 少采：剧目数比上一份少 2 部以上（实测出现过 22->14）
+                if len(new_r) <= len(prev_r) - 2:
+                    quarantine(cand, dd, 'short')
+                    log(f'导出疑似残缺（{len(new_r)} 部剧，上一份 {len(prev_r)} 部），已隔离，下一轮自动重试。')
+                    notify(f'【TikTok短剧日报】{dd} 的导出只有 {len(new_r)} 部剧（上次 {len(prev_r)} 部），'
                            '平台可能正在刷新中，本次未入库，下一轮定时任务会自动重试。')
                     return 3
-                if new_v == prev_v:
-                    # 平台"数据更新至"标注先行、剧目数据未刷：内容与上一份逐行相同，
-                    # 不能占用新数据日期的文件名，否则真数据来了会被跳过逻辑挡住。
-                    os.remove(xlsx)
-                    log(f'平台标注已到 {dd}，但剧目数据与上一份快照完全相同（尚未真正刷新），本次不入库。')
+                # ② 平台原地不动：与已入库的某份逐行相同，没有新信息。安静重试，不告警。
+                if any(new_r == snap_rows(f) for f in stored[-3:]):
+                    quarantine(cand, dd, 'same')
+                    log(f'平台标注 {dd}，但剧目行与已入库快照逐行相同（尚未推进），本次不入库。')
                     return 0
-                # 对账守卫：快照差值总和应≈官方趋势区间和（历史实测偏差<0.5%）。
-                # 必须按"同口径"算——只统计两份快照都在的剧。平台会把存量老剧新纳入统计，
-                # 这类剧首现时带的是全量历史累计（实测 +1,730,722），混进对账会把偏差冲爆
-                # （2026-08-18 那次 148.6%），把"老剧一部都没刷新"这个真问题盖掉。
+                # ③ 反推真实截止日。标注日不可信（平台会先翻标注、剧目行晚一天才补），
+                #    只有对账能定出这份快照真正覆盖到哪天。定不出来就是半刷新，隔离重试。
                 if daily:
                     tm = {r['eventDate']: int(r['metrics'].get('vv', 0)) for r in daily}
-                    prev_dd = re.search(r'(\d{4}-\d{2}-\d{2})', os.path.basename(prev[-1])).group(1)
-                    tsum = sum(v for d, v in tm.items() if prev_dd < d <= dd)
-                    pm = {str(r[0]): r for r in prev_v}
-                    nm = {str(r[0]): r for r in new_v}
-                    added = sorted(set(nm) - set(pm))
-                    sdiff = sum((nm[k][3] or 0) - (pm[k][3] or 0) for k in set(nm) & set(pm))
-                    if added:
-                        log(f'新纳入统计 {len(added)} 部剧（首现带全量累计，不计入对账）: '
-                            + '、'.join(str(nm[k][1]) for k in added))
-                    # 同口径增量远低于官方趋势 = 平台只翻了"数据更新至"标注、剧目行还没刷
-                    # （或只刷了一部分）。这种半刷新快照一旦入库就永久错位：占掉当天的档位，
-                    # 还让下一档把两天的量当成一天。丢弃重试，等平台补齐。
-                    if tsum > 0 and sdiff < tsum * 0.5:
-                        os.remove(xlsx)
-                        log(f'平台标注已到 {dd}，但老剧同口径增量仅 {sdiff:,}（趋势区间和 {tsum:,}），'
-                            '判定为剧目行尚未刷新，本次不入库，下一轮自动重试。')
-                        notify(f'【TikTok短剧日报】{dd} 剧目行疑似未刷新'
-                               f'（同口径增量 {sdiff:,} vs 官方趋势 {tsum:,}）。'
-                               '本次未入库，下一轮定时任务会自动重试。')
+                    hit = true_cutoff(sdiff, tm, base_dd, dd)
+                    if not hit:
+                        cands = {}
+                        run = 0
+                        for x in sorted(d for d in tm if base_dd < d <= dd):
+                            run += tm[x]
+                            cands[x] = run
+                        quarantine(cand, dd, 'unresolved')
+                        log(f'对账定不出真实截止日：同口径增量 {sdiff:,}（{ncommon} 部共同剧目），'
+                            f'候选区间 {", ".join(f"{k}={v:,}" for k, v in cands.items()) or "无"}。'
+                            '判定为剧目行只刷了一部分，已隔离，下一轮自动重试。')
+                        if au.get(dd, {}).get('status') != 'unresolved':   # 同一数据日只告警一次
+                            notify(f'【TikTok短剧日报】{dd} 剧目行疑似只刷了一部分'
+                                   f'（同口径增量 {sdiff:,}，对不上任何一天的趋势区间和）。'
+                                   '本次未入库，后续每轮会继续重试直到对上。')
+                        au[dd] = dict(status='unresolved', label=dd, sdiff=sdiff, dev=None,
+                                      days=None, rows=len(new_r), base=base_dd,
+                                      checked=datetime.datetime.now().isoformat(timespec='seconds'))
+                        audit_save(au)
                         return 0
-                    if tsum > 0 and abs(sdiff - tsum) / tsum > 0.05:
-                        dev = abs(sdiff - tsum) / tsum
-                        log(f'对账警告：快照差值 {sdiff:,} vs 趋势区间和 {tsum:,}，偏差 {dev:.1%}')
-                        notify(f'【TikTok短剧日报】{dd} 数据对账偏差 {dev:.0%}'
-                               f'（剧目快照增量 {sdiff:,} vs 官方趋势 {tsum:,}）。'
-                               '可能有部分剧目行未刷新，数据已入库，建议人工复核增长榜。')
+                    cutoff, tsum, dev = hit
+                    if cutoff != dd:
+                        log(f'注意：平台标注 {dd}，但对账显示这份快照实际只覆盖到 {cutoff}'
+                            f'（同口径增量 {sdiff:,} = 趋势 {base_dd}→{cutoff} 区间和 {tsum:,}）。'
+                            f'按真实截止日 {cutoff} 入库。')
+                    xlsx = os.path.join(DATA, f'content_performance_{cutoff}.xlsx')
+                    if os.path.exists(xlsx):   # 该真实截止日已入库过，本次没有新东西
+                        quarantine(cand, dd, 'dup')
+                        log(f'{cutoff} 已入库，本次导出无新增，不覆盖。')
+                        return 0
+                    days = (datetime.date.fromisoformat(cutoff) - datetime.date.fromisoformat(base_dd)).days
+                    if days > 1:   # 中间的日子平台没单独给过，永久拿不到，必须留痕
+                        miss = [(datetime.date.fromisoformat(base_dd)
+                                 + datetime.timedelta(days=k)).isoformat() for k in range(1, days)]
+                        log(f'缺采告知：{"、".join(miss)} 平台未单独下发，'
+                            f'{base_dd}→{cutoff} 只能作为 {days} 天合计入库（导出无历史回查入口，'
+                            '这些单日切分永久取不到）。报告会如实标注，不做日均摊派。')
+                        notify(f'【TikTok短剧日报】剧目级缺 {"、".join(miss)} 的单日切分'
+                               f'（平台与 {cutoff} 合并下发）。{days} 天合计已入库并在报告中标注，'
+                               '不做日均摊派。')
+                    au[cutoff] = dict(status='ok' if abs(dev) <= CLEAN_TOL else 'smear',
+                                      label=dd, sdiff=sdiff, tsum=tsum, dev=dev, days=days,
+                                      rows=len(new_r), base=base_dd,
+                                      checked=datetime.datetime.now().isoformat(timespec='seconds'))
+                    audit_save(au)
+                    log(f'验收通过：{cutoff} 同口径增量 {sdiff:,} vs 趋势 {tsum:,}，偏差 {dev:+.2%}'
+                        + ('（日界漂移，已记 smear）' if abs(dev) > CLEAN_TOL else ''))
+                else:
+                    # 趋势没抓到就没法对账。入库但不记验收通过，下一轮会重新导出复查——
+                    # 绝不能让一份没验过的快照冒充合格品把这个数据日永久占住。
+                    log(f'趋势数据缺失，{dd} 无法对账验收：先入库，下一轮会重新导出复查。')
+                    au[dd] = dict(status='unverified', label=dd, sdiff=sdiff, dev=None, days=None,
+                                  rows=len(new_r), base=base_dd,
+                                  checked=datetime.datetime.now().isoformat(timespec='seconds'))
+                    audit_save(au)
+            os.replace(cand, xlsx)
             log(f'快照已保存 {os.path.basename(xlsx)} ({os.path.getsize(xlsx)} bytes)')
             try:
                 collect_meta(page)
@@ -428,7 +606,12 @@ if __name__ == '__main__':
     ap.add_argument('--login', action='store_true', help='首次人工登录')
     ap.add_argument('--push', action='store_true', help='更新后 git 推送')
     ap.add_argument('--headless', action='store_true', help='无浏览器窗口运行')
+    ap.add_argument('--audit', action='store_true',
+                    help='离线全量复查已入库快照并重建验收台账（不开浏览器、不改数据）')
     a = ap.parse_args()
+    if a.audit:
+        _, probs = audit_all()
+        sys.exit(1 if probs else 0)
     if a.login:
         with sync_playwright() as p:
             sys.exit(do_login(p))

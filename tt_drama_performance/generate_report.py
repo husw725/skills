@@ -36,6 +36,10 @@ def load_daily():
 def load_snapshots():
     snaps = {}
     for f in sorted(glob.glob(os.path.join(DATA, 'content_performance_*.xlsx'))):
+        # .candidate.xlsx 是 daily_update 未通过验收的临时导出（正常会被改名或隔离，
+        # 崩在中途才会残留）。绝不能当成已验收快照读进来，否则半刷新数据混进增长榜。
+        if '.candidate.' in os.path.basename(f):
+            continue
         m = re.search(r'(\d{4}-\d{2}-\d{2})', os.path.basename(f))
         if not m:
             continue
@@ -265,8 +269,11 @@ def build():
             m['new7'] = bool(m['launch'] and m['launch'] >= cutoff)
         # 14天内新剧即使没进前10也固定追加在榜尾（带"新"标）
         rows = ranked[:10] + [m for m in ranked[10:] if m['new7']]
+        # totTv/totQv 是**全部剧目**的合计，不是榜上展示行的合计——缺采声明里要拿它当
+        # "这个合计是准的"的依据，用截断后的 rows 求和会少算掉榜外剧目。
         movers_series.append(dict(
-            frm=snap_dates[i - 1], to=snap_dates[i], days=(d1 - d0).days, rows=rows))
+            frm=snap_dates[i - 1], to=snap_dates[i], days=(d1 - d0).days, rows=rows,
+            totTv=sum(m['d_tv'] for m in ranked), totQv=sum(m['d_qv'] for m in ranked)))
 
     # ---- Auto insights (senior-BI voice) ----
     ins = []
@@ -296,11 +303,29 @@ def build():
     if len(snap_dates) < 2:
         ins.append("剧目级日增量需要至少两天的快照才能计算，从明天起将自动出现「单日增长榜」。")
 
+    # ---- 缺采日：机构级趋势里有、但剧目级没有单独档位的日期 ----
+    # 平台的剧目导出永远是"当前"全量累计，没有按历史日期回查的入口，所以这些日期的
+    # 剧目级切分是永久拿不到的（不是本地漏采）。只能如实标出来——绝不能把合并区间的
+    # 量按天数摊平，那是凭空造数。合计值仍然是准的，一并给出来。
+    gaps = []
+    for s in movers_series:
+        if s['days'] <= 1:
+            continue
+        d1 = datetime.strptime(s['to'], '%Y-%m-%d')
+        missing = [(d1 - timedelta(days=k)).date().isoformat() for k in range(s['days'] - 1, 0, -1)]
+        gaps.append(dict(frm=s['frm'], to=s['to'], days=s['days'], missing=missing,
+                         tv=s['totTv'], qv=s['totQv']))
+    if gaps:
+        miss_all = [d for g in gaps for d in g['missing']]
+        ins.append(f"数据完整性：剧目级缺 <b>{'、'.join(miss_all)}</b> 共 {len(miss_all)} 天的单日切分"
+                   f"（平台把相邻日合并下发，导出只有当前累计、无法回查历史某天）。"
+                   f"这些区间在增长榜和趋势图里按合计展示、不做日均摊派，趋势图上留空。")
+
     payload = dict(
         generated=datetime.now().strftime('%Y-%m-%d %H:%M'),
         dataThrough=daily[-1]['date'], snapDate=snap_dates[-1],
         daily=daily, kpis=kpis, wow=wow_rows, wowPeriods=wow_periods, dramas=dramas,
-        moversSeries=movers_series, dramaTrends=drama_trends,
+        moversSeries=movers_series, dramaTrends=drama_trends, gaps=gaps,
         insights=ins, top3Share=top3_share,
     )
     payload['aiInsights'] = ai_insights(payload)
