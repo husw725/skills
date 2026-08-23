@@ -43,6 +43,7 @@ summary { color: var(--muted); font-size: 12px; cursor: pointer; }
 .chart { position: relative; }
 svg text { fill: var(--muted); font-size: 11px; font-family: inherit; }
 svg .dl { fill: var(--ink2); font-size: 11px; font-weight: 600; }
+svg .bandlab { fill: var(--gold-dim); font-size: 10px; font-weight: 600; }
 #tip { position: fixed; pointer-events: none; background: var(--surface2); border: 1px solid var(--border);
   border-radius: 10px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5);
   display: none; z-index: 9; min-width: 140px; }
@@ -190,7 +191,10 @@ document.getElementById('kpis').innerHTML = DATA.kpis.map(k => {
 
 /* ---- tiny SVG line chart with crosshair + tooltip ---- */
 const tip = document.getElementById('tip');
-function lineChart(el, labels, series, yfmt) {
+// bands: [{from, to, label, note}] —— 缺采区间。单日轴上不放假点（该空还空），
+// 但把"这段合计多少"这个已知且准确的量画在它该在的位置，断层就从"像故障"
+// 变成"明确标注的合并区间"。
+function lineChart(el, labels, series, yfmt, bands) {
   const W = Math.min(el.clientWidth || 1040, 1040), H = 260,
         P = {l: 60, r: 74, t: 10, b: 24},
         iw = W - P.l - P.r, ih = H - P.t - P.b;
@@ -211,6 +215,20 @@ function lineChart(el, labels, series, yfmt) {
   const step = Math.ceil(labels.length / 7);
   labels.forEach((d, i) => { if (i % step === 0)
     g += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${d.slice(5)}</text>`; });
+  // 缺采带：画在网格之上、折线之下，覆盖整段留空的列（向两侧各让半格，正好卡在相邻实点之间）
+  const half = labels.length > 1 ? iw / (labels.length - 1) / 2 : iw / 2;
+  (bands || []).forEach(b => {
+    const i0 = labels.indexOf(b.from), i1 = labels.indexOf(b.to);
+    if (i0 < 0 || i1 < 0) return;
+    const xa = Math.max(P.l, x(i0) - half), xb = Math.min(W - P.r, x(i1) + half);
+    g += `<rect x="${xa}" y="${P.t}" width="${Math.max(1, xb-xa)}" height="${ih}" fill="var(--gold-dim)" opacity=".10"/>`;
+    [xa, xb].forEach(xx => { g += `<line x1="${xx}" y1="${P.t}" x2="${xx}" y2="${P.t+ih}" stroke="var(--gold-dim)" stroke-dasharray="2 3" opacity=".55"/>`; });
+    if (b.label) {
+      const cx = (xa + xb) / 2;
+      g += `<text class="bandlab" x="${cx}" y="${P.t+12}" text-anchor="middle">缺采</text>`;
+      g += `<text class="bandlab" x="${cx}" y="${P.t+25}" text-anchor="middle">${b.label}</text>`;
+    }
+  });
   series.forEach(s => {
     // 遇 null 断线：切成多段各自成 path，缺采处自然留空
     let seg = [];
@@ -241,8 +259,14 @@ function lineChart(el, labels, series, yfmt) {
     tip.style.display = 'block';
     tip.style.left = Math.min(e.clientX + 14, innerWidth - 180) + 'px';
     tip.style.top = (e.clientY + 14) + 'px';
-    tip.innerHTML = `<div class="d">${labels[i]}</div>` + series.map(s =>
-      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${s.values[i] == null ? '缺采' : yfmt(s.values[i], true)}</b></div>`).join('');
+    const bd = (bands || []).find(b => {
+      const a = labels.indexOf(b.from), z = labels.indexOf(b.to);
+      return a >= 0 && z >= 0 && i >= a && i <= z;
+    });
+    tip.innerHTML = `<div class="d">${labels[i]}${bd ? ' · 缺采' : ''}</div>`
+      + (bd && bd.note ? `<div style="max-width:260px;white-space:normal;line-height:1.5;margin-bottom:4px">${bd.note}</div>` : '')
+      + series.map(s =>
+      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${s.values[i] == null ? '—' : yfmt(s.values[i], true)}</b></div>`).join('');
   });
   svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
 }
@@ -388,16 +412,25 @@ if (Object.keys(DT).length) {
       for (let d = from; d <= to; d = dshift(d, 1)) axis.push(d);
     }
     const val = new Map(pts.filter(p => p.days === 1).map(p => [p.d, p]));
+    const gaps = pts.filter(p => p.days > 1);
+    // 每个合并区间给一条缺采带：范围 = 被留空的那几天（含该档截止日本身，
+    // 因为它的量和前面几天粘在一起，同样拆不出单日值）
+    const bands = gaps.map(p => {
+      const miss = [];
+      for (let k = p.days - 1; k >= 0; k--) miss.push(dshift(p.d, -k));
+      return {from: miss[0], to: miss[miss.length - 1],
+              label: `${p.days}日合计 ${fmtN(p.tv)}`,
+              note: `${miss[0].slice(5)}~${miss[miss.length-1].slice(5)} 平台合并下发，`
+                    + `${p.days}天合计 总播放 ${fmtN(p.tv)} / 合格播放 ${fmtN(p.qv)}。`
+                    + `合计是准的，但拆不到单日，所以不画单日点、也不做日均摊派。`};
+    });
     lineChart(document.getElementById('dtrend'), axis,
       [{name: '总播放 +', color: 'var(--s1)', values: axis.map(d => val.has(d) ? val.get(d).tv : null)},
        {name: '合格播放 +', color: 'var(--s2)', values: axis.map(d => val.has(d) ? val.get(d).qv : null)}],
-      v => fmtN(v));
-    const gaps = pts.filter(p => p.days > 1);
-    document.getElementById('dtrendNote').innerHTML = gaps.length
-      ? '缺采：' + gaps.map(p => {
-          const miss = []; for (let k = p.days - 1; k >= 0; k--) miss.push(dshift(p.d, -k).slice(5));
-          return `<b>${miss.join('、')}</b> 平台合并下发，${p.days}天合计 总播放 ${fmtN(p.tv)} / 合格播放 ${fmtN(p.qv)}，无法拆到单日`;
-        }).join('；') + '。图中留空，不做日均摊派。'
+      v => fmtN(v), bands);
+    document.getElementById('dtrendNote').innerHTML = bands.length
+      ? '图中阴影带 = 平台合并下发的区间，带内标的是该区间合计（准确值）；'
+        + '单日点留空，不做日均摊派。' + bands.map(b => `${b.from.slice(5)}~${b.to.slice(5)}`).join('、')
       : '';
   };
   sel.addEventListener('change', drawTrend);
