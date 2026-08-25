@@ -319,7 +319,7 @@ def build():
         miss_all = [d for g in gaps for d in g['missing']]
         ins.append(f"数据完整性：剧目级缺 <b>{'、'.join(miss_all)}</b> 共 {len(miss_all)} 天的单日切分"
                    f"（平台把相邻日合并下发，导出只有当前累计、无法回查历史某天）。"
-                   f"这些区间在增长榜和趋势图里按合计展示、不做日均摊派，趋势图上留空。")
+                   f"这些区间在增长榜按合计展示，趋势图上以虚线标出日均估算（非实测）。")
 
     payload = dict(
         generated=datetime.now().strftime('%Y-%m-%d %H:%M'),

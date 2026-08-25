@@ -159,7 +159,7 @@ document.getElementById('meta').textContent =
   `数据截至 ${DATA.dataThrough}（趋势） / ${DATA.snapDate}（剧目快照） · 生成于 ${DATA.generated}`;
 
 /* 缺采声明：平台把相邻日合并下发时，剧目级拿不到单日切分。如实标出来，
-   不摊派、不插值——合计值是准的，单日的就是没有。 */
+   实测点不造假；合并区间日均只以虚线估算段呈现，合计值是准的。 */
 if ((DATA.gaps || []).length) {
   document.getElementById('gapCard').style.display = '';
   document.getElementById('gapBody').innerHTML =
@@ -198,9 +198,10 @@ function lineChart(el, labels, series, yfmt, bands) {
   const W = Math.min(el.clientWidth || 1040, 1040), H = 260,
         P = {l: 60, r: 74, t: 10, b: 24},
         iw = W - P.l - P.r, ih = H - P.t - P.b;
-  // null = 该日无数据（平台合并下发，拿不到单日切分）。绝不插值、绝不摊派：
-  // 刻度和折线都跳过它，图上留出可见断口。
-  const vals = series.flatMap(s => s.values).filter(v => v != null);
+  // null = 该日无实测（平台合并下发，拿不到单日切分）。实线只连实测点；
+  // s.est（可选）：与 values 等长的估算值数组（合并区间日均），只在 values 为 null 处生效。
+  // 估算段画虚线 + 半透明，与实测实线明确区分；tooltip 标 ≈日均。
+  const vals = series.flatMap(s => s.values.concat(s.est || [])).filter(v => v != null);
   const vmax = Math.max(...vals, 0) * 1.08 || 1;
   const vmin = Math.min(...vals, 0);        // 快照差值可为负（平台下修），刻度须容纳
   const span = vmax - vmin || 1;
@@ -231,15 +232,27 @@ function lineChart(el, labels, series, yfmt, bands) {
   });
   series.forEach(s => {
     // 遇 null 断线：切成多段各自成 path，缺采处自然留空
-    let seg = [];
+    // 实测点连实线；有估算值的地方用虚线把断口接上（任一端是估算值 → 该段虚线）
+    const est = s.est || [], full = s.values.map((v, i) => v == null ? est[i] : v), isEst = i => s.values[i] == null;
+    let seg = [], dashed = null;
     const flush = () => {
       if (seg.length > 1)
-        g += `<path d="M${seg.join('L')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
-      else if (seg.length === 1)   // 孤立单点（两侧都缺采）否则画不出来
+        g += `<path d="M${seg.join('L')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"`
+           + (dashed ? ` stroke-dasharray="5 4" opacity=".6"` : '') + `/>`;
+      else if (seg.length === 1 && !dashed)   // 孤立单点（两侧都缺采）否则画不出来
         g += `<circle cx="${seg[0].split(',')[0]}" cy="${seg[0].split(',')[1]}" r="2.5" fill="${s.color}"/>`;
       seg = [];
     };
-    s.values.forEach((v, i) => { if (v == null) flush(); else seg.push(`${x(i)},${y(v)}`); });
+    full.forEach((v, i) => {
+      if (v == null) { flush(); dashed = null; return; }
+      const pt = `${x(i)},${y(v)}`;
+      if (seg.length) {
+        const d = isEst(i) || isEst(i - 1);
+        if (dashed !== null && d !== dashed) { const last = seg[seg.length - 1]; flush(); seg = [last]; }
+        dashed = d;
+      }
+      seg.push(pt);
+    });
     flush();
     const li = s.values.reduce((a, v, i) => v == null ? a : i, -1);   // 最后一个有值的点
     if (li >= 0) {
@@ -266,7 +279,7 @@ function lineChart(el, labels, series, yfmt, bands) {
     tip.innerHTML = `<div class="d">${labels[i]}${bd ? ' · 缺采' : ''}</div>`
       + (bd && bd.note ? `<div style="max-width:260px;white-space:normal;line-height:1.5;margin-bottom:4px">${bd.note}</div>` : '')
       + series.map(s =>
-      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${s.values[i] == null ? '—' : yfmt(s.values[i], true)}</b></div>`).join('');
+      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${s.values[i] != null ? yfmt(s.values[i], true) : (s.est && s.est[i] != null) ? '≈ ' + yfmt(s.est[i], true) + ' <span style="opacity:.6;font-weight:400">日均</span>' : '—'}</b></div>`).join('');
   });
   svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
 }
@@ -404,8 +417,8 @@ if (Object.keys(DT).length) {
   const dshift = (d, k) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + k); return t.toISOString().slice(0, 10); };
   const drawTrend = () => {
     const pts = (DT[sel.value] || []).slice(-30);   // 只展示最近30天
-    // 多天合并区间（平台跳更/半刷新）：**不做日均摊派**——把一天的量平摊到两天是凭空造数。
-    // 轴按自然日铺开，合并区间内所有日期一律留空，图上留出可见断口，合计写在下方注里。
+    // 多天合并区间（平台跳更/半刷新）：实测 values 留空（不造单日点），
+    // 日均走 est 通道以虚线呈现（BI 惯例：估算/插补值虚线标注），合计写在阴影带和下方注里。
     const axis = [];
     if (pts.length) {
       const from = dshift(pts[0].d, -(pts[0].days - 1)), to = pts[pts.length-1].d;
@@ -419,18 +432,20 @@ if (Object.keys(DT).length) {
       const miss = [];
       for (let k = p.days - 1; k >= 0; k--) miss.push(dshift(p.d, -k));
       return {from: miss[0], to: miss[miss.length - 1],
-              label: `${p.days}日合计 ${fmtN(p.tv)}`,
+              label: `${p.days}日合计 ${fmtN(p.tv)}（日均 ${fmtN(p.tv / p.days)}）`,
               note: `${miss[0].slice(5)}~${miss[miss.length-1].slice(5)} 平台合并下发，`
                     + `${p.days}天合计 总播放 ${fmtN(p.tv)} / 合格播放 ${fmtN(p.qv)}。`
-                    + `合计是准的，但拆不到单日，所以不画单日点、也不做日均摊派。`};
+                    + `合计是准的，拆不到单日；虚线段为日均估算值，不是实测。`};
     });
+    // 合并区间内的估算值 = 该档合计 / 天数，走 est 通道（虚线），与实测 values 分开
+    const estOf = key => { const m = new Map(); gaps.forEach(p => { for (let k = p.days - 1; k >= 0; k--) m.set(dshift(p.d, -k), p[key] / p.days); }); return axis.map(d => m.has(d) ? m.get(d) : null); };
     lineChart(document.getElementById('dtrend'), axis,
-      [{name: '总播放 +', color: 'var(--s1)', values: axis.map(d => val.has(d) ? val.get(d).tv : null)},
-       {name: '合格播放 +', color: 'var(--s2)', values: axis.map(d => val.has(d) ? val.get(d).qv : null)}],
+      [{name: '总播放 +', color: 'var(--s1)', values: axis.map(d => val.has(d) ? val.get(d).tv : null), est: estOf('tv')},
+       {name: '合格播放 +', color: 'var(--s2)', values: axis.map(d => val.has(d) ? val.get(d).qv : null), est: estOf('qv')}],
       v => fmtN(v), bands);
     document.getElementById('dtrendNote').innerHTML = bands.length
       ? '图中阴影带 = 平台合并下发的区间，带内标的是该区间合计（准确值）；'
-        + '单日点留空，不做日均摊派。' + bands.map(b => `${b.from.slice(5)}~${b.to.slice(5)}`).join('、')
+        + '带内虚线 = 合计 ÷ 天数的日均估算，仅供看整体走势，不是实测单日值。' + bands.map(b => `${b.from.slice(5)}~${b.to.slice(5)}`).join('、')
       : '';
   };
   sel.addEventListener('change', drawTrend);
