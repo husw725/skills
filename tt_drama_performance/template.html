@@ -162,16 +162,19 @@ document.getElementById('meta').textContent =
    实测点不造假；合并区间日均只以虚线估算段呈现，合计值是准的。 */
 if ((DATA.gaps || []).length) {
   document.getElementById('gapCard').style.display = '';
+  // 默认只露最新一条，历史条目和口径说明收进 <details>（原生折叠，免 JS）
+  const li = g => `<li><b>${g.missing.join('、')}</b> —— 平台与 ${g.to} 合并下发，`
+    + `${g.frm} → ${g.to} 共 ${g.days} 天合计 合格播放 ${fmtN(g.qv)}，这个合计是准的，但拆不到单日</li>`;
+  const gs = DATA.gaps.slice().reverse(), rest = gs.slice(1);
   document.getElementById('gapBody').innerHTML =
     '<div>剧目级数据缺以下日期的<b>单日切分</b>（机构级大盘趋势不受影响，仍是逐日完整的）：</div>'
-    + '<ul style="margin:8px 0 0;padding-left:18px">'
-    + DATA.gaps.map(g => `<li><b>${g.missing.join('、')}</b> —— 平台与 ${g.to} 合并下发，`
-        + `${g.frm} → ${g.to} 共 ${g.days} 天合计 合格播放 ${fmtN(g.qv)}，`
-        + '这个合计是准的，但拆不到单日</li>').join('')
-    + '</ul><div style="margin-top:8px;color:var(--gold-dim)">'
-    + '增长榜对应档位标 * 并注明"共N天合计"；单剧趋势图在这些日期<b>留空断开</b>。'
-    + '按天数平摊会造出不存在的数字，所以不做。平台导出永远是"当前"全量累计、'
-    + '没有按历史日期回查的入口，这些单日切分是永久取不到的。</div>';
+    + `<ul style="margin:8px 0 0;padding-left:18px">${li(gs[0])}</ul>`
+    + `<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--gold-dim)">`
+    + (rest.length ? `更早 ${rest.length} 条 · ` : '') + '口径说明</summary>'
+    + (rest.length ? `<ul style="margin:8px 0 0;padding-left:18px">${rest.map(li).join('')}</ul>` : '')
+    + '<div style="margin-top:8px;color:var(--gold-dim)">'
+    + '增长榜对应档位标 * 并注明"共N天合计"；单剧趋势图在这些日期以<b>虚线</b>画日均估算（非实测）。'
+    + '平台导出永远是"当前"全量累计、没有按历史日期回查的入口，这些单日切分是永久取不到的。</div></details>';
 }
 
 /* insights */
