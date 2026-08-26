@@ -73,9 +73,15 @@ CLEAN_TOL = 0.03      # 这个偏差内记 ok，超了记 smear（已验收但�
 
 
 def snap_rows(f):
-    """{contract_id: row}。row[1]=剧名 row[2]=合格播放 row[3]=总播放（累计）"""
-    import openpyxl as _o
-    return {str(r[0]): r for r in _o.load_workbook(f).active.iter_rows(min_row=2, values_only=True) if r[0]}
+    """{contract_id: dict(name, qv, tv, ...)}，按列名读（见 generate_report.HDR）。
+    对账探针用 qv（合格播放）：2026-08-24 起导出没有总播放列了，而趋势里的 innerfeedVv
+    与它同口径，历史各档偏差同样 <0.2%。"""
+    from generate_report import read_snapshot
+    return read_snapshot(f)
+
+
+TREND_KEY = 'innerfeedVv'   # 趋势 metrics 里与导出"合格播放"同口径的字段
+HIST_KEY = 'qv'             # daily_history.json 里对应的键
 
 
 def audit_load():
@@ -99,7 +105,7 @@ def same_scope_delta(new_rows, prev_rows):
     反而盖掉"老剧一部都没刷新"这个真问题。
     """
     common = set(new_rows) & set(prev_rows)
-    return (sum((new_rows[k][3] or 0) - (prev_rows[k][3] or 0) for k in common),
+    return (sum((new_rows[k]['qv'] or 0) - (prev_rows[k]['qv'] or 0) for k in common),
             sorted(set(new_rows) - set(prev_rows)),
             sorted(set(prev_rows) - set(new_rows)),
             len(common))
@@ -137,7 +143,7 @@ def audit_all(write=True):
     except Exception:
         log('daily_history.json 读不到，无法对账。')
         return {}, []
-    tm = {k: int(v.get('vv', 0)) for k, v in hist.items()}
+    tm = {k: int(v.get(HIST_KEY, 0)) for k, v in hist.items()}
     ds = sorted(snaps)
     au, problems = audit_load(), []
     log(f'全量复查：{len(ds)} 份快照 {ds[0]} ~ {ds[-1]}，趋势覆盖 {min(tm)} ~ {max(tm)}')
@@ -491,7 +497,7 @@ def run(push, headless):
                 # ③ 反推真实截止日。标注日不可信（平台会先翻标注、剧目行晚一天才补），
                 #    只有对账能定出这份快照真正覆盖到哪天。定不出来就是半刷新，隔离重试。
                 if daily:
-                    tm = {r['eventDate']: int(r['metrics'].get('vv', 0)) for r in daily}
+                    tm = {r['eventDate']: int(r['metrics'].get(TREND_KEY, 0)) for r in daily}
                     hit = true_cutoff(sdiff, tm, base_dd, dd)
                     if not hit:
                         cands = {}

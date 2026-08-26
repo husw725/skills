@@ -33,6 +33,38 @@ def load_daily():
     return [dict(date=d, **hist[d]) for d in sorted(hist)]
 
 
+# 导出列按**列名**识别，不按位置。2026-08-24 起平台把 "Total Views/总播放" 列从导出里
+# 砍掉了（8 列→7 列），按位置读会把"人均播放时长"当成总播放（实测同口径增量 −3.5 亿）。
+# 界面语言不同表头也不同，中英都认。缺列 → None。
+HDR = dict(id=('ID',), name=('Drama', '剧集', '剧名'), qv=('Qualified Views', '有效播放量', '合格播放'),
+           tv=('Total Views', '总播放量', '总播放'), dur=('Avg. Play Duration Per User', '人均播放时长'),
+           fav=('Favorites', '收藏'), com=('Comments', '评论'), like=('Likes', '点赞'))
+
+
+def read_snapshot(f):
+    """{contract_id: dict(name, qv, tv, dur, fav, com, like)}；tv 缺列时为 None。"""
+    ws = openpyxl.load_workbook(f).active
+    it = ws.iter_rows(values_only=True)
+    head = [str(h).strip() if h is not None else '' for h in next(it)]
+    col = {}
+    for k, names in HDR.items():
+        for i, h in enumerate(head):
+            if h in names:
+                col[k] = i
+                break
+    if 'id' not in col or 'qv' not in col:
+        raise ValueError(f'{os.path.basename(f)} 表头不认识: {head}')
+    g = lambda r, k: (r[col[k]] if k in col and col[k] < len(r) else None)
+    rows = {}
+    for r in it:
+        if g(r, 'id') is None:
+            continue
+        rows[str(g(r, 'id'))] = dict(name=g(r, 'name'), qv=g(r, 'qv') or 0, tv=g(r, 'tv'),
+                                    dur=g(r, 'dur') or 0, fav=g(r, 'fav') or 0,
+                                    com=g(r, 'com') or 0, like=g(r, 'like') or 0)
+    return rows
+
+
 def load_snapshots():
     snaps = {}
     for f in sorted(glob.glob(os.path.join(DATA, 'content_performance_*.xlsx'))):
@@ -43,14 +75,7 @@ def load_snapshots():
         m = re.search(r'(\d{4}-\d{2}-\d{2})', os.path.basename(f))
         if not m:
             continue
-        ws = openpyxl.load_workbook(f).active
-        rows = {}
-        for r in ws.iter_rows(min_row=2, values_only=True):
-            if r[0] is None:
-                continue
-            rows[str(r[0])] = dict(name=r[1], qv=r[2] or 0, tv=r[3] or 0, dur=r[4] or 0,
-                                   fav=r[5] or 0, com=r[6] or 0, like=r[7] or 0)
-        snaps[m.group(1)] = rows
+        snaps[m.group(1)] = read_snapshot(f)
     # 平台数据滞后且偶尔跳更：内容完全相同的相邻快照是同一批数据，只留最早那份，
     # 避免增长榜出现全 0 的假日期档位。
     prev = None
@@ -99,8 +124,8 @@ def ai_insights(payload):
         最近14天=[{'日期': r['date'], '总播放': r['vv'], '合格播放': r['qv'], '完播': r['finish'],
                   '点赞': r['likes'], '收藏': r['favs'], '分享': r['shares']} for r in payload['daily'][-14:]],
         周期环比=[{p['label']: p['rows']} for p in payload['wowPeriods']],
-        剧目Top8=[{'剧目': d['name'], '累计合格播放': d['qv'], '累计总播放': d['tv'],
-                  '合格率': d['qratio'], '互动率': d['engage'], '人均时长s': d['dur']}
+        剧目Top8=[{'剧目': d['name'], '累计合格播放': d['qv'],
+                  '互动率(每合格播放)': d['engage'], '人均时长s': d['dur']}
                  for d in payload['dramas'][:8]],
         最新单日剧目增量=payload['moversSeries'][-1] if payload['moversSeries'] else None,
     )
@@ -201,12 +226,12 @@ def build():
     raw = []
     for did, r in latest_snap.items():
         raw.append(dict(
-            id=did, name=r['name'], qv=r['qv'], tv=r['tv'], dur=r['dur'],
+            id=did, name=r['name'], qv=r['qv'], dur=r['dur'],
             launch=dmeta.get(str(did), {}).get('launch'),
             fav=r['fav'], com=r['com'], like=r['like'],
-            qratio=safe_div(r['qv'], r['tv']),
-            engage=safe_div(r['like'] + r['com'] + r['fav'], r['tv']),
-            fav1k=safe_div(r['fav'] * 1000, r['tv']),
+            # 剧目级导出已无总播放列（2026-08-24 起），比率一律以合格播放为分母
+            engage=safe_div(r['like'] + r['com'] + r['fav'], r['qv']),
+            fav1k=safe_div(r['fav'] * 1000, r['qv']),
         ))
 
     def group_of(d):
@@ -216,21 +241,20 @@ def build():
     for d in sorted(raw, key=lambda d: -d['qv']):
         g = group_of(d)
         key = g or d['id']
-        e = merged.setdefault(key, dict(id=key, name=g or d['name'], qv=0, tv=0,
+        e = merged.setdefault(key, dict(id=key, name=g or d['name'], qv=0,
                                         fav=0, com=0, like=0, _durw=0, members=[]))
-        for k in ('qv', 'tv', 'fav', 'com', 'like'):
+        for k in ('qv', 'fav', 'com', 'like'):
             e[k] += d[k]
-        e['_durw'] += (d['dur'] or 0) * (d['tv'] or 0)
+        e['_durw'] += (d['dur'] or 0) * (d['qv'] or 0)
         e['members'].append(d)
     dramas = []
     for e in merged.values():
-        e['dur'] = round(e['_durw'] / e['tv']) if e['tv'] else 0
+        e['dur'] = round(e['_durw'] / e['qv']) if e['qv'] else 0
         del e['_durw']
         # 合并组的上线时间取最新成员的（"最近上新"视角，配合默认按上线排序）
         e['launch'] = max((m['launch'] for m in e['members'] if m.get('launch')), default=None)
-        e['qratio'] = safe_div(e['qv'], e['tv'])
-        e['engage'] = safe_div(e['like'] + e['com'] + e['fav'], e['tv'])
-        e['fav1k'] = safe_div(e['fav'] * 1000, e['tv'])
+        e['engage'] = safe_div(e['like'] + e['com'] + e['fav'], e['qv'])
+        e['fav1k'] = safe_div(e['fav'] * 1000, e['qv'])
         if len(e['members']) == 1:
             e['members'] = []
         dramas.append(e)
@@ -240,7 +264,7 @@ def build():
 
     # ---- Per-drama movers: one entry per consecutive snapshot pair ----
     movers_series = []
-    drama_trends = {}   # 组名 -> [{d, qv, tv, days}]，单剧趋势图数据源
+    drama_trends = {}   # 组名 -> [{d, qv, days}]，单剧趋势图数据源
     for i in range(1, len(snap_dates)):
         d0 = datetime.strptime(snap_dates[i - 1], '%Y-%m-%d')
         d1 = datetime.strptime(snap_dates[i], '%Y-%m-%d')
@@ -248,32 +272,31 @@ def build():
         agg = {}
         for did, r in cur_snap.items():
             # 新上的剧在前一份快照里没有记录：基线记 0，首日增量=首日累计，榜上标"新"
-            p = prev_snap.get(did) or dict(qv=0, tv=0, like=0, fav=0)
+            p = prev_snap.get(did) or dict(qv=0, like=0, fav=0)
             g = member2group.get(did) or member2group.get(str(r['name'])) or r['name']
-            e = agg.setdefault(g, dict(name=g, d_qv=0, d_tv=0, d_like=0, d_fav=0, tv0=0, tv1=0, launch=None))
+            e = agg.setdefault(g, dict(name=g, d_qv=0, d_like=0, d_fav=0, qv0=0, qv1=0, launch=None))
             lc = dmeta.get(str(did), {}).get('launch')
             if lc and (e['launch'] is None or lc > e['launch']):
                 e['launch'] = lc
             e['d_qv'] += r['qv'] - p['qv']
-            e['d_tv'] += r['tv'] - p['tv']
             e['d_like'] += r['like'] - p['like']
             e['d_fav'] += r['fav'] - p['fav']
-            e['tv0'] += p['tv']   # 起始累计总播放（涨幅分母）
-            e['tv1'] += r['tv']   # 期末累计总播放
+            e['qv0'] += p['qv']   # 起始累计合格播放（涨幅分母）
+            e['qv1'] += r['qv']   # 期末累计合格播放
         for m in agg.values():
             drama_trends.setdefault(m['name'], []).append(
-                dict(d=snap_dates[i], qv=m['d_qv'], tv=m['d_tv'], days=(d1 - d0).days))
+                dict(d=snap_dates[i], qv=m['d_qv'], days=(d1 - d0).days))
         ranked = sorted(agg.values(), key=lambda m: -m['d_qv'])
         cutoff = (d1 - timedelta(days=14)).date().isoformat()
         for m in ranked:
             m['new7'] = bool(m['launch'] and m['launch'] >= cutoff)
         # 14天内新剧即使没进前10也固定追加在榜尾（带"新"标）
         rows = ranked[:10] + [m for m in ranked[10:] if m['new7']]
-        # totTv/totQv 是**全部剧目**的合计，不是榜上展示行的合计——缺采声明里要拿它当
+        # totQv 是**全部剧目**的合计，不是榜上展示行的合计——缺采声明里要拿它当
         # "这个合计是准的"的依据，用截断后的 rows 求和会少算掉榜外剧目。
         movers_series.append(dict(
             frm=snap_dates[i - 1], to=snap_dates[i], days=(d1 - d0).days, rows=rows,
-            totTv=sum(m['d_tv'] for m in ranked), totQv=sum(m['d_qv'] for m in ranked)))
+            totQv=sum(m['d_qv'] for m in ranked)))
 
     # ---- Auto insights (senior-BI voice) ----
     ins = []
@@ -291,15 +314,11 @@ def build():
         ins.append(f"内容集中度：Top3 短剧贡献了 <b>{pct(top3_share)}</b> 的合格播放"
                    f"{'，头部依赖偏高，建议培育腰部内容' if top3_share > 0.6 else '，组合相对健康'}"
                    f"（Top1：{html.escape(str(dramas[0]['name']))}，{fmt(dramas[0]['qv'])}）。")
-    med_tv = sorted(d['tv'] for d in dramas)[len(dramas)//2]
-    weak = [d for d in dramas if d['tv'] > med_tv and (d['engage'] or 0) < 0.01 and d['tv'] > 100000]
+    med_qv = sorted(d['qv'] for d in dramas)[len(dramas)//2]
+    weak = [d for d in dramas if d['qv'] > med_qv and (d['engage'] or 0) < 0.02 and d['qv'] > 50000]
     if weak:
         names = '、'.join(html.escape(str(d['name'])) for d in weak[:3])
-        ins.append(f"<b>高流量低互动</b>预警：{names} 播放量高于中位数但互动率不足 1%，转化效率待提升。")
-    hi_q = [d for d in dramas if d['tv'] > 500000 and (d['qratio'] or 0) < 0.25]
-    if hi_q:
-        names = '、'.join(html.escape(str(d['name'])) for d in hi_q[:3])
-        ins.append(f"合格率洼地：{names} 的合格播放占比不足 25%，观看深度/时长不达标的流量占比偏高。")
+        ins.append(f"<b>高流量低互动</b>预警：{names} 合格播放高于中位数但互动率不足 2%，转化效率待提升。")
     if len(snap_dates) < 2:
         ins.append("剧目级日增量需要至少两天的快照才能计算，从明天起将自动出现「单日增长榜」。")
 
@@ -314,7 +333,7 @@ def build():
         d1 = datetime.strptime(s['to'], '%Y-%m-%d')
         missing = [(d1 - timedelta(days=k)).date().isoformat() for k in range(s['days'] - 1, 0, -1)]
         gaps.append(dict(frm=s['frm'], to=s['to'], days=s['days'], missing=missing,
-                         tv=s['totTv'], qv=s['totQv']))
+                         qv=s['totQv']))
     if gaps:
         miss_all = [d for g in gaps for d in g['missing']]
         ins.append(f"数据完整性：剧目级缺 <b>{'、'.join(miss_all)}</b> 共 {len(miss_all)} 天的单日切分"

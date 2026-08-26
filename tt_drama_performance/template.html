@@ -136,7 +136,7 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
 
   <div class="foot">
     指标口径：合格播放 = 平台判定的有效观看（Qualified Views）；合格率 = 合格播放/总播放；完播率 = 完播量/总播放；
-    互动率 = (点赞+评论+收藏+分享)/总播放；剧目互动率 = (点赞+评论+收藏)/累计总播放。
+    互动率 = (点赞+评论+收藏+分享)/总播放；剧目级导出自 2026-08-24 起不再提供总播放，剧目互动率 = (点赞+评论+收藏)/累计合格播放，收藏/千播放同理。
     数据来源：TikTok Drama Center，每日 15:00 自动抓取更新。
   </div>
 </div>
@@ -166,7 +166,7 @@ if ((DATA.gaps || []).length) {
     '<div>剧目级数据缺以下日期的<b>单日切分</b>（机构级大盘趋势不受影响，仍是逐日完整的）：</div>'
     + '<ul style="margin:8px 0 0;padding-left:18px">'
     + DATA.gaps.map(g => `<li><b>${g.missing.join('、')}</b> —— 平台与 ${g.to} 合并下发，`
-        + `${g.frm} → ${g.to} 共 ${g.days} 天合计 总播放 ${fmtN(g.tv)} / 合格播放 ${fmtN(g.qv)}，`
+        + `${g.frm} → ${g.to} 共 ${g.days} 天合计 合格播放 ${fmtN(g.qv)}，`
         + '这个合计是准的，但拆不到单日</li>').join('')
     + '</ul><div style="margin-top:8px;color:var(--gold-dim)">'
     + '增长榜对应档位标 * 并注明"共N天合计"；单剧趋势图在这些日期<b>留空断开</b>。'
@@ -358,8 +358,6 @@ if (WP.length) {
       tip.style.top = (e.clientY + 14) + 'px';
       tip.innerHTML = `<div class="d">${esc(d.name)}</div>
         <div class="row"><span>合格播放</span><b>${fmtN(d.qv)}</b></div>
-        <div class="row"><span>总播放</span><b>${fmtN(d.tv)}</b></div>
-        <div class="row"><span>合格率</span><b>${fmtP(d.qratio)}</b></div>
         <div class="row"><span>互动率</span><b>${fmtP(d.engage, 2)}</b></div>`;
     });
     p.addEventListener('mouseleave', () => tip.style.display = 'none');
@@ -392,13 +390,13 @@ if (MS.length) {
       if (olderEl.value !== '') { moverSel = +olderEl.value; renderMovers(); }
     });
     document.getElementById('movers').innerHTML =
-      '<table><tr><th>#</th><th>剧目</th><th>合格播放 +</th><th>总播放 +</th><th>涨幅</th><th>累计总播放</th><th>点赞 +</th><th>收藏 +</th></tr>' +
+      '<table><tr><th>#</th><th>剧目</th><th>合格播放 +</th><th>涨幅</th><th>累计合格播放</th><th>点赞 +</th><th>收藏 +</th></tr>' +
       s.rows.map((m, i) => {
         const tail = i >= 10;   // 榜尾追加的7天内新剧（未进前10）
-        return (tail && i === 10 ? '<tr class="cut"><td colspan="8">以下为上线 14 天内新剧，未进增长前 10，仅供跟踪</td></tr>' : '') +
-          `<tr${tail ? ' class="tail"' : ''}><td>${tail ? '—' : i + 1}</td><td>${esc(m.name)}${m.new7 ? ' <span class="badge">新</span>' : ''}</td><td>${fmtN(m.d_qv)}</td><td>${fmtN(m.d_tv)}</td><td>${
-            m.tv0 > 0 ? (m.d_tv > 0 ? '+' : '') + (m.d_tv / m.tv0 * 100).toFixed(1) + '%' : '新'
-          }</td><td>${fmtN(m.tv1)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`;
+        return (tail && i === 10 ? '<tr class="cut"><td colspan="7">以下为上线 14 天内新剧，未进增长前 10，仅供跟踪</td></tr>' : '') +
+          `<tr${tail ? ' class="tail"' : ''}><td>${tail ? '—' : i + 1}</td><td>${esc(m.name)}${m.new7 ? ' <span class="badge">新</span>' : ''}</td><td>${fmtN(m.d_qv)}</td><td>${
+            m.qv0 > 0 ? (m.d_qv > 0 ? '+' : '') + (m.d_qv / m.qv0 * 100).toFixed(1) + '%' : '新'
+          }</td><td>${fmtN(m.qv1)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`;
       }).join('') + '</table>';
     document.querySelectorAll('#moverDates .datechip').forEach(b =>
       b.addEventListener('click', () => { moverSel = +b.dataset.i; renderMovers(); }));
@@ -432,16 +430,15 @@ if (Object.keys(DT).length) {
       const miss = [];
       for (let k = p.days - 1; k >= 0; k--) miss.push(dshift(p.d, -k));
       return {from: miss[0], to: miss[miss.length - 1],
-              label: `${p.days}日合计 ${fmtN(p.tv)}（日均 ${fmtN(p.tv / p.days)}）`,
+              label: `${p.days}日合计 ${fmtN(p.qv)}（日均 ${fmtN(p.qv / p.days)}）`,
               note: `${miss[0].slice(5)}~${miss[miss.length-1].slice(5)} 平台合并下发，`
-                    + `${p.days}天合计 总播放 ${fmtN(p.tv)} / 合格播放 ${fmtN(p.qv)}。`
+                    + `${p.days}天合计 合格播放 ${fmtN(p.qv)}。`
                     + `合计是准的，拆不到单日；虚线段为日均估算值，不是实测。`};
     });
     // 合并区间内的估算值 = 该档合计 / 天数，走 est 通道（虚线），与实测 values 分开
     const estOf = key => { const m = new Map(); gaps.forEach(p => { for (let k = p.days - 1; k >= 0; k--) m.set(dshift(p.d, -k), p[key] / p.days); }); return axis.map(d => m.has(d) ? m.get(d) : null); };
     lineChart(document.getElementById('dtrend'), axis,
-      [{name: '总播放 +', color: 'var(--s1)', values: axis.map(d => val.has(d) ? val.get(d).tv : null), est: estOf('tv')},
-       {name: '合格播放 +', color: 'var(--s2)', values: axis.map(d => val.has(d) ? val.get(d).qv : null), est: estOf('qv')}],
+      [{name: '合格播放 +', color: 'var(--s2)', values: axis.map(d => val.has(d) ? val.get(d).qv : null), est: estOf('qv')}],
       v => fmtN(v), bands);
     document.getElementById('dtrendNote').innerHTML = bands.length
       ? '图中阴影带 = 平台合并下发的区间，带内标的是该区间合计（准确值）；'
@@ -453,10 +450,10 @@ if (Object.keys(DT).length) {
 }
 
 /* full drama table: sortable headers, default = launch date desc; grouped rows expand */
-const cells = d => `<td>${d.launch || '-'}</td><td>${fmtN(d.qv)}</td><td>${fmtN(d.tv)}</td><td>${fmtP(d.qratio)}</td><td>${d.dur}</td>
+const cells = d => `<td>${d.launch || '-'}</td><td>${fmtN(d.qv)}</td><td>${d.dur}</td>
   <td>${fmtN(d.like)}</td><td>${fmtN(d.fav)}</td><td>${fmtN(d.com)}</td>
   <td>${fmtP(d.engage, 2)}</td><td>${d.fav1k == null ? '-' : d.fav1k.toFixed(1)}</td>`;
-const DCOLS = [['name','剧目'],['launch','上线'],['qv','合格播放'],['tv','总播放'],['qratio','合格率'],
+const DCOLS = [['name','剧目'],['launch','上线'],['qv','合格播放'],
   ['dur','人均时长(s)'],['like','点赞'],['fav','收藏'],['com','评论'],['engage','互动率'],['fav1k','收藏/千播放']];
 let dSortK = 'launch', dSortDesc = true;
 const openGrp = new Set();   // 已展开的合并组名，跨重渲染（排序）保持
