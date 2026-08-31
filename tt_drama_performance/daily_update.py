@@ -84,17 +84,48 @@ TREND_KEY = 'innerfeedVv'   # 趋势 metrics 里与导出"合格播放"同口径
 HIST_KEY = 'qv'             # daily_history.json 里对应的键
 
 
-def audit_load():
+class AuditCorrupt(RuntimeError):
+    """台账文件在，但读不出来。"""
+
+
+def audit_load(strict=True):
+    """读验收台账。**读不出来时绝不能当空台账返回。**
+
+    跳过判定只认这个文件，空台账等于所有历史快照一起退回"未验收"：下一轮会把它们
+    重新导出，还可能拿一份未验收的导出把已入库的好快照顶掉。2026-08-26 实测：
+    autostash 落回冲突把冲突标记写进了这个 JSON，老逻辑 `except: return {}` 静默归零，
+    27 档台账当场只剩 2 档。
+    文件不存在才是合法的空（首次运行）；存在但解析失败一律抛出，由 __main__ 的总闸
+    告警退出，坏文件原样留在盘上等人工处理。
+    strict=False 只给 audit_all 用——它本身就是重建台账的修复工具。
+    """
+    if not os.path.exists(AUDIT):
+        return {}
     try:
         with open(AUDIT, encoding='utf-8') as fh:
-            return json.load(fh)
-    except Exception:
+            au = json.load(fh)
+        if not isinstance(au, dict):
+            raise ValueError(f'顶层不是 dict 而是 {type(au).__name__}')
+        return au
+    except Exception as e:
+        msg = (f'验收台账 {os.path.basename(AUDIT)} 在，但读不出来'
+               f'（{e.__class__.__name__}: {str(e)[:120]}）。拒绝按空台账继续，'
+               f'否则已验收的历史快照会被全部重采。修法：先解开 git 冲突，'
+               f'再跑 python daily_update.py --audit 重建。')
+        if strict:
+            raise AuditCorrupt(msg) from e
+        log(f'{msg}（--audit 本身就是重建工具，按空台账继续）')
         return {}
 
 
 def audit_save(a):
-    with open(AUDIT, 'w', encoding='utf-8') as fh:
+    """先写临时文件再原子替换——半截的台账和读不出来的台账一样致命（见 audit_load）。"""
+    tmp = AUDIT + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as fh:
         json.dump(a, fh, ensure_ascii=False, indent=1, sort_keys=True)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, AUDIT)
 
 
 def same_scope_delta(new_rows, prev_rows):
@@ -145,7 +176,7 @@ def audit_all(write=True):
         return {}, []
     tm = {k: int(v.get(HIST_KEY, 0)) for k, v in hist.items()}
     ds = sorted(snaps)
-    au, problems = audit_load(), []
+    au, problems = audit_load(strict=False), []
     log(f'全量复查：{len(ds)} 份快照 {ds[0]} ~ {ds[-1]}，趋势覆盖 {min(tm)} ~ {max(tm)}')
     for i in range(1, len(ds)):
         a, b = ds[i - 1], ds[i]
@@ -215,6 +246,84 @@ def notify(text):
             log(f'钉钉通知被拒: {r.get("errmsg")}')
     except Exception as e:
         log(f'钉钉通知失败: {e}')
+
+
+ALERT = os.path.join(DATA, '.alert_state.json')
+
+
+def _alert_state():
+    try:
+        with open(ALERT, encoding='utf-8') as fh:
+            st = json.load(fh)
+        return st if isinstance(st, dict) else {}
+    except Exception:
+        return {}
+
+
+def _alert_write(st):
+    try:
+        with open(ALERT, 'w', encoding='utf-8') as fh:
+            json.dump(st, fh, ensure_ascii=False, indent=1, sort_keys=True)
+    except OSError as e:
+        log(f'告警状态写入失败（不影响主流程）: {e}')
+
+
+def notify_once(key, text, hours=12):
+    """同一个故障 hours 小时内只推一条。定时任务 4 小时一轮，一个卡死状态能连推几十条
+    （2026-08-26 那次卡了 5 天 = 30 轮），推成噪音就等于没推。"""
+    st = _alert_state()
+    now = datetime.datetime.now()
+    try:
+        last = datetime.datetime.fromisoformat(st[key]) if key in st else None
+    except ValueError:
+        last = None                      # 记号写坏了就当没推过，宁可多推一条
+    if last and (now - last).total_seconds() < hours * 3600:
+        log(f'（{key} 告警 {hours}h 内已推过，本次只记日志）')
+        return
+    notify(text)
+    st[key] = now.isoformat(timespec='seconds')
+    _alert_write(st)
+
+
+def alert_clear(*keys):
+    """故障恢复后清掉记号，下次再犯立刻能推出去（而不是被去重窗口吃掉）。"""
+    st = _alert_state()
+    if any(st.pop(k, None) is not None for k in keys):
+        _alert_write(st)
+
+
+# index 里的冲突状态码（git status --porcelain v1 的前两位）
+CONFLICT_CODES = ('DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU')
+
+
+def git_stuck():
+    """检测仓库是不是卡在冲突/rebase 中间态；正常返回 None，否则返回一句人话。
+
+    autostash 落回冲突时 index 里留 UU 但**没有** MERGE_HEAD，`git rebase --abort` 救不了，
+    于是之后每一轮 pull 都是 "Pulling is not possible because you have unmerged files"：
+    采集照常、git 全废。更糟的是"已验收就跳过"那条路径在 git 分发之前就 return 0 了，
+    所以一条告警都发不出来——2026-08-26 起就这样静默卡了 5 天 30 轮，两份已验收快照
+    一直没推出去。因此这个检查必须放在每轮最开头，与本轮有没有采到新数据无关。
+    """
+    gd = subprocess.run(['git', 'rev-parse', '--git-dir'], cwd=BASE,
+                        capture_output=True, text=True)
+    if gd.returncode != 0:
+        return None                      # 不在 git 仓库里，交给调用方按普通 git 失败处理
+    gdir = os.path.join(BASE, gd.stdout.strip())
+    mid = [n for n in ('MERGE_HEAD', 'rebase-merge', 'rebase-apply', 'CHERRY_PICK_HEAD')
+           if os.path.exists(os.path.join(gdir, n))]
+    st = subprocess.run(['git', 'status', '--porcelain'], cwd=BASE,
+                        capture_output=True, text=True)
+    bad = [l for l in st.stdout.splitlines() if l[:2] in CONFLICT_CODES]
+    if not mid and not bad:
+        return None
+    parts = []
+    if bad:
+        parts.append('未解决冲突 ' + '、'.join(l[3:] for l in bad[:5])
+                     + (f' 等 {len(bad)} 个' if len(bad) > 5 else ''))
+    if mid:
+        parts.append('中间态 ' + '/'.join(mid))
+    return '；'.join(parts)
 
 
 def open_page(p, headless):
@@ -411,7 +520,10 @@ def sync_s3(today):
 def run(push, headless):
     today = datetime.date.today().isoformat()
     os.makedirs(DATA, exist_ok=True)
-    if push:
+    # 仓库体检必须放在最前面：卡住时"已验收就跳过"那条路径会在 git 分发之前就 return，
+    # 检查放后面等于永远发不出告警（2026-08-26 静默卡 5 天 30 轮的直接原因）。
+    stuck = git_stuck() if push else None
+    if push and not stuck:
         # 先同步远端：另一台机器可能已采过同一数据日，pull 后靠"快照已存在"直接跳过，
         # 避免两台机器各自持有同名未跟踪文件把 git 通道互相顶死
         r = subprocess.run(['git', 'pull', '--rebase', '--autostash'],
@@ -419,6 +531,26 @@ def run(push, headless):
         if r.returncode != 0:
             subprocess.run(['git', 'rebase', '--abort'], cwd=BASE, capture_output=True)
             log(f'预同步 pull 失败（继续本地采集）: {r.stderr.strip()[:200]}')
+            first = (r.stderr.strip().splitlines() or ['见日志'])[0][:120]
+            notify_once('git_pull',
+                        f'【TikTok短剧日报】预同步 git pull 失败：{first}。'
+                        '本轮继续本地采集，但远端可能已经落后，请检查 daily_update.log。')
+        else:
+            alert_clear('git_pull')
+        # 复检 index：autostash 落不回去时 pull **照样返回 0**（已复现验证），
+        # 只在 stdout 里留一行 "Applying autostash resulted in conflicts."。
+        # 光看 returncode 就是 2026-08-26 那一轮什么都没报的原因。
+        stuck = git_stuck()
+    if stuck:
+        # 采集不能因为 git 停：导出永远是"当前"全量累计，没有按历史日期回查的入口，
+        # 错过当天的剧目级状态就永久找不回来。所以照常采集 + 传 S3，只禁掉 git 分发。
+        push = False
+        log(f'git 仓库卡在中间态（{stuck}），本轮禁用 git 分发，S3 与本地入库照常。')
+        notify_once('git_stuck',
+                    f'【TikTok短剧日报】git 仓库卡住了：{stuck}。数据照常采集、S3 照常更新，'
+                    '但 GitHub 上的报告和数据备份已停止同步。修法：到仓库里 git status 看'
+                    '冲突文件，解开后 git add + git commit；或 git merge --abort / '
+                    'git rebase --abort 退回干净状态。')
     with sync_playwright() as p:
         ctx, page = open_page(p, headless)
         try:
@@ -444,7 +576,7 @@ def run(push, headless):
             if dd in passed:
                 r = au[dd]
                 log(f'{dd} 已验收通过（同口径偏差 {r["dev"]:+.2%}，{r["days"]}天档），本次跳过。')
-                return 0
+                return 4 if stuck else 0
             log(f'平台数据截止日: {dd}')
 
             # 1) 导出 xlsx（直接接住下载，不经过下载目录）
@@ -585,22 +717,38 @@ def run(push, headless):
 
     # 4) 分发。S3 优先（业务系统的消费口），git/分享页其次——三路互不阻塞，
     #    GitHub 偶发连不上时 S3 照常更新。
+    if push or stuck:
+        sync_s3(dd)          # S3 是业务系统的消费口，git 卡住也得照常更新
+    if stuck:
+        log('git 仓库仍卡在中间态，本轮不做 git 分发（本地已入库，解开冲突后会一并补推）。')
+        return 4
     if push:
-        sync_s3(dd)
         for cmd in (['git', 'pull', '--rebase', '--autostash'],
                     ['git', 'add', 'data', 'report.html'],
                     ['git', 'commit', '-m', f'data: snapshot {dd} (exported {today})'],
                     ['git', 'push']):
             r = subprocess.run(cmd, cwd=BASE, capture_output=True, text=True)
+            if cmd[1] == 'pull' and r.returncode == 0:
+                st2 = git_stuck()        # autostash 落不回去，pull 仍然 rc 0
+                if st2:
+                    log(f'pull 之后 index 变成冲突态（{st2}）：autostash 落不回去，'
+                        f'本轮停止 git 分发（数据已入库并传 S3）。')
+                    notify_once('git_stuck',
+                                f'【TikTok短剧日报】git pull 的 autostash 落回时冲突：{st2}。'
+                                '数据已采集并同步 S3，但 GitHub 同步已停。'
+                                '修法：解开冲突后 git add + git commit（本地改动在 git stash list 里）。')
+                    return 4
             if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
                 if 'pull' in cmd:
                     # rebase 冲突时把仓库恢复干净，避免后续每轮都卡在 rebase 中间态
                     subprocess.run(['git', 'rebase', '--abort'], cwd=BASE, capture_output=True)
                 log(f'git 失败: {" ".join(cmd)}\n{r.stderr.strip()}')
-                notify(f'【TikTok短剧日报】{dd} 数据已采集（S3 分发不受影响，结果见日志）；'
-                       f'但 git 推送失败（{cmd[1]}），GitHub 报告和数据备份未更新，'
-                       '下次采到新数据时会一并补推，持续失败请检查 daily_update.log。')
+                notify_once('git_push',
+                            f'【TikTok短剧日报】{dd} 数据已采集（S3 分发不受影响，结果见日志）；'
+                            f'但 git 推送失败（{cmd[1]}），GitHub 报告和数据备份未更新，'
+                            '下次采到新数据时会一并补推，持续失败请检查 daily_update.log。')
                 return 4
+        alert_clear('git_stuck', 'git_pull', 'git_push')
         log('已推送到远端。')
         sync_pages_repo(today)
     log('完成。')
