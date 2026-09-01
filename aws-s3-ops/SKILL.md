@@ -39,6 +39,11 @@ Downloads an object from an S3 bucket to the local filesystem.
 - **Script**: `scripts/s3_op.py`
 - **Command**: `python3 scripts/s3_op.py download <bucket_name> <object_key> [local_file_path]`
 
+### 5. HTML Share Upload Server (Web UI)
+Starts a local web page with an upload button: pick an `.html` file, it uploads to the fixed team path `s3://starlitshorts/aigc/drama/html_share/` and returns a public link.
+- **Script**: `scripts/upload_server.py` — credentials from `scripts/.s3creds` (two hex lines: AK then SK, gitignored) or the default boto3 chain
+- **Command**: `python3 scripts/upload_server.py [port]` (default 8000), then open `http://localhost:<port>`
+
 ## Setup Guidance
 
 If the user has not configured AWS, suggest one of these:
