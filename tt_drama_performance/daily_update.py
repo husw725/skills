@@ -128,6 +128,16 @@ def audit_save(a):
     os.replace(tmp, AUDIT)
 
 
+def names(rows, keys, cap=8):
+    """日志用的剧名列表。**按字段名取**——2026-08-24 那次"按列名读"重构把行从元组
+    换成了 dict，这里原来写的 `rows[k][1]` 一直是元组时代的下标，added/gone 非空时
+    直接 KeyError: 1，把整轮打挂（2026-08-31 19:00、2026-09-02 15:00 两次）。
+    顺手截断：空导出那次 gone=27 部，整串刷屏也没用。"""
+    keys = list(keys)
+    head = '、'.join(str(rows[k].get('name')) for k in keys[:cap])
+    return head + (f' 等 {len(keys)} 部' if len(keys) > cap else '')
+
+
 def same_scope_delta(new_rows, prev_rows):
     """同口径增量（只算两份快照都在的剧）+ 新增/消失名单。
 
@@ -602,6 +612,16 @@ def run(push, headless):
             stored = sorted(f for f in _g.glob(os.path.join(DATA, 'content_performance_*.xlsx'))
                             if '.candidate.' not in os.path.basename(f))
             new_r = snap_rows(cand)
+            if not new_r:
+                # 平台偶发下发只有表头的空导出（2026-09-02 15:00 实测 16,103 字节 / 0 行，
+                # 字节数守卫拦不住）。这里必须独立成一条：下面"比上一份少 2 部"的判据在
+                # 首次运行（stored 为空）时整段跳过，空导出会一路入库。
+                quarantine(cand, dd, 'empty')
+                log('导出只有表头、0 部剧（平台空转），已隔离，下一轮自动重试。')
+                notify_once('export_empty',
+                            f'【TikTok短剧日报】{dd} 的导出是空的（只有表头 0 部剧），'
+                            '平台可能正在刷新，本次未入库，下一轮定时任务会自动重试。')
+                return 3
             xlsx = os.path.join(DATA, f'content_performance_{dd}.xlsx')   # 默认按标注日命名
             if stored:
                 base_f = stored[-1]
@@ -610,10 +630,9 @@ def run(push, headless):
                 sdiff, added, gone, ncommon = same_scope_delta(new_r, prev_r)
                 if added:
                     log(f'新纳入统计 {len(added)} 部剧（首现带全量累计，不计入对账）: '
-                        + '、'.join(str(new_r[k][1]) for k in added))
+                        + names(new_r, added))
                 if gone:   # 剧目消失是异常，必须留痕，绝不静默少采
-                    log(f'警告：{len(gone)} 部剧在本次导出中消失: '
-                        + '、'.join(str(prev_r[k][1]) for k in gone))
+                    log(f'警告：{len(gone)} 部剧在本次导出中消失: ' + names(prev_r, gone))
                 # ① 少采：剧目数比上一份少 2 部以上（实测出现过 22->14）
                 if len(new_r) <= len(prev_r) - 2:
                     quarantine(cand, dd, 'short')
