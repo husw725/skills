@@ -302,6 +302,12 @@ def alert_clear(*keys):
         _alert_write(st)
 
 
+def alert_clear_all():
+    """整轮跑到"完成"= 采集/对账/报告/分发全通，所有记号一起清。"""
+    if _alert_state():
+        _alert_write({})
+
+
 # index 里的冲突状态码（git status --porcelain v1 的前两位）
 CONFLICT_CODES = ('DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU')
 
@@ -414,7 +420,8 @@ def sync_pages_repo(today):
         r = subprocess.run(cmd, cwd=d, capture_output=True, text=True)
         if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
             log(f'分享页同步失败: {" ".join(cmd)} -> {r.stderr.strip()[:200]}')
-            notify(f'【TikTok短剧日报】分享页(tt-drama-report)同步失败（{cmd[1]}），'
+            notify_once('pages_sync',
+                        f'【TikTok短剧日报】分享页(tt-drama-report)同步失败（{cmd[1]}），'
                    'github.io 短链暂未更新，下次数据更新时自动重试。')
             return
     log('分享页(tt-drama-report)已同步。')
@@ -566,10 +573,12 @@ def run(push, headless):
         try:
             if not logged_in(page):
                 log('登录态失效：请先运行  python daily_update.py --login')
-                notify('【TikTok短剧日报】登录态失效，今日数据未更新。'
-                       '请到 Windows 机器上双击 login.bat 重新登录一次即可恢复。')
+                notify_once('login_expired',
+                            '【TikTok短剧日报】登录态失效，今日数据未更新。'
+                            '请到 Windows 机器上双击 login.bat 重新登录一次即可恢复。')
                 return 2
 
+            alert_clear('login_expired')      # 登录态恢复了，下次失效要能立刻推出去
             dd = data_date(page)
             daily = page.evaluate(EXTRACT_JS)
             if not dd and daily:
@@ -599,13 +608,16 @@ def run(push, headless):
                 dl.value.save_as(cand)
             except PWTimeout:
                 log('导出失败：点击 Export Data 后 30 秒内没有产生下载。')
-                notify('【TikTok短剧日报】导出失败（页面可能改版），今日数据未更新，请人工检查。')
+                notify_once('export_timeout',
+                            '【TikTok短剧日报】导出失败（页面可能改版），今日数据未更新，请人工检查。')
                 return 3
             if os.path.getsize(cand) < 1000:
                 size = os.path.getsize(cand)
                 quarantine(cand, dd, 'tiny')
                 log(f'导出文件异常（{size} bytes），已隔离，下一轮自动重试。')
-                notify(f'【TikTok短剧日报】{dd} 导出文件异常（{size} bytes），本次未入库，下一轮自动重试。')
+                notify_once('export_tiny',
+                            f'【TikTok短剧日报】{dd} 导出文件异常（{size} bytes），'
+                            '本次未入库，下一轮自动重试。')
                 return 3
             # ---- 验收：过了才入库，没过就隔离重试 ----
             import glob as _g
@@ -637,8 +649,10 @@ def run(push, headless):
                 if len(new_r) <= len(prev_r) - 2:
                     quarantine(cand, dd, 'short')
                     log(f'导出疑似残缺（{len(new_r)} 部剧，上一份 {len(prev_r)} 部），已隔离，下一轮自动重试。')
-                    notify(f'【TikTok短剧日报】{dd} 的导出只有 {len(new_r)} 部剧（上次 {len(prev_r)} 部），'
-                           '平台可能正在刷新中，本次未入库，下一轮定时任务会自动重试。')
+                    notify_once('export_short',
+                                f'【TikTok短剧日报】{dd} 的导出只有 {len(new_r)} 部剧'
+                                f'（上次 {len(prev_r)} 部），平台可能正在刷新中，'
+                                '本次未入库，下一轮定时任务会自动重试。')
                     return 3
                 # ② 平台原地不动：与已入库的某份逐行相同，没有新信息。安静重试，不告警。
                 if any(new_r == snap_rows(f) for f in stored[-3:]):
@@ -727,7 +741,8 @@ def run(push, headless):
                        capture_output=True, text=True)
     print(r.stdout, r.stderr)
     if r.returncode != 0:
-        notify(f'【TikTok短剧日报】{dd} 数据已采集但报告生成失败（generate_report.py），'
+        notify_once('report_gen',
+                    f'【TikTok短剧日报】{dd} 数据已采集但报告生成失败（generate_report.py），'
                '线上报告未更新，请检查 daily_update.log。')
         return 4
     # 数据校验：报告必须包含本次快照的数据日期
@@ -770,6 +785,7 @@ def run(push, headless):
         alert_clear('git_stuck', 'git_pull', 'git_push')
         log('已推送到远端。')
         sync_pages_repo(today)
+    alert_clear_all()
     log('完成。')
     return 0
 
@@ -797,6 +813,7 @@ if __name__ == '__main__':
         # 无人值守的管道里静默失败比失败更糟
         import traceback
         traceback.print_exc()
-        notify(f'【TikTok短剧日报】运行异常中止：{e.__class__.__name__}: {str(e)[:150]}。'
-               '今日数据可能未更新，请检查 daily_update.log。')
+        notify_once(f'crash:{e.__class__.__name__}',
+                    f'【TikTok短剧日报】运行异常中止：{e.__class__.__name__}: {str(e)[:150]}。'
+                    '今日数据可能未更新，请检查 daily_update.log。')
         sys.exit(4)
