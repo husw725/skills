@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}操作台 · 短剧数据台{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/">首页</a> › 操作台</p>
+{% if msg %}<div class="notice">{{ msg }}</div>{% endif %}
+
+<section class="charts two">
+  <div class="panel">
+    <h3>添加剧</h3>
+    <form method="post" action="/admin/add" class="form">
+      <label>剧 ID（一行一个，也可以直接粘贴剧集链接）
+        <textarea name="ids" rows="4" placeholder="7677865695564436501&#10;https://www.tiktok.com/shortdrama/episode/7677865695564436501/1" required></textarea>
+      </label>
+      <div class="row">
+        <label>分组
+          <select name="grp">{% for g in groups %}<option value="{{ g }}">{{ g }}</option>{% endfor %}</select>
+        </label>
+        <label>或自定义分组 <input name="grp_custom" placeholder="例如：韩剧对标"></label>
+      </div>
+      <p class="hint">提交后立刻抓一次，成功会自动填入剧名和封面；ID 错了会在列表里标红。</p>
+      <button class="btn" type="submit">添加并抓取</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>刷新</h3>
+    <p>当前数据源：<b>{{ '自建直连 TikTok' if cfg.source == 'direct' else 'Apify 云端' }}</b>。{{ '自建模式逐部抓取，每部剧约 2 到 5 秒。' if cfg.source == 'direct' else '所有未归档的剧塞进同一次 Apify 运行，几十部剧通常一两分钟。' }}</p>
+    <form method="post" action="/admin/refresh" class="inline">
+      <button class="btn" type="submit" {{ 'disabled' if running else '' }}>{{ '抓取中，请稍候…' if running else '全部立即刷新' }}</button>
+    </form>
+    <h3 class="mt">设置</h3>
+    <form method="post" action="/admin/settings" class="form">
+      <fieldset class="src">
+        <legend>数据源</legend>
+        <label class="chk"><input type="radio" name="source" value="apify" {{ 'checked' if cfg.source != 'direct' else '' }}> Apify 云端抓取 <span class="muted">按集计费，海外出口，最省事</span></label>
+        <label class="chk"><input type="radio" name="source" value="direct" {{ 'checked' if cfg.source == 'direct' else '' }}> 自建直连 TikTok <span class="muted">免费，本机直接请求；国内网络必须填代理</span></label>
+      </fieldset>
+      <div class="row">
+        <label>每部剧最多抓几集 <input type="number" name="max_items" value="{{ cfg.max_items }}" min="1" max="10000"></label>
+      </div>
+      <h4>Apify 模式</h4>
+      <label>Apify API Token <span class="muted">{{ token_hint }}</span>
+        <input type="password" name="apify_token" placeholder="留空则保持不变" autocomplete="off">
+      </label>
+      <label class="chk"><input type="checkbox" name="use_proxy" {{ 'checked' if cfg.use_proxy else '' }}> 使用 Apify 住宅代理（结果为空时再开）</label>
+      <h4>自建模式</h4>
+      <div class="row">
+        <label>HTTP 代理 <input name="direct_proxy" value="{{ cfg.direct_proxy }}" placeholder="http://127.0.0.1:7890，能直连 TikTok 则留空"></label>
+        <label>请求间隔（秒）<input type="number" name="direct_delay" value="{{ cfg.direct_delay }}" min="0" max="30" step="0.5"></label>
+      </div>
+      <div class="row">
+        <label class="chk"><input type="checkbox" name="schedule_enabled" {{ 'checked' if cfg.schedule_enabled else '' }}> 每日自动刷新</label>
+        <label>时间（本机时区）<input type="time" name="schedule_time" value="{{ cfg.schedule_time }}"></label>
+      </div>
+      <p class="hint">Token 在 Apify Console → Settings → Integrations 获取，保存在本机 config.json。</p>
+      <button class="btn" type="submit">保存设置</button>
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>剧管理 <span class="muted">{{ ov|length }} 部</span></h3>
+  <div class="wrap">
+  <table class="tbl">
+    <thead><tr><th>剧</th><th>ID</th><th>分组 / 备注</th><th>状态</th><th class="r">集数</th><th class="r">总播放</th><th>最后更新</th><th>操作</th></tr></thead>
+    <tbody>
+    {% for m in ov %}
+    <tr class="{{ 'dim' if m.archived else '' }}">
+      <td><a href="/series/{{ m.series_id }}">{{ m.title or '（未抓到剧名）' }}</a>{% if m.archived %} <span class="tag">已归档</span>{% endif %}</td>
+      <td class="mono">{{ m.series_id }}</td>
+      <td>
+        <form method="post" action="/admin/series/{{ m.series_id }}" class="inline row tight">
+          <select name="grp">
+            {% for g in groups %}<option value="{{ g }}" {{ 'selected' if m.grp == g else '' }}>{{ g }}</option>{% endfor %}
+            {% if m.grp not in groups %}<option value="{{ m.grp }}" selected>{{ m.grp }}</option>{% endif %}
+          </select>
+          <input name="notes" value="{{ m.notes }}" placeholder="备注" size="12">
+          <button class="btn sm ghost" name="action" value="save">保存</button>
+        </form>
+      </td>
+      <td>
+        {% if m.status == 'ok' %}<span class="badge ok">正常</span>
+        {% elif m.status == 'pending' %}<span class="badge">抓取中</span>
+        {% else %}<span class="badge bad" title="{{ m.status_msg }}">失败</span> <span class="muted small">{{ m.status_msg }}</span>{% endif %}
+      </td>
+      <td class="r">{{ m.ep_n or '—' }}</td>
+      <td class="r">{{ m.total_play|num }}</td>
+      <td>{{ m.last_taken_at|t }}</td>
+      <td>
+        <form method="post" action="/admin/series/{{ m.series_id }}" class="inline">
+          <button class="btn sm ghost" name="action" value="refresh">刷新</button>
+          {% if m.archived %}<button class="btn sm ghost" name="action" value="unarchive">恢复</button>
+          {% else %}<button class="btn sm ghost" name="action" value="archive">归档</button>{% endif %}
+          <button class="btn sm danger" name="action" value="delete" onclick="return confirm('删除这部剧和它的全部历史数据？')">删除</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h3>抓取日志</h3>
+  <div class="wrap">
+  <table class="tbl">
+    <thead><tr><th>#</th><th>触发</th><th>开始</th><th>结束</th><th>状态</th><th class="r">剧数</th><th class="r">抓到集数</th><th class="r">估算费用</th><th>Apify Run / 错误</th></tr></thead>
+    <tbody>
+    {% for j in jobs %}
+    <tr>
+      <td>{{ j.id }}</td>
+      <td>{{ {'add': '添加', 'manual': '手动', 'schedule': '定时'}.get(j.trigger, j.trigger) }}</td>
+      <td>{{ j.started_at }}</td><td>{{ j.finished_at or '—' }}</td>
+      <td>{% if j.status == 'ok' %}<span class="badge ok">成功</span>{% elif j.status == 'running' %}<span class="badge">运行中</span>{% else %}<span class="badge bad">失败</span>{% endif %}</td>
+      <td class="r">{{ j.series_count }}</td><td class="r">{{ j['items'] if j['items'] is not none else '—' }}</td>
+      <td class="r">{{ '$%.3f'|format(j.cost_usd) if j.cost_usd is not none else '—' }}</td>
+      <td class="small">{% if j.run_id == 'direct' %}<span class="tag">自建</span>{% elif j.run_id %}<a href="https://console.apify.com/actors/runs/{{ j.run_id }}" target="_blank" rel="noopener" class="mono">{{ j.run_id }}</a>{% endif %} {{ j.error or '' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

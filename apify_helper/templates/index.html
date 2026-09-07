@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<script id="data" type="application/json">{{ payload|tojson }}</script>
+
+{% if dash.alerts %}
+<section class="alerts">
+  {% for a in dash.alerts %}
+  <a class="alert {{ a.level }}" href="{{ '/series/' ~ a.sid if a.sid else '/admin' }}">
+    <span class="dot"></span><b>{{ a.title }}</b><span>{{ a.msg }}</span>
+  </a>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="kpis">
+  <div class="kpi"><span class="lbl">在追剧数</span><b>{{ dash.kpi.n_series }}</b><span class="sub">自家 {{ dash.kpi.n_ours }} · 竞品 {{ dash.kpi.n_series - dash.kpi.n_ours }}</span></div>
+  <div class="kpi"><span class="lbl">昨日播放增量</span><b class="{{ 'up' if dash.kpi.delta_play and dash.kpi.delta_play > 0 else '' }}">{{ dash.kpi.delta_play|delta }}</b><span class="sub">全部剧，对比上一日快照</span></div>
+  <div class="kpi"><span class="lbl">总播放</span><b>{{ dash.kpi.total_play|num }}</b><span class="sub">最新快照累计</span></div>
+  <div class="kpi"><span class="lbl">自家平均首集播放</span><b>{{ dash.kpi.avg_first_play|num }}</b><span class="sub">第 1 集播放均值</span></div>
+  <div class="kpi"><span class="lbl">自家平均末集留存</span><b>{{ dash.kpi.avg_retention|pct(0) }}</b><span class="sub">末集播放 ÷ 首集播放</span></div>
+  <div class="kpi"><span class="lbl">自家平均互动率</span><b>{{ dash.kpi.avg_eng|pct }}</b><span class="sub">赞评转藏 ÷ 播放 · 收藏率 {{ dash.kpi.avg_collect|pct(2) }}</span></div>
+</section>
+
+<section class="charts two">
+  <div class="panel">
+    <h3>近 30 天总播放趋势</h3>
+    {% if payload.trend %}<div class="ch"><canvas id="trendChart"></canvas></div>
+    {% else %}<p class="empty">还没有历史快照。每天自动刷新一次后这里会出现趋势线。</p>{% endif %}
+  </div>
+  <div class="panel">
+    <h3>昨日播放增量 Top 5</h3>
+    {% if payload.top %}<div class="ch"><canvas id="topChart"></canvas></div>
+    {% else %}<p class="empty">需要至少两天的快照才能算增量。</p>{% endif %}
+  </div>
+</section>
+
+<section class="toolbar">
+  <div class="chips" id="grpChips">
+    <button class="chip on" data-grp="">全部</button>
+    {% for g in groups %}<button class="chip" data-grp="{{ g }}">{{ g }}</button>{% endfor %}
+  </div>
+  <select id="sortSel">
+    <option value="delta">按日增量</option>
+    <option value="play">按总播放</option>
+    <option value="added">按添加时间</option>
+    <option value="title">按剧名</option>
+  </select>
+  <input id="searchBox" type="search" placeholder="搜剧名 / ID">
+  <a class="btn" href="/admin">操作台 · 添加剧</a>
+</section>
+
+{% if not ov %}
+<p class="empty big">还没有剧。到 <a href="/admin">操作台</a> 输入剧 ID 添加第一部。</p>
+{% endif %}
+<section class="cards" id="cards">
+  {% for m in ov %}
+  <a class="card {{ 'ours' if m.grp == '自家' else 'rival' }}" href="/series/{{ m.series_id }}"
+     data-grp="{{ m.grp }}" data-title="{{ (m.title or '')|lower }} {{ m.series_id }}"
+     data-delta="{{ m.delta_play if m.delta_play is not none else -1e18 }}" data-play="{{ m.total_play or 0 }}"
+     data-added="{{ m.added_at }}" {% if m.cover_url %}style="--bg:url('{{ m.cover_url }}')"{% endif %}>
+    <div class="card-top">
+      <span class="tag">{{ m.grp }}</span>
+      {% if m.status == 'pending' %}<span class="badge">抓取中</span>
+      {% elif m.status == 'error' %}<span class="badge bad">抓取失败</span>
+      {% elif m.stale %}<span class="badge warn">数据过期</span>{% endif %}
+    </div>
+    <div class="card-body">
+      <h3>{{ m.title or ('剧 ' ~ m.series_id) }}</h3>
+      <p class="sub">{{ m.genres or '—' }} · {{ m.ep_n or m.episode_count or '?' }} 集{% if m.paywall_ep %} · 免费至第 {{ m.paywall_ep }} 集{% endif %}</p>
+      <div class="stats">
+        <div><b>{{ m.total_play|num }}</b><span>总播放</span></div>
+        <div><b class="{{ 'up' if m.delta_play and m.delta_play > 0 else '' }}">{{ m.delta_play|delta }}</b><span>日增</span></div>
+        <div><b>{{ m.eng_rate|pct }}</b><span>互动率</span></div>
+        <div><b>{{ m.retention|pct(0) }}</b><span>末集留存</span></div>
+      </div>
+      <p class="foot">更新 {{ m.last_taken_at|t }}</p>
+    </div>
+  </a>
+  {% endfor %}
+</section>
+{% endblock %}
+{% block scripts %}<script>initIndex();</script>{% endblock %}

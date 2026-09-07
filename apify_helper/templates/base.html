@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}短剧数据台{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">短剧数据台</a>
+  <nav>
+    <a href="/" class="{{ 'on' if request.path == '/' else '' }}">首页</a>
+    <a href="/admin" class="{{ 'on' if request.path.startswith('/admin') else '' }}">操作台</a>
+  </nav>
+  <span id="jobpill" class="pill" hidden>抓取中…</span>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

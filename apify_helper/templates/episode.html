@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ s.title or s.series_id }} 第{{ ep }}集 · 短剧数据台{% endblock %}
+{% block content %}
+<script id="data" type="application/json">{{ payload|tojson }}</script>
+<p class="crumb"><a href="/">首页</a> › <a href="/series/{{ s.series_id }}">{{ s.title or s.series_id }}</a> › 第 {{ ep }} 集</p>
+
+<section class="hero small">
+  <div class="poster" {% if e.cover_url or s.cover_url %}style="background-image:url('{{ e.cover_url or s.cover_url }}')"{% endif %}></div>
+  <div class="hero-body">
+    <div class="hero-head">
+      <h1>第 {{ ep }} 集 <span class="muted">/ {{ n }}</span></h1>
+      {% if e.is_preview %}<span class="tag free">免费集</span>{% else %}<span class="tag paid">付费集</span>{% endif %}
+      {% if s.paywall_ep and ep == s.paywall_ep + 1 %}<span class="badge warn">付费墙后第一集</span>{% endif %}
+    </div>
+    <p class="meta">{{ s.title }} · 时长 {{ e.duration|dur }} · 发布 {{ e.created_at|t }} · 快照 {{ s.last_taken_at|t }}</p>
+    <div class="actions">
+      {% if prev_ep %}<a class="btn ghost" href="/series/{{ s.series_id }}/episode/{{ ep - 1 }}">‹ 第 {{ ep - 1 }} 集</a>{% endif %}
+      {% if next_ep %}<a class="btn ghost" href="/series/{{ s.series_id }}/episode/{{ ep + 1 }}">第 {{ ep + 1 }} 集 ›</a>{% endif %}
+      {% if e.url %}<a class="btn ghost" href="{{ e.url }}" target="_blank" rel="noopener">TikTok 原页</a>{% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="kpis">
+  <div class="kpi"><span class="lbl">播放</span><b>{{ e.play|num }}</b><span class="sub">剧内排名 {{ rank }} / {{ n }}</span></div>
+  <div class="kpi"><span class="lbl">日增量</span><b class="{{ 'up' if last_delta and last_delta > 0 else '' }}">{{ last_delta|delta }}</b><span class="sub">最近一个自然日</span></div>
+  <div class="kpi"><span class="lbl">留存</span><b>{{ e.retention|pct(0) }}</b><span class="sub">相对第 1 集</span></div>
+  <div class="kpi"><span class="lbl">互动率</span><b>{{ e.eng_rate|pct }}</b><span class="sub">收藏率 {{ e.collect_rate|pct(2) }}</span></div>
+  <div class="kpi"><span class="lbl">点赞 / 评论</span><b>{{ e.digg|num }} <span class="muted">/</span> {{ e.comment|num }}</b><span class="sub">最新快照</span></div>
+  <div class="kpi"><span class="lbl">分享 / 收藏</span><b>{{ e.share|num }} <span class="muted">/</span> {{ e.collect|num }}</b><span class="sub">最新快照</span></div>
+</section>
+
+<section class="charts two">
+  <div class="panel"><h3>播放历史</h3>
+    {% if hist|length > 1 %}<div class="ch"><canvas id="playHist"></canvas></div>{% else %}<p class="empty">只有一次快照。</p>{% endif %}
+  </div>
+  <div class="panel"><h3>每日播放增量</h3>
+    {% if deltas %}<div class="ch"><canvas id="deltaChart"></canvas></div>{% else %}<p class="empty">需要两天以上快照。</p>{% endif %}
+  </div>
+  <div class="panel wide"><h3>互动增长指数 <span class="muted">首次快照 = 100</span></h3>
+    {% if hist|length > 1 %}<div class="ch"><canvas id="engIdx"></canvas></div>{% else %}<p class="empty">只有一次快照。</p>{% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <h3>快照明细</h3>
+  <div class="wrap">
+  <table class="tbl">
+    <thead><tr><th>快照时间</th><th class="r">播放</th><th class="r">点赞</th><th class="r">评论</th><th class="r">分享</th><th class="r">收藏</th></tr></thead>
+    <tbody>
+    {% for r in hist|reverse %}
+    <tr><td>{{ r.taken_at }}</td><td class="r">{{ r.play|num }}</td><td class="r">{{ r.digg|num }}</td><td class="r">{{ r.comment|num }}</td><td class="r">{{ r.share|num }}</td><td class="r">{{ r.collect|num }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script>initEpisode();</script>{% endblock %}

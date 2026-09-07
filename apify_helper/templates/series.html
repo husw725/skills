@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ s.title or s.series_id }} · 短剧数据台{% endblock %}
+{% block content %}
+<script id="data" type="application/json">{{ payload|tojson }}</script>
+<p class="crumb"><a href="/">首页</a> › {{ s.title or s.series_id }}</p>
+
+<section class="hero">
+  <div class="poster" {% if s.cover_url %}style="background-image:url('{{ s.cover_url }}')"{% endif %}></div>
+  <div class="hero-body">
+    <div class="hero-head">
+      <h1>{{ s.title or ('剧 ' ~ s.series_id) }}</h1>
+      <span class="tag">{{ s.grp }}</span>
+      {% if s.status == 'error' %}<span class="badge bad">抓取失败：{{ s.status_msg }}</span>
+      {% elif s.status == 'pending' %}<span class="badge">抓取中</span>
+      {% elif s.stale %}<span class="badge warn">数据过期</span>{% endif %}
+    </div>
+    <p class="meta">
+      {{ s.genres or '题材未知' }} · {{ s.ep_n or s.episode_count or '?' }} 集
+      {% if s.paywall_ep %} · 免费至第 {{ s.paywall_ep }} 集{% else %} · 未识别到付费墙{% endif %}
+      {% if s.author_name %} · @{{ s.author_name }}{% if s.author_nick %}（{{ s.author_nick }}）{% endif %} · 粉丝 {{ s.author_fans|num }}{% endif %}
+    </p>
+    {% if s.synopsis %}<p class="syn">{{ s.synopsis }}</p>{% endif %}
+    <p class="meta small">剧 ID {{ s.series_id }} · 最后更新 {{ s.last_taken_at|t }}{% if s.notes %} · 备注：{{ s.notes }}{% endif %}</p>
+    <div class="actions">
+      {% if eps %}<a class="btn ghost" href="{{ eps[0].url }}" target="_blank" rel="noopener">TikTok 原页</a>{% endif %}
+      <a class="btn ghost" href="/export/series/{{ s.series_id }}.csv">导出 CSV</a>
+      <form method="post" action="/admin/series/{{ s.series_id }}" class="inline"><input type="hidden" name="action" value="refresh"><button class="btn">立即刷新</button></form>
+    </div>
+  </div>
+</section>
+
+<section class="kpis">
+  <div class="kpi"><span class="lbl">总播放</span><b>{{ s.total_play|num }}</b><span class="sub">{{ s.ep_n }} 集累计</span></div>
+  <div class="kpi"><span class="lbl">日增量</span><b class="{{ 'up' if s.delta_play and s.delta_play > 0 else '' }}">{{ s.delta_play|delta }}</b><span class="sub">{% if s.prev_taken_at %}对比 {{ s.prev_taken_at|t }}{% else %}需要两天以上快照{% endif %}</span></div>
+  <div class="kpi"><span class="lbl">首集播放</span><b>{{ s.first_play|num }}</b><span class="sub">流量入口</span></div>
+  <div class="kpi"><span class="lbl">末集留存</span><b>{{ s.retention|pct(0) }}</b><span class="sub">末集 ÷ 首集</span></div>
+  <div class="kpi"><span class="lbl">付费墙断崖</span><b>{{ s.cliff|x }}</b><span class="sub">最后免费集 ÷ 首个付费集</span></div>
+  <div class="kpi"><span class="lbl">互动率</span><b>{{ s.eng_rate|pct }}</b><span class="sub">收藏率 {{ s.collect_rate|pct(2) }}</span></div>
+</section>
+
+{% if eps %}
+<section class="toolbar">
+  <form method="get" class="inline">
+    <label>叠加对比留存曲线：
+      <select name="compare" onchange="this.form.submit()">
+        <option value="">不对比</option>
+        {% for o in others %}<option value="{{ o.series_id }}" {{ 'selected' if o.series_id == cmp_sid else '' }}>{{ o.grp }} · {{ o.title or o.series_id }}</option>{% endfor %}
+      </select>
+    </label>
+  </form>
+</section>
+
+<section class="charts two">
+  <div class="panel"><h3>每集播放</h3><div class="ch"><canvas id="epPlayChart"></canvas></div></div>
+  <div class="panel"><h3>留存曲线（相对第 1 集）</h3><div class="ch"><canvas id="retChart"></canvas></div></div>
+  <div class="panel"><h3>每集互动率 / 收藏率</h3><div class="ch"><canvas id="engChart"></canvas></div></div>
+  <div class="panel"><h3>总播放趋势（按快照）</h3>
+    {% if payload.trend|length > 1 %}<div class="ch"><canvas id="trendChart"></canvas></div>
+    {% else %}<p class="empty">只有一次快照，明天起会出现趋势。</p>{% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <h3>分集明细 <span class="muted">点击任意一集查看历史</span></h3>
+  <div class="wrap">
+  <table class="tbl">
+    <thead><tr><th>集</th><th>类型</th><th class="r">播放</th><th class="r">留存</th><th class="r">点赞</th><th class="r">评论</th><th class="r">分享</th><th class="r">收藏</th><th class="r">互动率</th><th class="r">时长</th><th>发布时间</th></tr></thead>
+    <tbody>
+    {% for e in eps %}
+    <tr class="{{ 'paywall' if s.paywall_ep and e.episode_number == s.paywall_ep + 1 else '' }}">
+      <td><a href="/series/{{ s.series_id }}/episode/{{ e.episode_number }}">第 {{ e.episode_number }} 集</a></td>
+      <td>{% if e.is_preview %}<span class="tag free">免费</span>{% else %}<span class="tag paid">付费</span>{% endif %}</td>
+      <td class="r">{{ e.play|num }}</td>
+      <td class="ret"><span class="bar" style="--w:{{ ((e.retention or 0) * 100)|round|int }}%"></span>{{ e.retention|pct(0) }}</td>
+      <td class="r">{{ e.digg|num }}</td><td class="r">{{ e.comment|num }}</td><td class="r">{{ e.share|num }}</td><td class="r">{{ e.collect|num }}</td>
+      <td class="r">{{ e.eng_rate|pct }}</td>
+      <td class="r">{{ e.duration|dur }}</td>
+      <td>{{ e.created_at|t }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% else %}
+<p class="empty big">这部剧还没有数据。{% if s.status == 'pending' %}正在抓取，稍后刷新页面。{% else %}到操作台点「刷新」重试。{% endif %}</p>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script>initSeries();</script>{% endblock %}
