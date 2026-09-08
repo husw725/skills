@@ -8,7 +8,7 @@ if errorlevel 1 (
   exit /b 1
 )
 if not exist config.json copy config.example.json config.json >nul
-python -m pip install -r requirements.txt -q --disable-pip-version-warning
+python -m pip install -r requirements.txt -q --disable-pip-version-check
 if errorlevel 1 (
   echo [ERROR] pip install failed. Check network / proxy, then run start.bat again.
   pause
