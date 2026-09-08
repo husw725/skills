@@ -1,0 +1,27 @@
+{% extends "proto/base.html" %}
+{% block title %}Authorize {{ app_name }}{% endblock %}
+{% block body %}
+<div class="tt-top">TikTok <span class="muted" style="font-weight:400;font-size:12px;margin-left:10px">simulated consent screen, hosted by TikTok in production</span></div>
+<div class="consent">
+  <h1>Authorize access</h1>
+  <p class="small">An app is requesting permission to access your TikTok account.</p>
+  <div class="app"><div class="logo">S</div><div><b>{{ app_name }}</b><br><span class="small">Redirect: {{ redirect_uri }}</span></div></div>
+
+  <form method="get" action="/connect/callback">
+    <label class="small">Authorize as
+      <select name="account" style="display:block;width:100%;margin:6px 0 14px">
+        {% for h in handles %}<option value="{{ h }}">@{{ h }}</option>{% endfor %}
+      </select>
+    </label>
+    <p style="margin:0 0 4px"><b>This app will be able to:</b></p>
+    {% for title, desc in scopes %}
+    <div class="scope"><b>{{ title }}</b><span>{{ desc }}</span></div>
+    {% endfor %}
+    <div class="scope"><b style="color:var(--ink2)">This app will NOT be able to</b><span>post, edit or delete videos, read private messages, or act on your behalf.</span></div>
+    <div class="btns">
+      <button class="btn ghost" name="decision" value="deny">Cancel</button>
+      <button class="btn dark" name="decision" value="allow">Authorize</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

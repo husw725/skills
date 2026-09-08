@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ app_name }}{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+  .proto-bar{background:#fff8c5;border-bottom:1px solid #d4a72c;font-size:12px;color:#6b4d00;text-align:center;padding:3px}
+  .acct{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--grid);border-radius:8px;background:var(--surface);margin-bottom:10px}
+  .avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#2a78d6,#1baf7a);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex:none}
+  .acct .grow{flex:1;min-width:0}
+  .acct b{font-size:16px}
+  .consent{max-width:480px;margin:40px auto;background:#fff;border:1px solid var(--grid);border-radius:12px;padding:28px 30px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
+  .consent h1{font-size:20px;margin:0 0 4px}
+  .consent .app{display:flex;align-items:center;gap:10px;margin:16px 0}
+  .consent .app .logo{width:40px;height:40px;border-radius:10px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .scope{padding:10px 0;border-top:1px solid var(--grid)}
+  .scope b{display:block}
+  .scope span{color:var(--ink2);font-size:13px}
+  .consent .btns{display:flex;gap:10px;margin-top:20px}
+  .consent .btns .btn{flex:1;text-align:center;padding:10px}
+  .btn.dark{background:#111;border-color:#111}
+  .tt-top{background:#000;color:#fff;padding:12px 24px;font-weight:700;letter-spacing:.5px}
+  .pill-empty{padding:40px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
+  .kpis.five{grid-template-columns:repeat(5,1fr)}
+  .pct{display:inline-block;height:8px;background:#9ec5f4;border-radius:2px;vertical-align:middle;margin-right:6px}
+  .src{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="proto-bar">PROTOTYPE · mock data for permission review · no live TikTok requests</div>
+{% block body %}{% endblock %}
+</body>
+</html>

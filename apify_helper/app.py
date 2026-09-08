@@ -55,6 +55,8 @@ db = DB(str(_db_path if os.path.isabs(_db_path) else BASE_DIR / _db_path))
 app = Flask(__name__, template_folder=str(BASE_DIR / "templates"), static_folder=str(BASE_DIR / "static"))
 app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
+from prototype_tiktok import bp as _proto_bp  # noqa: E402  录屏原型，全假数据
+app.register_blueprint(_proto_bp)
 
 
 # ---------- 模板过滤器 ----------

@@ -1,0 +1,48 @@
+{% extends "proto/base.html" %}
+{% block title %}@{{ acc.handle }} · {{ app_name }}{% endblock %}
+{% block body %}
+<header class="top">
+  <span class="brand">{{ app_name }}</span>
+  <nav><a href="/connect/" class="on">TikTok Accounts</a><a href="/">Content Dashboard</a></nav>
+</header>
+<main>
+  <p class="crumb"><a href="/connect/">TikTok Accounts</a> › @{{ acc.handle }}</p>
+  <div class="acct">
+    <div class="avatar">{{ acc.name[0] }}</div>
+    <div class="grow"><b>{{ acc.name }}</b> <span class="muted">@{{ acc.handle }}</span><br><span class="small">{{ acc.followers|num_en }} followers · Source: TikTok Accounts API · last sync today 09:00 · data delayed 24 to 48 h by TikTok</span></div>
+  </div>
+
+  <section class="kpis five">
+    <div class="kpi"><span class="lbl">Videos (last 30 days)</span><b>{{ summary.videos }}</b></div>
+    <div class="kpi"><span class="lbl">Video views</span><b>{{ summary.views|num_en }}</b><span class="sub">video_views</span></div>
+    <div class="kpi"><span class="lbl">Avg. time watched</span><b>{{ '%.1f'|format(summary.avg_watch) }}s</b><span class="sub">average_time_watched</span></div>
+    <div class="kpi"><span class="lbl">Watched full video</span><b>{{ summary.full_rate|pct }}</b><span class="sub">full_video_watched_rate</span></div>
+    <div class="kpi"><span class="lbl">Female audience</span><b>{{ '%.0f'|format(summary.female) }}%</b><span class="sub">audience_genders</span></div>
+  </section>
+
+  <section class="panel">
+    <h3>Video performance <span class="muted">used for weekly content review and episode pacing decisions</span></h3>
+    <div class="wrap">
+    <table class="tbl">
+      <thead><tr><th>Video</th><th>Posted</th><th class="r">Views</th><th class="r">Reach</th><th class="r">Avg. watched</th><th class="r">Full video</th><th>Audience gender</th><th>Top countries</th><th>Traffic sources</th></tr></thead>
+      <tbody>
+      {% for v in videos %}
+      <tr>
+        <td><b>{{ v.title }}</b><br><span class="src">{{ v.id }}</span></td>
+        <td>{{ v.posted }}</td>
+        <td class="r">{{ v.video_views|num_en }}</td>
+        <td class="r">{{ v.reach|num_en }}</td>
+        <td class="r">{{ '%.1f'|format(v.average_time_watched) }}s</td>
+        <td class="r"><span class="pct" style="width:{{ (v.full_video_watched_rate*60)|int }}px"></span>{{ v.full_video_watched_rate|pct(0) }}</td>
+        <td>F {{ v.audience_genders.Female }}% · M {{ v.audience_genders.Male }}%</td>
+        <td>{% for c, p in v.audience_countries %}{{ c }} {{ p }}%{{ ' · ' if not loop.last }}{% endfor %}</td>
+        <td>{% for s, p in v.impression_sources %}{{ s }} {{ p }}%{{ ' · ' if not loop.last }}{% endfor %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p class="src">Field names shown under each metric map to the TikTok Accounts API response. Audience figures are aggregated percentages; no individual viewer data is requested or stored.</p>
+  </section>
+</main>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "proto/base.html" %}
+{% block body %}
+<header class="top">
+  <span class="brand">{{ app_name }}</span>
+  <nav><a href="/connect/" class="on">TikTok Accounts</a><a href="/">Content Dashboard</a></nav>
+</header>
+<main style="max-width:860px">
+  <h2 style="border:0;margin-top:8px">Connected TikTok Accounts</h2>
+  <p class="small">Each account is authorized by its owner through TikTok's OAuth consent screen. We only read performance and aggregated audience data of the authorized account's own videos for internal reporting. Data is refreshed once a day.</p>
+
+  {% if just %}<div class="notice">@{{ just }} connected successfully. Initial data sync scheduled.</div>{% endif %}
+
+  {% if accounts %}
+    {% for a in accounts %}
+    <div class="acct">
+      <div class="avatar">{{ a.name[0] }}</div>
+      <div class="grow">
+        <b>{{ a.name }}</b> <span class="muted">@{{ a.handle }}</span><br>
+        <span class="small">{{ a.followers|num_en }} followers · business_id {{ a.business_id }} · connected {{ a.connected_at }}</span>
+      </div>
+      <a class="btn" href="/connect/{{ a.handle }}/videos">View analytics</a>
+      <form method="post" action="/connect/{{ a.handle }}/disconnect" class="inline" onsubmit="return confirm('Revoke access for @{{ a.handle }}? Stored data for this account will be deleted.')">
+        <button class="btn ghost">Disconnect</button>
+      </form>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="pill-empty">No TikTok account connected yet.</div>
+  {% endif %}
+
+  <p style="margin-top:20px"><a class="btn dark" href="/connect/authorize">+ Connect TikTok Account</a></p>
+  <p class="small">Clicking the button redirects the account owner to TikTok to log in and approve the requested permissions. Access can be revoked here or in the TikTok app at any time.</p>
+</main>
+{% endblock %}
