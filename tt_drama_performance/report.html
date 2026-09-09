@@ -428,7 +428,7 @@ function renderTrendCharts() {
     {name: T().sVV, color: 'var(--s1)', values: days.map(r => r.vv)},
     {name: T().sQV, color: 'var(--s2)', values: days.map(r => r.qv)},
   ];
-  lineChart(document.getElementById('c1'), labels, s1, (v, exact) => exact ? fmtN(v) : fmtN(v));
+  lineChart(document.getElementById('c1'), labels, s1, v => fmtN(v));
   legend('lg1', s1); dataTable('t1', labels, s1, v => fmtN(v));
 
   const s2 = [
