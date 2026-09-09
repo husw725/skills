@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TikTok 短剧数据日报</title>
+<title>TikTok Drama Daily Report</title>
 <style>
 :root {
   color-scheme: dark;
@@ -18,9 +18,14 @@
 * { box-sizing: border-box; margin: 0; }
 body { background: var(--page); color: var(--ink); font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 28px 16px 64px; }
 .wrap { max-width: 1080px; margin: 0 auto; }
+.hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .kicker { color: var(--gold-dim); font-size: 11px; letter-spacing: .28em; text-transform: uppercase; margin-bottom: 6px; }
 h1 { font-family: var(--serif); font-size: 30px; font-weight: 500; letter-spacing: .01em; }
 .meta { color: var(--muted); font-size: 12px; letter-spacing: .06em; margin: 8px 0 24px; }
+.langbtn { background: transparent; border: 1px solid var(--border); color: var(--ink2);
+  border-radius: 10px; padding: 5px 14px; cursor: pointer; font: inherit; font-size: 13px;
+  white-space: nowrap; margin-top: 4px; }
+.langbtn:hover { border-color: var(--gold-dim); color: var(--gold); }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; }
 .card h2 { color: var(--gold); font-size: 12px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; margin-bottom: 14px; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
@@ -74,129 +79,179 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
 </head>
 <body>
 <div class="wrap">
-  <div class="kicker">Analytics · Daily Report</div>
-  <h1>TikTok 短剧数据日报</h1>
+  <div class="hdr">
+    <div>
+      <div class="kicker">Analytics · Daily Report</div>
+      <h1 id="h1"></h1>
+    </div>
+    <button class="langbtn" id="langBtn"></button>
+  </div>
   <div class="meta" id="meta"></div>
 
   <div class="card" id="gapCard" style="display:none;border-color:var(--gold-dim)">
-    <h2>数据完整性说明</h2><div id="gapBody" style="font-size:13px;line-height:1.7"></div>
+    <h2 id="gapTitle"></h2><div id="gapBody" style="font-size:13px;line-height:1.7"></div>
   </div>
 
-  <div class="card"><h2>核心洞察</h2><ul class="insights" id="insights"></ul></div>
+  <div class="card"><h2 id="insTitle"></h2><ul class="insights" id="insights"></ul></div>
 
   <div class="card" id="aiCard" style="display:none">
-    <h2>AI 深度洞察 · Claude</h2>
+    <h2 id="aiTitle"></h2>
     <ul class="insights" id="aiInsights"></ul>
   </div>
 
   <div class="kpis" id="kpis" style="margin-bottom:16px"></div>
 
   <div class="card">
-    <h2>每日播放趋势</h2>
+    <h2 id="c1Title"></h2>
     <div class="legend" id="lg1"></div>
     <div class="chart" id="c1"></div>
-    <details><summary>查看数据表</summary><div class="tbl-scroll" id="t1"></div></details>
+    <details><summary id="c1Sum"></summary><div class="tbl-scroll" id="t1"></div></details>
   </div>
 
   <div class="card">
-    <h2>流量质量趋势（合格率 / 完播率）</h2>
+    <h2 id="c2Title"></h2>
     <div class="legend" id="lg2"></div>
     <div class="chart" id="c2"></div>
-    <details><summary>查看数据表</summary><div class="tbl-scroll" id="t2"></div></details>
+    <details><summary id="c2Sum"></summary><div class="tbl-scroll" id="t2"></div></details>
   </div>
 
   <div class="card" id="wowCard">
-    <h2 id="wowTitle">周期环比</h2>
+    <h2 id="wowTitle"></h2>
     <div class="datebar" id="wowPeriodBar"></div>
     <div class="tbl-scroll" id="wow"></div>
   </div>
 
   <div class="card">
-    <h2>剧目表现 Top 10（按累计合格播放）</h2>
+    <h2 id="topTitle"></h2>
     <div class="chart" id="cbar"></div>
   </div>
 
   <div class="card" id="moversCard" style="display:none">
-    <h2 id="moversTitle">剧目增长榜</h2>
+    <h2 id="moversTitle"></h2>
     <div class="datebar" id="moverDates"></div>
     <div class="tbl-scroll" id="movers"></div>
   </div>
 
   <div class="card" id="dtrendCard" style="display:none">
-    <h2 style="display:flex;align-items:center;gap:12px">单剧每日增长趋势
+    <h2 style="display:flex;align-items:center;gap:12px"><span id="dtrendTitle"></span>
       <select id="dtrendSel"></select></h2>
     <div class="chart" id="dtrend"></div>
     <div id="dtrendNote" style="font-size:11px;color:var(--gold-dim);margin-top:6px"></div>
   </div>
 
   <div class="card">
-    <h2>剧目全量明细（累计）</h2>
+    <h2 id="dramaTblTitle"></h2>
     <div class="tbl-scroll" id="dramaTbl"></div>
   </div>
 
-  <div class="foot">
-    指标口径：合格播放 = 平台判定的有效观看（Qualified Views）；合格率 = 合格播放/总播放；完播率 = 完播量/总播放；
-    互动率 = (点赞+评论+收藏+分享)/总播放；剧目级导出自 2026-08-24 起不再提供总播放，剧目互动率 = (点赞+评论+收藏)/累计合格播放，收藏/千播放同理。
-    数据来源：TikTok Drama Center，每日 15:00 自动抓取更新。
-  </div>
+  <div class="foot" id="foot"></div>
 </div>
 <div id="tip"></div>
 
 <script>
 const DATA = /*__DATA__*/null;
 
+/* ---------- i18n ---------- */
+const I18N = {
+  zh: {
+    htmlLang: 'zh-CN', langBtn: 'English',
+    title: 'TikTok 短剧数据日报',
+    meta: (a, b, c) => `数据截至 ${a}（趋势） / ${b}（剧目快照） · 生成于 ${c}`,
+    gapTitle: '数据完整性说明', insTitle: '核心洞察', aiTitle: 'AI 深度洞察 · Claude',
+    c1Title: '每日播放趋势', c2Title: '流量质量趋势（合格率 / 完播率）', viewData: '查看数据表',
+    topTitle: '剧目表现 Top 10（按累计合格播放）', dtrendTitle: '单剧每日增长趋势',
+    dramaTblTitle: '剧目全量明细（累计）',
+    sVV: '总播放', sQV: '合格播放', sQR: '合格率', sFin: '完播率', sQVplus: '合格播放 +',
+    date: '日期', metric: '指标', chg: '环比', engage: '互动率',
+    dod: '日环比', wow: '周环比',
+    wowTitle: p => `${p.n === 7 ? '周' : p.n === 30 ? '月' : ''}环比（${p.label} vs 前${p.n}日）`,
+    prevN: n => `前${n}日`,
+    moversMulti: s => `剧目增长榜（${s.frm} ~ ${s.to} 共${s.days}天合计，期间有缺采）`,
+    movers1: s => `剧目单日增长榜（${s.to}，对比 ${s.frm} 快照）`,
+    older: n => `更早 (${n})…`,
+    moverCols: ['#', '剧目', '合格播放 +', '涨幅', '累计合格播放', '点赞 +', '收藏 +'],
+    cutRow: '以下为上线 14 天内新剧，未进增长前 10，仅供跟踪',
+    newBadge: '新', newCell: '新', versions: n => `${n} 个版本`,
+    gapTag: '缺采', avgDay: '日均',
+    bandLabel: (d, t, a) => `${d}日合计 ${t}（日均 ${a}）`,
+    bandShort: t => `合计 ${t}`,
+    bandNote: (f, t, d, q) => `${f}~${t} 平台合并下发，${d}天合计 合格播放 ${q}。合计是准的，拆不到单日；虚线段为日均估算值，不是实测。`,
+    dtrendNote: '图中阴影带 = 平台合并下发的区间（悬停查看该区间合计）；带内虚线 = 合计 ÷ 天数的日均估算，仅供看整体走势，不是实测单日值。',
+    gapIntro: '剧目级数据缺以下日期的<b>单日切分</b>（机构级大盘趋势不受影响，仍是逐日完整的）：',
+    gapLi: (g, qv) => `<b>${g.missing.join('、')}</b> —— 平台与 ${g.to} 合并下发，${g.frm} → ${g.to} 共 ${g.days} 天合计 合格播放 ${qv}，这个合计是准的，但拆不到单日`,
+    gapMore: n => `更早 ${n} 条 · `, gapMethod: '口径说明',
+    gapFootnote: '增长榜对应档位标 * 并注明"共N天合计"；单剧趋势图在这些日期以<b>虚线</b>画日均估算（非实测）。'
+      + '平台导出永远是"当前"全量累计、没有按历史日期回查的入口，这些单日切分是永久取不到的。',
+    dcols: { name: '剧目', launch: '上线', qv: '合格播放', dur: '人均时长(s)', like: '点赞',
+             fav: '收藏', com: '评论', engage: '互动率', fav1k: '收藏/千播放' },
+    foot: '指标口径：合格播放 = 平台判定的有效观看（Qualified Views）；合格率 = 合格播放/总播放；完播率 = 完播量/总播放；'
+      + '互动率 = (点赞+评论+收藏+分享)/总播放；剧目级导出自 2026-08-24 起不再提供总播放，剧目互动率 = (点赞+评论+收藏)/累计合格播放，收藏/千播放同理。'
+      + '数据来源：TikTok Drama Center，每日自动抓取更新。',
+  },
+  en: {
+    htmlLang: 'en', langBtn: '中文',
+    title: 'TikTok Drama Daily Report',
+    meta: (a, b, c) => `Data through ${a} (trend) / ${b} (drama snapshot) · Generated ${c}`,
+    gapTitle: 'Data Completeness', insTitle: 'Key Insights', aiTitle: 'AI Insights · Claude',
+    c1Title: 'Daily Views Trend', c2Title: 'Traffic Quality (Qualified / Completion Rate)', viewData: 'View data table',
+    topTitle: 'Top 10 Dramas (by cumulative qualified views)', dtrendTitle: 'Per-Drama Daily Growth',
+    dramaTblTitle: 'All Dramas (cumulative)',
+    sVV: 'Total Views', sQV: 'Qualified Views', sQR: 'Qualified Rate', sFin: 'Completion Rate', sQVplus: 'Qualified Views +',
+    date: 'Date', metric: 'Metric', chg: 'Change', engage: 'Engagement',
+    dod: 'DoD', wow: 'WoW',
+    wowTitle: p => `${p.n === 7 ? 'Week over Week' : p.n === 30 ? 'Month over Month' : ''} (${p.label_en || p.label} vs prior ${p.n}d)`,
+    prevN: n => `Prior ${n}d`,
+    moversMulti: s => `Drama Growth Board (${s.frm} ~ ${s.to}, ${s.days}-day total, gap inside)`,
+    movers1: s => `Daily Drama Movers (${s.to} vs ${s.frm} snapshot)`,
+    older: n => `Earlier (${n})…`,
+    moverCols: ['#', 'Drama', 'Qualified +', 'Growth', 'Cumulative Qualified', 'Likes +', 'Favorites +'],
+    cutRow: 'New dramas launched within 14 days, below the top 10 — for tracking only',
+    newBadge: 'NEW', newCell: 'new', versions: n => `${n} versions`,
+    gapTag: 'gap', avgDay: 'avg/day',
+    bandLabel: (d, t, a) => `${d}-day total ${t} (${a}/day)`,
+    bandShort: t => `Σ ${t}`,
+    bandNote: (f, t, d, q) => `${f}~${t}: the platform merged these days into one release. ${d}-day total qualified views ${q}. The total is accurate but has no per-day split; the dashed segment is a daily-average estimate, not measured.`,
+    dtrendNote: 'Shaded bands = intervals the platform merged (hover for the interval total); dashed segments inside = total ÷ days, a daily-average estimate for shape only, not measured values.',
+    gapIntro: 'Per-drama data is missing <b>single-day splits</b> for the dates below (institution-level trend is unaffected and complete day by day):',
+    gapLi: (g, qv) => `<b>${g.missing.join(', ')}</b> — merged into the ${g.to} release; ${g.frm} → ${g.to} ${g.days}-day total qualified views ${qv}. The total is accurate but cannot be split per day`,
+    gapMore: n => `${n} earlier · `, gapMethod: 'Methodology',
+    gapFootnote: 'Affected slots on the movers board are marked * with "N-day total"; per-drama trend charts show <b>dashed</b> daily-average estimates (not measured) on those dates. '
+      + 'Platform exports are always current cumulative totals with no historical lookup, so these single-day splits are permanently unrecoverable.',
+    dcols: { name: 'Drama', launch: 'Launch', qv: 'Qualified Views', dur: 'Avg Dur (s)', like: 'Likes',
+             fav: 'Favorites', com: 'Comments', engage: 'Engagement', fav1k: 'Fav/1K Views' },
+    foot: 'Definitions: Qualified Views = platform-verified valid views; Qualified Rate = qualified/total views; Completion Rate = completions/total views; '
+      + 'Engagement = (likes+comments+favorites+shares)/total views. Since 2026-08-24 per-drama exports no longer include total views, so per-drama engagement = (likes+comments+favorites)/cumulative qualified views, favorites per 1K likewise. '
+      + 'Source: TikTok Drama Center, auto-collected daily.',
+  },
+};
+let LANG = (() => { try { return localStorage.getItem('ttdr_lang') || 'en'; } catch (e) { return 'en'; } })();
+if (!I18N[LANG]) LANG = 'en';
+const T = () => I18N[LANG];
+const tx = (o, k) => (LANG === 'zh' ? o[k] : (o[k + '_en'] ?? o[k]));   // 双语字段：X / X_en
+
 const fmtN = n => {
   if (n == null) return '-';
   const a = Math.abs(n), s = n < 0 ? '-' : '';
-  if (a >= 1e8) return s + (a/1e8).toFixed(2) + '亿';
-  if (a >= 1e4) return s + (a/1e4).toFixed(1) + '万';
+  if (LANG === 'zh') {
+    if (a >= 1e8) return s + (a/1e8).toFixed(2) + '亿';
+    if (a >= 1e4) return s + (a/1e4).toFixed(1) + '万';
+    return s + Math.round(a).toLocaleString();
+  }
+  if (a >= 1e9) return s + (a/1e9).toFixed(2) + 'B';
+  if (a >= 1e6) return s + (a/1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return s + (a/1e3).toFixed(1) + 'K';
   return s + Math.round(a).toLocaleString();
 };
 const fmtP = (x, d=1) => x == null ? '-' : (x*100).toFixed(d) + '%';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-
-document.getElementById('meta').textContent =
-  `数据截至 ${DATA.dataThrough}（趋势） / ${DATA.snapDate}（剧目快照） · 生成于 ${DATA.generated}`;
-
-/* 缺采声明：平台把相邻日合并下发时，剧目级拿不到单日切分。如实标出来，
-   实测点不造假；合并区间日均只以虚线估算段呈现，合计值是准的。 */
-if ((DATA.gaps || []).length) {
-  document.getElementById('gapCard').style.display = '';
-  // 默认只露最新一条，历史条目和口径说明收进 <details>（原生折叠，免 JS）
-  const li = g => `<li><b>${g.missing.join('、')}</b> —— 平台与 ${g.to} 合并下发，`
-    + `${g.frm} → ${g.to} 共 ${g.days} 天合计 合格播放 ${fmtN(g.qv)}，这个合计是准的，但拆不到单日</li>`;
-  const gs = DATA.gaps.slice().reverse(), rest = gs.slice(1);
-  document.getElementById('gapBody').innerHTML =
-    '<div>剧目级数据缺以下日期的<b>单日切分</b>（机构级大盘趋势不受影响，仍是逐日完整的）：</div>'
-    + `<ul style="margin:8px 0 0;padding-left:18px">${li(gs[0])}</ul>`
-    + `<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--gold-dim)">`
-    + (rest.length ? `更早 ${rest.length} 条 · ` : '') + '口径说明</summary>'
-    + (rest.length ? `<ul style="margin:8px 0 0;padding-left:18px">${rest.map(li).join('')}</ul>` : '')
-    + '<div style="margin-top:8px;color:var(--gold-dim)">'
-    + '增长榜对应档位标 * 并注明"共N天合计"；单剧趋势图在这些日期以<b>虚线</b>画日均估算（非实测）。'
-    + '平台导出永远是"当前"全量累计、没有按历史日期回查的入口，这些单日切分是永久取不到的。</div></details>';
-}
-
-/* insights */
-document.getElementById('insights').innerHTML = DATA.insights.map(i => `<li>${i}</li>`).join('');
-
-/* KPIs */
-document.getElementById('kpis').innerHTML = DATA.kpis.map(k => {
-  let d = '';
-  if (k.delta != null) {
-    const cls = k.delta >= 0 ? 'delta-up' : 'delta-down';
-    d += `<span class="${cls}">${k.delta >= 0 ? '▲' : '▼'} ${fmtP(Math.abs(k.delta))}</span> 日环比`;
-  }
-  if (k.wow != null) d += `${d ? ' · ' : ''}周环比 ${fmtP(k.wow)}`;
-  if (k.sub) d += `${d ? ' · ' : ''}${k.sub}`;
-  return `<div class="kpi"><div class="lab">${k.label}</div><div class="val">${k.value}</div><div class="sub">${d || '&nbsp;'}</div></div>`;
-}).join('');
+// SVG 文字宽度估算（11px 字体）：CJK ≈10px/字，其余 ≈6px。缺采带标签"装得下才画"用它判定
+const estW = t => { let w = 0; for (const c of String(t)) w += c.charCodeAt(0) > 255 ? 10 : 6; return w; };
 
 /* ---- tiny SVG line chart with crosshair + tooltip ---- */
 const tip = document.getElementById('tip');
-// bands: [{from, to, label, note}] —— 缺采区间。单日轴上不放假点（该空还空），
-// 但把"这段合计多少"这个已知且准确的量画在它该在的位置，断层就从"像故障"
-// 变成"明确标注的合并区间"。
+// bands: [{from, to, label, short, note}] —— 缺采区间。单日轴上不放假点（该空还空）。
+// 标签防叠字：完整标签装得进带宽才画，装不下退化成短标签（只写合计），再装不下只留
+// 阴影带和"缺采"小标——完整数值悬停 tooltip（note）里始终有，不丢信息。
 function lineChart(el, labels, series, yfmt, bands) {
   const W = Math.min(el.clientWidth || 1040, 1040), H = 260,
         P = {l: 60, r: 74, t: 10, b: 24},
@@ -221,17 +276,20 @@ function lineChart(el, labels, series, yfmt, bands) {
     g += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${d.slice(5)}</text>`; });
   // 缺采带：画在网格之上、折线之下，覆盖整段留空的列（向两侧各让半格，正好卡在相邻实点之间）
   const half = labels.length > 1 ? iw / (labels.length - 1) / 2 : iw / 2;
-  (bands || []).forEach(b => {
+  (bands || []).forEach((b, bi) => {
     const i0 = labels.indexOf(b.from), i1 = labels.indexOf(b.to);
     if (i0 < 0 || i1 < 0) return;
     const xa = Math.max(P.l, x(i0) - half), xb = Math.min(W - P.r, x(i1) + half);
     g += `<rect x="${xa}" y="${P.t}" width="${Math.max(1, xb-xa)}" height="${ih}" fill="var(--gold-dim)" opacity=".10"/>`;
     [xa, xb].forEach(xx => { g += `<line x1="${xx}" y1="${P.t}" x2="${xx}" y2="${P.t+ih}" stroke="var(--gold-dim)" stroke-dasharray="2 3" opacity=".55"/>`; });
-    if (b.label) {
-      const cx = (xa + xb) / 2;
-      g += `<text class="bandlab" x="${cx}" y="${P.t+12}" text-anchor="middle">缺采</text>`;
-      g += `<text class="bandlab" x="${cx}" y="${P.t+25}" text-anchor="middle">${b.label}</text>`;
-    }
+    const bw = xb - xa, cx = (xa + xb) / 2;
+    if (estW(T().gapTag) <= bw + 4)
+      g += `<text class="bandlab" x="${cx}" y="${P.t+12}" text-anchor="middle">${T().gapTag}</text>`;
+    // 允许标签比带宽略宽（一格半以内），但相邻带按奇偶上下错行，避免连成一串
+    const lab = b.label && estW(b.label) <= bw + 6 ? b.label
+              : b.short && estW(b.short) <= bw + half ? b.short : null;
+    if (lab)
+      g += `<text class="bandlab" x="${cx}" y="${P.t + (bi % 2 ? 38 : 25)}" text-anchor="middle">${lab}</text>`;
   });
   series.forEach(s => {
     // 遇 null 断线：切成多段各自成 path，缺采处自然留空
@@ -279,10 +337,10 @@ function lineChart(el, labels, series, yfmt, bands) {
       const a = labels.indexOf(b.from), z = labels.indexOf(b.to);
       return a >= 0 && z >= 0 && i >= a && i <= z;
     });
-    tip.innerHTML = `<div class="d">${labels[i]}${bd ? ' · 缺采' : ''}</div>`
+    tip.innerHTML = `<div class="d">${labels[i]}${bd ? ' · ' + T().gapTag : ''}</div>`
       + (bd && bd.note ? `<div style="max-width:260px;white-space:normal;line-height:1.5;margin-bottom:4px">${bd.note}</div>` : '')
       + series.map(s =>
-      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${s.values[i] != null ? yfmt(s.values[i], true) : (s.est && s.est[i] != null) ? '≈ ' + yfmt(s.est[i], true) + ' <span style="opacity:.6;font-weight:400">日均</span>' : '—'}</b></div>`).join('');
+      `<div class="row"><span><span class="chip" style="background:${s.color};display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px"></span>${s.name}</span><b>${s.values[i] != null ? yfmt(s.values[i], true) : (s.est && s.est[i] != null) ? '≈ ' + yfmt(s.est[i], true) + ` <span style="opacity:.6;font-weight:400">${T().avgDay}</span>` : '—'}</b></div>`).join('');
   });
   svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
 }
@@ -293,52 +351,111 @@ function legend(el, series) {
 }
 
 function dataTable(el, labels, series, yfmt) {
-  document.getElementById(el).innerHTML = `<table><tr><th>日期</th>${series.map(s=>`<th>${s.name}</th>`).join('')}</tr>` +
+  document.getElementById(el).innerHTML = `<table><tr><th>${T().date}</th>${series.map(s=>`<th>${s.name}</th>`).join('')}</tr>` +
     labels.map((d,i) => `<tr><td>${d}</td>${series.map(s=>`<td>${yfmt(s.values[i], true)}</td>`).join('')}</tr>`).join('') + '</table>';
 }
 
-const days = DATA.daily, labels = days.map(r => r.date);
-const s1 = [
-  {name: '总播放', color: 'var(--s1)', values: days.map(r => r.vv)},
-  {name: '合格播放', color: 'var(--s2)', values: days.map(r => r.qv)},
-];
-lineChart(document.getElementById('c1'), labels, s1, (v, exact) => exact ? fmtN(v) : fmtN(v));
-legend('lg1', s1); dataTable('t1', labels, s1, v => fmtN(v));
+/* ---------- 跨语言/跨渲染保持的交互状态 ---------- */
+let wowSel = 0;
+let moverSel = (DATA.moversSeries || []).length - 1;
+let dtrendPick = null;              // 单剧趋势图当前选中的剧
+let dSortK = 'launch', dSortDesc = true;
+const openGrp = new Set();          // 已展开的合并组名，跨重渲染（排序/切语言）保持
 
-const s2 = [
-  {name: '合格率', color: 'var(--s2)', values: days.map(r => r.vv ? r.qv/r.vv : 0)},
-  {name: '完播率', color: 'var(--s3)', values: days.map(r => r.vv ? r.finish/r.vv : 0)},
-];
-lineChart(document.getElementById('c2'), labels, s2, (v) => fmtP(v));
-legend('lg2', s2); dataTable('t2', labels, s2, v => fmtP(v));
+/* ---------- 各区块渲染（全部读当前 LANG，切语言时整体重跑） ---------- */
+function renderHeader() {
+  document.documentElement.lang = T().htmlLang;
+  document.title = T().title;
+  document.getElementById('h1').textContent = T().title;
+  document.getElementById('langBtn').textContent = T().langBtn;
+  document.getElementById('meta').textContent = T().meta(DATA.dataThrough, DATA.snapDate, DATA.generated);
+  const set = (id, v) => document.getElementById(id).textContent = v;
+  set('gapTitle', T().gapTitle); set('insTitle', T().insTitle); set('aiTitle', T().aiTitle);
+  set('c1Title', T().c1Title); set('c2Title', T().c2Title);
+  set('c1Sum', T().viewData); set('c2Sum', T().viewData);
+  set('topTitle', T().topTitle); set('dtrendTitle', T().dtrendTitle);
+  set('dramaTblTitle', T().dramaTblTitle);
+  document.getElementById('foot').textContent = T().foot;
+}
 
-/* AI insights (present only when claude CLI produced them) */
-if (DATA.aiInsights && DATA.aiInsights.length) {
-  document.getElementById('aiCard').style.display = '';
-  document.getElementById('aiInsights').innerHTML = DATA.aiInsights.map(i => `<li>${esc(i)}</li>`).join('');
+/* 缺采声明：平台把相邻日合并下发时，剧目级拿不到单日切分。如实标出来，
+   实测点不造假；合并区间日均只以虚线估算段呈现，合计值是准的。 */
+function renderGaps() {
+  if (!(DATA.gaps || []).length) return;
+  document.getElementById('gapCard').style.display = '';
+  // 默认只露最新一条，历史条目和口径说明收进 <details>（原生折叠，免 JS）
+  const li = g => `<li>${T().gapLi(g, fmtN(g.qv))}</li>`;
+  const gs = DATA.gaps.slice().reverse(), rest = gs.slice(1);
+  document.getElementById('gapBody').innerHTML =
+    `<div>${T().gapIntro}</div>`
+    + `<ul style="margin:8px 0 0;padding-left:18px">${li(gs[0])}</ul>`
+    + `<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--gold-dim)">`
+    + (rest.length ? T().gapMore(rest.length) : '') + T().gapMethod + '</summary>'
+    + (rest.length ? `<ul style="margin:8px 0 0;padding-left:18px">${rest.map(li).join('')}</ul>` : '')
+    + `<div style="margin-top:8px;color:var(--gold-dim)">${T().gapFootnote}</div></details>`;
+}
+
+function renderInsights() {
+  const list = LANG === 'zh' ? DATA.insights : (DATA.insights_en || DATA.insights);
+  document.getElementById('insights').innerHTML = list.map(i => `<li>${i}</li>`).join('');
+  /* AI insights：新格式 {zh,en}，旧报告可能是纯字符串 */
+  if (DATA.aiInsights && DATA.aiInsights.length) {
+    document.getElementById('aiCard').style.display = '';
+    document.getElementById('aiInsights').innerHTML = DATA.aiInsights.map(it => {
+      const s = typeof it === 'string' ? it : (LANG === 'zh' ? it.zh : (it.en || it.zh));
+      return `<li>${esc(s)}</li>`;
+    }).join('');
+  }
+}
+
+function renderKpis() {
+  document.getElementById('kpis').innerHTML = DATA.kpis.map(k => {
+    let d = '';
+    if (k.delta != null) {
+      const cls = k.delta >= 0 ? 'delta-up' : 'delta-down';
+      d += `<span class="${cls}">${k.delta >= 0 ? '▲' : '▼'} ${fmtP(Math.abs(k.delta))}</span> ${T().dod}`;
+    }
+    if (k.wow != null) d += `${d ? ' · ' : ''}${T().wow} ${fmtP(k.wow)}`;
+    const sub = tx(k, 'sub');
+    if (sub) d += `${d ? ' · ' : ''}${sub}`;
+    return `<div class="kpi"><div class="lab">${tx(k, 'label')}</div><div class="val">${tx(k, 'value') ?? k.value}</div><div class="sub">${d || '&nbsp;'}</div></div>`;
+  }).join('');
+}
+
+function renderTrendCharts() {
+  const days = DATA.daily, labels = days.map(r => r.date);
+  const s1 = [
+    {name: T().sVV, color: 'var(--s1)', values: days.map(r => r.vv)},
+    {name: T().sQV, color: 'var(--s2)', values: days.map(r => r.qv)},
+  ];
+  lineChart(document.getElementById('c1'), labels, s1, (v, exact) => exact ? fmtN(v) : fmtN(v));
+  legend('lg1', s1); dataTable('t1', labels, s1, v => fmtN(v));
+
+  const s2 = [
+    {name: T().sQR, color: 'var(--s2)', values: days.map(r => r.vv ? r.qv/r.vv : 0)},
+    {name: T().sFin, color: 'var(--s3)', values: days.map(r => r.vv ? r.finish/r.vv : 0)},
+  ];
+  lineChart(document.getElementById('c2'), labels, s2, (v) => fmtP(v));
+  legend('lg2', s2); dataTable('t2', labels, s2, v => fmtP(v));
 }
 
 /* period-over-period with 7d/30d switcher */
-const WP = DATA.wowPeriods || [];
-if (WP.length) {
-  let wowSel = 0;
-  const renderWow = () => {
-    const p = WP[wowSel];
-    document.getElementById('wowTitle').textContent =
-      `${p.n === 7 ? '周' : p.n === 30 ? '月' : ''}环比（${p.label} vs 前${p.n}日）`;
-    document.getElementById('wowPeriodBar').innerHTML = WP.length > 1 ? WP.map((x, i) =>
-      `<button class="datechip${i === wowSel ? ' on' : ''}" data-i="${i}">${x.label}</button>`).join('') : '';
-    document.getElementById('wow').innerHTML = `<table><tr><th>指标</th><th>${p.label}</th><th>前${p.n}日</th><th>环比</th></tr>` +
-      p.rows.map(r => `<tr><td>${r.metric}</td><td>${r.w1}</td><td>${r.w0}</td>
-        <td class="${r.chg >= 0 ? 'delta-up' : 'delta-down'}">${r.chg >= 0 ? '+' : ''}${fmtP(r.chg)}</td></tr>`).join('') + '</table>';
-    document.querySelectorAll('#wowPeriodBar .datechip').forEach(b =>
-      b.addEventListener('click', () => { wowSel = +b.dataset.i; renderWow(); }));
-  };
-  renderWow();
-} else document.getElementById('wowCard').style.display = 'none';
+function renderWow() {
+  const WP = DATA.wowPeriods || [];
+  if (!WP.length) { document.getElementById('wowCard').style.display = 'none'; return; }
+  const p = WP[wowSel];
+  document.getElementById('wowTitle').textContent = T().wowTitle(p);
+  document.getElementById('wowPeriodBar').innerHTML = WP.length > 1 ? WP.map((x, i) =>
+    `<button class="datechip${i === wowSel ? ' on' : ''}" data-i="${i}">${tx(x, 'label')}</button>`).join('') : '';
+  document.getElementById('wow').innerHTML = `<table><tr><th>${T().metric}</th><th>${tx(p, 'label')}</th><th>${T().prevN(p.n)}</th><th>${T().chg}</th></tr>` +
+    p.rows.map(r => `<tr><td>${tx(r, 'metric')}</td><td>${tx(r, 'w1')}</td><td>${tx(r, 'w0')}</td>
+      <td class="${r.chg >= 0 ? 'delta-up' : 'delta-down'}">${r.chg >= 0 ? '+' : ''}${fmtP(r.chg)}</td></tr>`).join('') + '</table>';
+  document.querySelectorAll('#wowPeriodBar .datechip').forEach(b =>
+    b.addEventListener('click', () => { wowSel = +b.dataset.i; renderWow(); }));
+}
 
 /* Top-10 horizontal bars */
-(function() {
+function renderTopBars() {
   const top = DATA.dramas.slice(0, 10), el = document.getElementById('cbar');
   const W = Math.min(el.clientWidth || 1040, 1040), rowH = 30, P = {l: 230, r: 90, t: 4, b: 4};
   const H = P.t + P.b + top.length * rowH;
@@ -360,66 +477,63 @@ if (WP.length) {
       tip.style.left = Math.min(e.clientX + 14, innerWidth - 200) + 'px';
       tip.style.top = (e.clientY + 14) + 'px';
       tip.innerHTML = `<div class="d">${esc(d.name)}</div>
-        <div class="row"><span>合格播放</span><b>${fmtN(d.qv)}</b></div>
-        <div class="row"><span>互动率</span><b>${fmtP(d.engage, 2)}</b></div>`;
+        <div class="row"><span>${T().sQV}</span><b>${fmtN(d.qv)}</b></div>
+        <div class="row"><span>${T().engage}</span><b>${fmtP(d.engage, 2)}</b></div>`;
     });
     p.addEventListener('mouseleave', () => tip.style.display = 'none');
   });
-})();
+}
 
 /* movers with date switcher */
-const MS = DATA.moversSeries || [];
-if (MS.length) {
+function renderMovers() {
+  const MS = DATA.moversSeries || [];
+  if (!MS.length) return;
   document.getElementById('moversCard').style.display = '';
-  let moverSel = MS.length - 1;
-  const renderMovers = () => {
-    const s = MS[moverSel];
-    document.getElementById('moversTitle').textContent = s.days > 1
-      ? `剧目增长榜（${s.frm} ~ ${s.to} 共${s.days}天合计，期间有缺采）`
-      : `剧目单日增长榜（${s.to}，对比 ${s.frm} 快照）`;
-    // 只铺最近10档 chip，更早的收进下拉，避免日期越攒越多挤爆一行
-    const RECENT = 10, cut = Math.max(0, MS.length - RECENT);
-    const older = MS.slice(0, cut);
-    document.getElementById('moverDates').innerHTML =
-      (older.length ? `<select id="moverOlder" class="datesel${moverSel < cut ? ' on' : ''}">
-         <option value="">更早 (${older.length})…</option>` +
-         older.map((x, i) =>
-           `<option value="${i}"${i === moverSel ? ' selected' : ''}>${x.to}${x.days > 1 ? ' *' : ''}</option>`).join('') +
-         '</select>' : '') +
-      MS.slice(cut).map((x, j) => { const i = cut + j;
-        return `<button class="datechip${i === moverSel ? ' on' : ''}" data-i="${i}" title="${x.frm} → ${x.to}">${x.to.slice(5)}${x.days > 1 ? ' *' : ''}</button>`; }).join('');
-    const olderEl = document.getElementById('moverOlder');
-    if (olderEl) olderEl.addEventListener('change', () => {
-      if (olderEl.value !== '') { moverSel = +olderEl.value; renderMovers(); }
-    });
-    document.getElementById('movers').innerHTML =
-      '<table><tr><th>#</th><th>剧目</th><th>合格播放 +</th><th>涨幅</th><th>累计合格播放</th><th>点赞 +</th><th>收藏 +</th></tr>' +
-      s.rows.map((m, i) => {
-        const tail = i >= 10;   // 榜尾追加的7天内新剧（未进前10）
-        return (tail && i === 10 ? '<tr class="cut"><td colspan="7">以下为上线 14 天内新剧，未进增长前 10，仅供跟踪</td></tr>' : '') +
-          `<tr${tail ? ' class="tail"' : ''}><td>${tail ? '—' : i + 1}</td><td>${esc(m.name)}${m.new7 ? ' <span class="badge">新</span>' : ''}</td><td>${fmtN(m.d_qv)}</td><td>${
-            m.qv0 > 0 ? (m.d_qv > 0 ? '+' : '') + (m.d_qv / m.qv0 * 100).toFixed(1) + '%' : '新'
-          }</td><td>${fmtN(m.qv1)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`;
-      }).join('') + '</table>';
-    document.querySelectorAll('#moverDates .datechip').forEach(b =>
-      b.addEventListener('click', () => { moverSel = +b.dataset.i; renderMovers(); }));
-  };
-  renderMovers();
+  const s = MS[moverSel];
+  document.getElementById('moversTitle').textContent = s.days > 1 ? T().moversMulti(s) : T().movers1(s);
+  // 只铺最近10档 chip，更早的收进下拉，避免日期越攒越多挤爆一行
+  const RECENT = 10, cut = Math.max(0, MS.length - RECENT);
+  const older = MS.slice(0, cut);
+  document.getElementById('moverDates').innerHTML =
+    (older.length ? `<select id="moverOlder" class="datesel${moverSel < cut ? ' on' : ''}">
+       <option value="">${T().older(older.length)}</option>` +
+       older.map((x, i) =>
+         `<option value="${i}"${i === moverSel ? ' selected' : ''}>${x.to}${x.days > 1 ? ' *' : ''}</option>`).join('') +
+       '</select>' : '') +
+    MS.slice(cut).map((x, j) => { const i = cut + j;
+      return `<button class="datechip${i === moverSel ? ' on' : ''}" data-i="${i}" title="${x.frm} → ${x.to}">${x.to.slice(5)}${x.days > 1 ? ' *' : ''}</button>`; }).join('');
+  const olderEl = document.getElementById('moverOlder');
+  if (olderEl) olderEl.addEventListener('change', () => {
+    if (olderEl.value !== '') { moverSel = +olderEl.value; renderMovers(); }
+  });
+  document.getElementById('movers').innerHTML =
+    `<table><tr>${T().moverCols.map(c => `<th>${c}</th>`).join('')}</tr>` +
+    s.rows.map((m, i) => {
+      const tail = i >= 10;   // 榜尾追加的14天内新剧（未进前10）
+      return (tail && i === 10 ? `<tr class="cut"><td colspan="7">${T().cutRow}</td></tr>` : '') +
+        `<tr${tail ? ' class="tail"' : ''}><td>${tail ? '—' : i + 1}</td><td>${esc(m.name)}${m.new7 ? ` <span class="badge">${T().newBadge}</span>` : ''}</td><td>${fmtN(m.d_qv)}</td><td>${
+          m.qv0 > 0 ? (m.d_qv > 0 ? '+' : '') + (m.d_qv / m.qv0 * 100).toFixed(1) + '%' : T().newCell
+        }</td><td>${fmtN(m.qv1)}</td><td>${fmtN(m.d_like)}</td><td>${fmtN(m.d_fav)}</td></tr>`;
+    }).join('') + '</table>';
+  document.querySelectorAll('#moverDates .datechip').forEach(b =>
+    b.addEventListener('click', () => { moverSel = +b.dataset.i; renderMovers(); }));
 }
 
 /* per-drama daily growth trend: one drama at a time, dropdown to switch */
-const DT = DATA.dramaTrends || {};
-if (Object.keys(DT).length) {
+function renderDtrend() {
+  const DT = DATA.dramaTrends || {};
+  if (!Object.keys(DT).length) return;
   document.getElementById('dtrendCard').style.display = '';
   const sel = document.getElementById('dtrendSel');
   // 下拉顺序 = 累计合格播放降序（与 Top10 柱图一致），确保都有趋势数据
   const names = DATA.dramas.map(d => d.name).filter(n => DT[n] && DT[n].length);
-  sel.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if (!dtrendPick || !names.includes(dtrendPick)) dtrendPick = names[0];
+  sel.innerHTML = names.map(n => `<option value="${esc(n)}"${n === dtrendPick ? ' selected' : ''}>${esc(n)}</option>`).join('');
   const dshift = (d, k) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + k); return t.toISOString().slice(0, 10); };
   const drawTrend = () => {
-    const pts = (DT[sel.value] || []).slice(-30);   // 只展示最近30天
+    const pts = (DT[dtrendPick] || []).slice(-30);   // 只展示最近30天
     // 多天合并区间（平台跳更/半刷新）：实测 values 留空（不造单日点），
-    // 日均走 est 通道以虚线呈现（BI 惯例：估算/插补值虚线标注），合计写在阴影带和下方注里。
+    // 日均走 est 通道以虚线呈现（BI 惯例：估算/插补值虚线标注），合计写在阴影带和 tooltip 里。
     const axis = [];
     if (pts.length) {
       const from = dshift(pts[0].d, -(pts[0].days - 1)), to = pts[pts.length-1].d;
@@ -433,34 +547,29 @@ if (Object.keys(DT).length) {
       const miss = [];
       for (let k = p.days - 1; k >= 0; k--) miss.push(dshift(p.d, -k));
       return {from: miss[0], to: miss[miss.length - 1],
-              label: `${p.days}日合计 ${fmtN(p.qv)}（日均 ${fmtN(p.qv / p.days)}）`,
-              note: `${miss[0].slice(5)}~${miss[miss.length-1].slice(5)} 平台合并下发，`
-                    + `${p.days}天合计 合格播放 ${fmtN(p.qv)}。`
-                    + `合计是准的，拆不到单日；虚线段为日均估算值，不是实测。`};
+              label: T().bandLabel(p.days, fmtN(p.qv), fmtN(p.qv / p.days)),
+              short: T().bandShort(fmtN(p.qv)),
+              note: T().bandNote(miss[0].slice(5), miss[miss.length-1].slice(5), p.days, fmtN(p.qv))};
     });
     // 合并区间内的估算值 = 该档合计 / 天数，走 est 通道（虚线），与实测 values 分开
     const estOf = key => { const m = new Map(); gaps.forEach(p => { for (let k = p.days - 1; k >= 0; k--) m.set(dshift(p.d, -k), p[key] / p.days); }); return axis.map(d => m.has(d) ? m.get(d) : null); };
     lineChart(document.getElementById('dtrend'), axis,
-      [{name: '合格播放 +', color: 'var(--s2)', values: axis.map(d => val.has(d) ? val.get(d).qv : null), est: estOf('qv')}],
+      [{name: T().sQVplus, color: 'var(--s2)', values: axis.map(d => val.has(d) ? val.get(d).qv : null), est: estOf('qv')}],
       v => fmtN(v), bands);
     document.getElementById('dtrendNote').innerHTML = bands.length
-      ? '图中阴影带 = 平台合并下发的区间，带内标的是该区间合计（准确值）；'
-        + '带内虚线 = 合计 ÷ 天数的日均估算，仅供看整体走势，不是实测单日值。' + bands.map(b => `${b.from.slice(5)}~${b.to.slice(5)}`).join('、')
+      ? T().dtrendNote + ' ' + bands.map(b => `${b.from.slice(5)}~${b.to.slice(5)}`).join('、')
       : '';
   };
-  sel.addEventListener('change', drawTrend);
+  sel.onchange = () => { dtrendPick = sel.value; drawTrend(); };
   drawTrend();
 }
 
 /* full drama table: sortable headers, default = launch date desc; grouped rows expand */
-const cells = d => `<td>${d.launch || '-'}</td><td>${fmtN(d.qv)}</td><td>${d.dur}</td>
-  <td>${fmtN(d.like)}</td><td>${fmtN(d.fav)}</td><td>${fmtN(d.com)}</td>
-  <td>${fmtP(d.engage, 2)}</td><td>${d.fav1k == null ? '-' : d.fav1k.toFixed(1)}</td>`;
-const DCOLS = [['name','剧目'],['launch','上线'],['qv','合格播放'],
-  ['dur','人均时长(s)'],['like','点赞'],['fav','收藏'],['com','评论'],['engage','互动率'],['fav1k','收藏/千播放']];
-let dSortK = 'launch', dSortDesc = true;
-const openGrp = new Set();   // 已展开的合并组名，跨重渲染（排序）保持
 function renderDramaTbl() {
+  const cells = d => `<td>${d.launch || '-'}</td><td>${fmtN(d.qv)}</td><td>${d.dur}</td>
+    <td>${fmtN(d.like)}</td><td>${fmtN(d.fav)}</td><td>${fmtN(d.com)}</td>
+    <td>${fmtP(d.engage, 2)}</td><td>${d.fav1k == null ? '-' : d.fav1k.toFixed(1)}</td>`;
+  const DCOLS = ['name', 'launch', 'qv', 'dur', 'like', 'fav', 'com', 'engage', 'fav1k'];
   const list = [...DATA.dramas].sort((a, b) => {
     const va = a[dSortK], vb = b[dSortK];
     const n = (va == null) - (vb == null);   // 空值永远垫底，不随排序方向翻到顶部
@@ -469,14 +578,14 @@ function renderDramaTbl() {
     return dSortDesc ? -c : c;
   });
   document.getElementById('dramaTbl').innerHTML =
-    '<table><tr><th>#</th>' + DCOLS.map(([k, t]) =>
-      `<th class="sortable" data-k="${k}" style="cursor:pointer;white-space:nowrap">${t}${
+    '<table><tr><th>#</th>' + DCOLS.map(k =>
+      `<th class="sortable" data-k="${k}" style="cursor:pointer;white-space:nowrap">${T().dcols[k]}${
         k === dSortK ? (dSortDesc ? ' ▼' : ' ▲') : ''}</th>`).join('') + '</tr>' +
     list.map((d, i) => {
       const n = d.members ? d.members.length : 0;
       const isOpen = n && openGrp.has(d.name);
       let rows = `<tr${n ? ` class="grp" data-g="${i}"` : ''}><td>${i+1}</td>
-        <td>${n ? `<span class="arr" id="arr${i}">${isOpen ? '▾' : '▸'}</span> ` : ''}${esc(d.name)}${n ? ` <span class="badge">${n} 个版本</span>` : ''}</td>${cells(d)}</tr>`;
+        <td>${n ? `<span class="arr" id="arr${i}">${isOpen ? '▾' : '▸'}</span> ` : ''}${esc(d.name)}${n ? ` <span class="badge">${T().versions(n)}</span>` : ''}</td>${cells(d)}</tr>`;
       if (n) rows += d.members.map(m =>
         `<tr class="sub sub${i}" style="display:${isOpen ? '' : 'none'}"><td></td><td class="subname">└ ${esc(m.name)}</td>${cells(m)}</tr>`).join('');
       return rows;
@@ -496,7 +605,26 @@ function renderDramaTbl() {
     renderDramaTbl();
   }));
 }
-renderDramaTbl();
+
+function renderAll() {
+  renderHeader();
+  renderGaps();
+  renderInsights();
+  renderKpis();
+  renderTrendCharts();
+  renderWow();
+  renderTopBars();
+  renderMovers();
+  renderDtrend();
+  renderDramaTbl();
+}
+
+document.getElementById('langBtn').addEventListener('click', () => {
+  LANG = LANG === 'zh' ? 'en' : 'zh';
+  try { localStorage.setItem('ttdr_lang', LANG); } catch (e) {}
+  renderAll();
+});
+renderAll();
 </script>
 </body>
 </html>

@@ -98,6 +98,19 @@ def fmt(n):
     return f'{sign}{a:,.0f}'
 
 
+def fmt_en(n):
+    """英文单位（K/M/B），与 fmt() 的 万/亿 对应；页面语言切换时两套并存。"""
+    if n is None:
+        return '-'
+    n = float(n)
+    sign = '-' if n < 0 else ''
+    a = abs(n)
+    if a >= 1e9: return f'{sign}{a/1e9:.2f}B'
+    if a >= 1e6: return f'{sign}{a/1e6:.2f}M'
+    if a >= 1e3: return f'{sign}{a/1e3:.1f}K'
+    return f'{sign}{a:,.0f}'
+
+
 def pct(x, digits=1):
     return '-' if x is None else f'{x*100:.{digits}f}%'
 
@@ -134,7 +147,9 @@ def ai_insights(payload):
         '写 4-6 条深度洞察。要求：每条 1-2 句话、必须引用具体数字、'
         '聚焦趋势拐点/结构变化/内容集中度/互动质量/异常点，并尽量给出可执行建议；'
         '不要复述表面数字，要给判断。'
-        '只输出一个 JSON 字符串数组（如 ["洞察1","洞察2"]），不要 markdown 代码块，不要其他文字。\n\n'
+        '每条洞察同时给中文和英文两个版本（英文为地道的 BI 表达，不是直译腔）。'
+        '只输出一个 JSON 数组，每个元素形如 {"zh":"中文洞察","en":"English insight"}，'
+        '不要 markdown 代码块，不要其他文字。\n\n'
         + json.dumps(digest, ensure_ascii=False, default=str)
     )
     try:
@@ -145,9 +160,16 @@ def ai_insights(payload):
                            capture_output=True, text=True, encoding='utf-8', timeout=300)
         out = r.stdout.strip()
         items = json.loads(out[out.index('['):out.rindex(']') + 1])
-        items = [str(x) for x in items if isinstance(x, str) and x.strip()][:8]
-        print(f'AI 洞察 {len(items)} 条')
-        return items or None
+        # 双语对象为准；模型偶尔退化成纯字符串时两种语言共用同一句，页面不至于缺条目
+        norm = []
+        for x in items:
+            if isinstance(x, dict) and (x.get('zh') or x.get('en')):
+                norm.append(dict(zh=str(x.get('zh') or x.get('en')), en=str(x.get('en') or x.get('zh'))))
+            elif isinstance(x, str) and x.strip():
+                norm.append(dict(zh=x, en=x))
+        norm = norm[:8]
+        print(f'AI 洞察 {len(norm)} 条')
+        return norm or None
     except Exception as e:
         print(f'AI 洞察失败（{e.__class__.__name__}: {e}），使用规则式洞察')
         return None
@@ -174,38 +196,50 @@ def build():
         return safe_div(r['likes'] + r['comments'] + r['favs'] + r['shares'], r['vv'])
 
     kpis = [
-        dict(label='总播放 (最新日)', value=fmt(last['vv']),
+        dict(label='总播放 (最新日)', label_en='Total Views (latest)',
+             value=fmt(last['vv']), value_en=fmt_en(last['vv']),
              delta=safe_div(last['vv'] - prev['vv'], prev['vv']) if prev else None, wow=wow('vv')),
-        dict(label='合格播放 (最新日)', value=fmt(last['qv']),
+        dict(label='合格播放 (最新日)', label_en='Qualified Views (latest)',
+             value=fmt(last['qv']), value_en=fmt_en(last['qv']),
              delta=safe_div(last['qv'] - prev['qv'], prev['qv']) if prev else None, wow=wow('qv')),
-        dict(label='合格率', value=pct(safe_div(last['qv'], last['vv'])),
+        dict(label='合格率', label_en='Qualified Rate',
+             value=pct(safe_div(last['qv'], last['vv'])),
              delta=None, wow=None,
-             sub=f"7日均 {pct(safe_div(wsum(w1,'qv'), wsum(w1,'vv')))}"),
-        dict(label='完播量', value=fmt(last['finish']),
+             sub=f"7日均 {pct(safe_div(wsum(w1,'qv'), wsum(w1,'vv')))}",
+             sub_en=f"7d avg {pct(safe_div(wsum(w1,'qv'), wsum(w1,'vv')))}"),
+        dict(label='完播量', label_en='Completions',
+             value=fmt(last['finish']), value_en=fmt_en(last['finish']),
              delta=safe_div(last['finish'] - prev['finish'], prev['finish']) if prev else None, wow=wow('finish')),
-        dict(label='互动率', value=pct(eng(last), 2),
+        dict(label='互动率', label_en='Engagement Rate',
+             value=pct(eng(last), 2),
              delta=None, wow=None,
-             sub=f"前一日 {pct(eng(prev), 2) if prev else '-'}"),
-        dict(label='单次播放时长', value=f"{last['playDur']/last['vv']:.1f}s" if last['vv'] else '-',
+             sub=f"前一日 {pct(eng(prev), 2) if prev else '-'}",
+             sub_en=f"Prev day {pct(eng(prev), 2) if prev else '-'}"),
+        dict(label='单次播放时长', label_en='Avg Play Duration',
+             value=f"{last['playDur']/last['vv']:.1f}s" if last['vv'] else '-',
              delta=None, wow=None,
-             sub=f"7日均 {wsum(w1,'playDur')/wsum(w1,'vv'):.1f}s" if wsum(w1, 'vv') else ''),
+             sub=f"7日均 {wsum(w1,'playDur')/wsum(w1,'vv'):.1f}s" if wsum(w1, 'vv') else '',
+             sub_en=f"7d avg {wsum(w1,'playDur')/wsum(w1,'vv'):.1f}s" if wsum(w1, 'vv') else ''),
     ]
 
     # ---- Period-over-period tables (7d = 周环比, 30d = 月环比), shown when data suffices ----
-    METRIC_LABELS = [('vv', '总播放'), ('qv', '合格播放'), ('finish', '完播量'),
-                     ('likes', '点赞'), ('comments', '评论'), ('favs', '收藏'), ('shares', '分享')]
+    METRIC_LABELS = [('vv', '总播放', 'Total Views'), ('qv', '合格播放', 'Qualified Views'),
+                     ('finish', '完播量', 'Completions'), ('likes', '点赞', 'Likes'),
+                     ('comments', '评论', 'Comments'), ('favs', '收藏', 'Favorites'),
+                     ('shares', '分享', 'Shares')]
 
     def period_rows(n):
         a, b = daily[-n:], daily[-2 * n:-n]
         if len(a) < n or len(b) < n:
             return None
         rows = []
-        for k, lab in METRIC_LABELS:
+        for k, lab, lab_en in METRIC_LABELS:
             s1, s0 = sum(r[k] for r in a), sum(r[k] for r in b)
-            rows.append(dict(metric=lab, w1=fmt(s1), w0=fmt(s0), chg=safe_div(s1 - s0, s0)))
+            rows.append(dict(metric=lab, metric_en=lab_en, w1=fmt(s1), w0=fmt(s0),
+                             w1_en=fmt_en(s1), w0_en=fmt_en(s0), chg=safe_div(s1 - s0, s0)))
         return rows
 
-    wow_periods = [dict(label=f'近{n}日', n=n, rows=period_rows(n)) for n in (7, 30)]
+    wow_periods = [dict(label=f'近{n}日', label_en=f'Last {n}d', n=n, rows=period_rows(n)) for n in (7, 30)]
     wow_periods = [p for p in wow_periods if p['rows']]
     wow_rows = wow_periods[0]['rows'] if wow_periods else []
 
@@ -298,29 +332,43 @@ def build():
             frm=snap_dates[i - 1], to=snap_dates[i], days=(d1 - d0).days, rows=rows,
             totQv=sum(m['d_qv'] for m in ranked)))
 
-    # ---- Auto insights (senior-BI voice) ----
-    ins = []
+    # ---- Auto insights (senior-BI voice)，中英两份并行生成 ----
+    ins, ins_en = [], []
     peak = max(daily, key=lambda r: r['vv'])
-    ins.append(f"周期内总播放峰值出现在 <b>{peak['date']}</b>（{fmt(peak['vv'])}），当日合格率 {pct(safe_div(peak['qv'], peak['vv']))}。")
+    peak_qr = pct(safe_div(peak['qv'], peak['vv']))
+    ins.append(f"周期内总播放峰值出现在 <b>{peak['date']}</b>（{fmt(peak['vv'])}），当日合格率 {peak_qr}。")
+    ins_en.append(f"Total views peaked on <b>{peak['date']}</b> ({fmt_en(peak['vv'])}), with a {peak_qr} qualified rate that day.")
     if len(w0) == 7:
         d_vv, d_qv = wow('vv'), wow('qv')
         arrow = '回升' if d_vv > 0 else '回落'
         ins.append(f"近7日总播放较前7日<b>{arrow} {pct(abs(d_vv))}</b>，合格播放变化 {pct(d_qv)}"
                    f"（{'合格播放跑赢大盘，流量质量在改善' if d_qv > d_vv else '合格播放弱于大盘，需关注流量质量'}）。")
+        ins_en.append(f"Total views {'rebounded' if d_vv > 0 else 'fell'} <b>{pct(abs(d_vv))}</b> over the last 7 days vs the prior 7; "
+                      f"qualified views changed {pct(d_qv)} "
+                      f"({'qualified views are outpacing overall traffic — quality improving' if d_qv > d_vv else 'qualified views lag overall traffic — watch traffic quality'}).")
         qr1, qr0 = safe_div(wsum(w1, 'qv'), wsum(w1, 'vv')), safe_div(wsum(w0, 'qv'), wsum(w0, 'vv'))
         ins.append(f"合格率近7日 <b>{pct(qr1)}</b> vs 前7日 {pct(qr0)}，"
                    f"{'结构性提升' if qr1 > qr0 else '有所下滑，建议排查低质流量来源'}。")
+        ins_en.append(f"Qualified rate: <b>{pct(qr1)}</b> last 7 days vs {pct(qr0)} the prior 7 — "
+                      f"{'a structural improvement' if qr1 > qr0 else 'slipping; investigate low-quality traffic sources'}.")
     if top3_share:
+        top1 = html.escape(str(dramas[0]['name']))
         ins.append(f"内容集中度：Top3 短剧贡献了 <b>{pct(top3_share)}</b> 的合格播放"
                    f"{'，头部依赖偏高，建议培育腰部内容' if top3_share > 0.6 else '，组合相对健康'}"
-                   f"（Top1：{html.escape(str(dramas[0]['name']))}，{fmt(dramas[0]['qv'])}）。")
+                   f"（Top1：{top1}，{fmt(dramas[0]['qv'])}）。")
+        ins_en.append(f"Content concentration: the top 3 dramas contribute <b>{pct(top3_share)}</b> of qualified views"
+                      f"{' — heavy head reliance, develop mid-tier titles' if top3_share > 0.6 else ' — a reasonably healthy mix'}"
+                      f" (No.1: {top1}, {fmt_en(dramas[0]['qv'])}).")
     med_qv = sorted(d['qv'] for d in dramas)[len(dramas)//2]
     weak = [d for d in dramas if d['qv'] > med_qv and (d['engage'] or 0) < 0.02 and d['qv'] > 50000]
     if weak:
         names = '、'.join(html.escape(str(d['name'])) for d in weak[:3])
+        names_en = ', '.join(html.escape(str(d['name'])) for d in weak[:3])
         ins.append(f"<b>高流量低互动</b>预警：{names} 合格播放高于中位数但互动率不足 2%，转化效率待提升。")
+        ins_en.append(f"<b>High traffic, low engagement</b> alert: {names_en} sit above the median in qualified views but engage under 2% — conversion efficiency needs work.")
     if len(snap_dates) < 2:
         ins.append("剧目级日增量需要至少两天的快照才能计算，从明天起将自动出现「单日增长榜」。")
+        ins_en.append("Per-drama daily increments need at least two snapshots; the daily movers board will appear from tomorrow.")
 
     # ---- 缺采日：机构级趋势里有、但剧目级没有单独档位的日期 ----
     # 平台的剧目导出永远是"当前"全量累计，没有按历史日期回查的入口，所以这些日期的
@@ -339,13 +387,16 @@ def build():
         ins.append(f"数据完整性：剧目级缺 <b>{'、'.join(miss_all)}</b> 共 {len(miss_all)} 天的单日切分"
                    f"（平台把相邻日合并下发，导出只有当前累计、无法回查历史某天）。"
                    f"这些区间在增长榜按合计展示，趋势图上以虚线标出日均估算（非实测）。")
+        ins_en.append(f"Data completeness: per-drama single-day splits are missing for <b>{', '.join(miss_all)}</b> ({len(miss_all)} days) — "
+                      f"the platform merged adjacent days and exports are cumulative-only with no historical lookup. "
+                      f"These intervals show interval totals on the movers board and dashed daily-average estimates on trend charts.")
 
     payload = dict(
         generated=datetime.now().strftime('%Y-%m-%d %H:%M'),
         dataThrough=daily[-1]['date'], snapDate=snap_dates[-1],
         daily=daily, kpis=kpis, wow=wow_rows, wowPeriods=wow_periods, dramas=dramas,
         moversSeries=movers_series, dramaTrends=drama_trends, gaps=gaps,
-        insights=ins, top3Share=top3_share,
+        insights=ins, insights_en=ins_en, top3Share=top3_share,
     )
     payload['aiInsights'] = ai_insights(payload)
 
