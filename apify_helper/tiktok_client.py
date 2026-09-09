@@ -67,8 +67,6 @@ def parse_detail(d):
         "author_name": user.get("uniqueId"),
         "author_nick": user.get("nickname"),
         "author_fans": _int(stats.get("followerCount")),
-        # ponytail: 网页接口不给剧封面，先拿作者头像当卡片背景；只在剧没有封面时才写入
-        "cover_fallback": user.get("avatarMedium") or user.get("avatarLarger"),
         "num_watched": _int(di.get("numWatched")),
     }
 

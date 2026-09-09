@@ -29,7 +29,7 @@ def main():
     meta = T.parse_detail(DETAIL)
     assert meta["title"] == "Mighty Tyrant, Tender Love" and meta["episode_count"] == 30
     assert meta["genres"].startswith("Forced Love") and meta["author_name"] == "mialopez2249"
-    assert meta["author_fans"] == 1500000 and meta["cover_fallback"].startswith("https://")
+    assert meta["author_fans"] == 1500000 and "cover_fallback" not in meta, "不再用头像兜底"
     eps = T.parse_items(SID, ITEMS["itemList"])
     assert [e["episode_number"] for e in eps] == [1, 2, 3, 15, 16]
     e1 = eps[0]
@@ -67,15 +67,18 @@ def main():
     j = db.one("SELECT * FROM job WHERE id=?", (job_id,))
     assert j["status"] == "ok" and j["items"] == 5 and j["run_id"] == "direct" and j["cost_usd"] == 0.0, dict(j)
     s = db.get_series(SID)
-    assert s["status"] == "ok" and s["title"] == "Mighty Tyrant, Tender Love" and s["cover_url"].startswith("https://")
+    assert s["status"] == "ok" and s["title"] == "Mighty Tyrant, Tender Love" and s["cover_url"] == "", "非自家剧没有封面"
     assert s["genres"].startswith("Forced Love") and s["episode_count"] == 30
     assert db.get_series("bad")["status"] == "error" and "剧不存在" in db.get_series("bad")["status_msg"]
     m = db.series_metrics(s)
     assert m["paywall_ep"] == 15 and m["total_play"] == sum(e["play"] for e in eps)
-    # 已有封面不被头像覆盖
+    # 已有真实封面保留；老库里残留的头像封面被清掉
     db.set_series_fields(SID, cover_url="https://img.test/real.jpg")
     A.run_job([SID], "manual", taken_at="2026-09-08 09:00:00")
     assert db.get_series(SID)["cover_url"] == "https://img.test/real.jpg"
+    db.set_series_fields(SID, cover_url="https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/abc~c5_720x720.jpeg")
+    A.run_job([SID], "manual", taken_at="2026-09-08 10:00:00")
+    assert db.get_series(SID)["cover_url"] == "", "头像封面应被清空"
     print("run_job direct ok")
 
     # 4) 设置页切换数据源

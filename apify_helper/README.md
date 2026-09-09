@@ -9,7 +9,7 @@
 | Apify 云端 | `apify` | 调 Apify 上的 `rainminer/tiktok-short-drama-scraper`，所有剧一次 run | 约 $2 / 千集 | Apify token |
 | 自建直连 | `direct` | 本机直接请求 tiktok.com 网页端的 `/api/drama/detail/` 和 `/api/drama/episode/item_list/` | 免费 | 机器能访问 TikTok；国内网络在设置里填 HTTP 代理 |
 
-自建模式 2026-09-07 实测无需登录、无需签名参数。缺点：拿不到剧封面（用作者头像兜底），依赖 TikTok 网页接口不改；
+自建模式 2026-09-07 实测无需登录、无需签名参数。缺点：拿不到剧封面（自家剧用 `static/covers/` 里从 Drama Center 下载的海报，其它剧走渐变底），依赖 TikTok 网页接口不改；
 连续两天失败就切回 Apify。两种模式写同一张表，切换不影响历史数据和日增量。
 
 ## 部署（Windows）
@@ -30,7 +30,8 @@
 | `apify_client.py` | Apify 模式：调 actor、轮询、解析字段 |
 | `tiktok_client.py` | 自建模式：直连 TikTok 网页接口、分页、解析 |
 | `db.py` | SQLite 表结构、快照写入、所有指标查询 |
-| `own_series.json` | 自家剧清单（Drama Center 剧集管理导出的 54 个剧集 ID），操作台一键添加；新剧上线手动补一条 |
+| `own_series.json` | 自家剧清单（Drama Center 剧集管理导出的 54 个剧集 ID + 本地海报路径），操作台一键添加；新剧上线手动补一条 |
+| `static/covers/` | 自家剧海报，Drama Center 后台下载后压到 640px（海报链接带签名 6 小时过期，所以存文件） |
 | `templates/` `static/` | 页面、样式、Chart.js 本地副本 |
 | `tests/test_smoke.py` | Apify 模式全链路：`python tests/test_smoke.py` |
 | `tests/test_own.py` | 自家剧清单渲染 + 添加 + 不覆盖已有分组：`python tests/test_own.py` |

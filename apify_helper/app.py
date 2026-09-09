@@ -114,15 +114,23 @@ _job_lock = threading.Lock()
 _current = {"running": False, "job_id": None, "sids": [], "started_at": None}
 
 
+def _is_avatar(url):
+    """早期自建模式拿不到剧封面时用过账号头像兜底，这里识别出来清掉。"""
+    return bool(url) and ("-avt-" in url or "avatar" in url)
+
+
 def _apply_results(sids, parsed, errors, job_id, taken_at):
     n = 0
+    own_cover = {o["id"]: o.get("cover") for o in load_own()}
     for sid in sids:
         p = parsed.get(sid)
         if p and p["episodes"]:
             cur = db.get_series(sid)
-            fb = p["meta"].pop("cover_fallback", None)
-            if fb and cur and not cur["cover_url"]:
-                p["meta"]["cover_url"] = fb
+            # 自家剧用 Drama Center 海报（本地文件）；其它剧公开接口没有封面，宁可空着走渐变底也不用头像
+            if own_cover.get(sid):
+                p["meta"]["cover_url"] = own_cover[sid]
+            elif cur and _is_avatar(cur["cover_url"]):
+                db.set_series_fields(sid, cover_url="")   # save_snapshot 跳过空值，这里直接清
             db.save_snapshot(sid, p, job_id, taken_at)
             db.set_series_status(sid, "ok", "")
             n += len(p["episodes"])
@@ -277,7 +285,7 @@ def admin_add_own():
     picked = [o for o in load_own() if o["id"] not in have and (want == "all" or o["id"] == want)]
     for o in picked:
         db.add_series(o["id"], f"自家-{o['region']}")
-        db.set_series_fields(o["id"], notes=o["account"], title=o["title"])
+        db.set_series_fields(o["id"], notes=o["account"], title=o["title"], cover_url=o.get("cover"))
     msg = f"已添加 {len(picked)} 部剧" if picked else "没有新增（已在系统里）"
     if picked:
         _, m2 = start_job([o["id"] for o in picked], "add")

@@ -9,6 +9,7 @@ A.start_job = lambda sids, trig: calls.append(list(sids)) or (True, f"已开始�
 own = A.load_own()
 assert len(own) == 54 and all(A.SID_RE.match(o["id"]) for o in own), len(own)
 assert len({o["id"] for o in own}) == 54, "ID 重复"
+assert all(o.get("cover") and os.path.exists(os.path.join(os.path.dirname(A.__file__), o["cover"].lstrip("/"))) for o in own), "海报文件缺失"
 c = A.app.test_client()
 html = c.get("/admin").get_data(as_text=True)
 assert "自家剧清单" in html and own[0]["id"] in html and "已添加" not in html
@@ -17,6 +18,7 @@ r = c.post("/admin/add_own", data={"sid": first}, follow_redirects=True).get_dat
 assert "已添加 1 部剧" in r and calls[-1] == [first], r[:200]
 s = A.db.get_series(first)
 assert s["grp"] == f"自家-{own[0]['region']}" and s["notes"] == own[0]["account"] and s["title"] == own[0]["title"], dict(s)
+assert s["cover_url"] == own[0]["cover"], s["cover_url"]
 A.db.set_series_fields(first, grp="改过的组")                      # 模拟用户改过分组
 r = c.post("/admin/add_own", data={"sid": "all"}, follow_redirects=True).get_data(as_text=True)
 assert "已添加 53 部剧" in r and len(calls[-1]) == 53 and first not in calls[-1], r[:200]
