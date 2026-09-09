@@ -59,6 +59,36 @@
 </section>
 
 <section class="panel">
+  <h3>自家剧清单 <span class="muted">{{ own|length }} 部，来自 Drama Center 剧集管理，{{ own|selectattr('added')|list|length }} 部已在系统</span></h3>
+  <form method="post" action="/admin/add_own" class="inline">
+    <input type="hidden" name="sid" value="all">
+    <button class="btn" type="submit" {{ 'disabled' if running or own|rejectattr('added')|list|length == 0 else '' }}>添加全部未加入的（{{ own|rejectattr('added')|list|length }} 部）</button>
+  </form>
+  <p class="hint">分组自动填 自家-地区，备注填发布账号。同一部剧不同账号/地区是不同 ID，会分别列出。</p>
+  <div class="wrap">
+  <table class="tbl">
+    <thead><tr><th>剧</th><th>ID</th><th>账号 · 地区</th><th class="r">集数</th><th>发布日</th><th>后台状态</th><th>操作</th></tr></thead>
+    <tbody>
+    {% for o in own %}
+    <tr class="{{ 'dim' if o.added else '' }}">
+      <td>{% if o.added %}<a href="/series/{{ o.id }}">{{ o.title }}</a>{% else %}{{ o.title }}{% endif %}</td>
+      <td class="mono">{{ o.id }}</td>
+      <td>{{ o.account }} · {{ o.region }}</td>
+      <td class="r">{{ o.episodes }}</td>
+      <td>{{ o.published }}</td>
+      <td>{{ o.dc_status }}</td>
+      <td>
+        {% if o.added %}<span class="tag">已添加</span>
+        {% else %}<form method="post" action="/admin/add_own" class="inline"><input type="hidden" name="sid" value="{{ o.id }}"><button class="btn sm" type="submit">添加</button></form>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="panel">
   <h3>剧管理 <span class="muted">{{ ov|length }} 部</span></h3>
   <div class="wrap">
   <table class="tbl">

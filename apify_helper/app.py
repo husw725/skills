@@ -32,6 +32,15 @@ DEFAULTS = {
 }
 GROUPS = ["自家", "竞品"]
 SID_RE = re.compile(r"^\d{10,25}$")
+# ponytail: 自家剧清单是静态文件（Drama Center 接口带登录态+签名，程序拉不到）；新剧上线手动更新
+OWN_PATH = BASE_DIR / "own_series.json"
+
+
+def load_own():
+    try:
+        return json.loads(OWN_PATH.read_text("utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
 
 
 def load_config():
@@ -254,8 +263,26 @@ def admin():
     ov = db.overview(include_archived=True)
     tok = cfg["apify_token"]
     token_hint = f"已配置（末四位 {tok[-4:]}）" if tok else "未配置"
-    return render_template("admin.html", cfg=cfg, ov=ov, jobs=db.list_jobs(), groups=GROUPS,
+    have = {m["series_id"] for m in ov}
+    own = [{**o, "added": o["id"] in have} for o in load_own()]
+    return render_template("admin.html", cfg=cfg, ov=ov, jobs=db.list_jobs(), groups=GROUPS, own=own,
                            token_hint=token_hint, msg=request.args.get("msg", ""), running=_current["running"])
+
+
+@app.route("/admin/add_own", methods=["POST"])
+def admin_add_own():
+    """从内置自家剧清单添加：sid=单部，sid=all 加全部未添加的。分组 自家-地区，备注写发布账号。"""
+    want = request.form.get("sid", "")
+    have = {m["series_id"] for m in db.list_series(include_archived=True)}
+    picked = [o for o in load_own() if o["id"] not in have and (want == "all" or o["id"] == want)]
+    for o in picked:
+        db.add_series(o["id"], f"自家-{o['region']}")
+        db.set_series_fields(o["id"], notes=o["account"], title=o["title"])
+    msg = f"已添加 {len(picked)} 部剧" if picked else "没有新增（已在系统里）"
+    if picked:
+        _, m2 = start_job([o["id"] for o in picked], "add")
+        msg += f"；{m2}"
+    return redirect(url_for("admin", msg=msg))
 
 
 @app.route("/admin/add", methods=["POST"])

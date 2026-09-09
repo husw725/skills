@@ -16,7 +16,8 @@
 
 1. 机器上装好 Python 3.10+（安装时勾选 Add to PATH）。
 2. 把整个 `apify_helper` 目录拷到机器上，双击 `start.bat`。首次会自动装依赖并生成 `config.json`。
-3. 浏览器打开 `http://<这台机器的IP>:8765/`，进「操作台」填 Apify token，添加剧 ID。
+3. 浏览器打开 `http://<这台机器的IP>:8765/`，进「操作台」→「自家剧清单」点「添加全部」；竞品剧在「添加剧」里贴 ID。
+   注意：Drama Center「剧集表现」页显示的是原剧 ID，TikTok 公开端不认；要用「剧集管理」编辑页地址栏里的剧集 ID。
 4. 想开机自启和放行防火墙端口：右键 `install_autostart.bat` → 以管理员身份运行（只需一次）。
 
 改端口 / 定时时间 / 代理：操作台的「设置」，或直接改 `config.json` 后重启。
@@ -29,8 +30,10 @@
 | `apify_client.py` | Apify 模式：调 actor、轮询、解析字段 |
 | `tiktok_client.py` | 自建模式：直连 TikTok 网页接口、分页、解析 |
 | `db.py` | SQLite 表结构、快照写入、所有指标查询 |
+| `own_series.json` | 自家剧清单（Drama Center 剧集管理导出的 54 个剧集 ID），操作台一键添加；新剧上线手动补一条 |
 | `templates/` `static/` | 页面、样式、Chart.js 本地副本 |
 | `tests/test_smoke.py` | Apify 模式全链路：`python tests/test_smoke.py` |
+| `tests/test_own.py` | 自家剧清单渲染 + 添加 + 不覆盖已有分组：`python tests/test_own.py` |
 | `tests/test_direct.py` | 自建模式：真实响应夹具解析 + 分页 + run_job：`python tests/test_direct.py` |
 
 ## 指标口径
