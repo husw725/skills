@@ -2,16 +2,6 @@
 {% block content %}
 <script id="data" type="application/json">{{ payload|tojson }}</script>
 
-{% if dash.alerts %}
-<section class="alerts">
-  {% for a in dash.alerts %}
-  <a class="alert {{ a.level }}" href="{{ '/series/' ~ a.sid if a.sid else '/admin' }}">
-    <span class="dot"></span><b>{{ a.title }}</b><span>{{ a.msg }}</span>
-  </a>
-  {% endfor %}
-</section>
-{% endif %}
-
 <section class="kpis">
   <div class="kpi"><span class="lbl">在追剧数</span><b>{{ dash.kpi.n_series }}</b><span class="sub">自家 {{ dash.kpi.n_ours }} · 竞品 {{ dash.kpi.n_series - dash.kpi.n_ours }}</span></div>
   <div class="kpi"><span class="lbl">昨日播放增量</span><b class="{{ 'up' if dash.kpi.delta_play and dash.kpi.delta_play > 0 else '' }}">{{ dash.kpi.delta_play|delta }}</b><span class="sub">全部剧，对比上一日快照</span></div>
@@ -54,7 +44,7 @@
 {% endif %}
 <section class="cards" id="cards">
   {% for m in ov %}
-  <a class="card {{ 'ours' if m.grp == '自家' else 'rival' }}" href="/series/{{ m.series_id }}"
+  <a class="card {{ 'ours' if m.grp.startswith('自家') else 'rival' }}" href="/series/{{ m.series_id }}"
      data-grp="{{ m.grp }}" data-title="{{ (m.title or '')|lower }} {{ m.series_id }}"
      data-delta="{{ m.delta_play if m.delta_play is not none else -1e18 }}" data-play="{{ m.total_play or 0 }}"
      data-added="{{ m.added_at }}" {% if m.cover_url %}style="--bg:url('{{ m.cover_url }}')"{% endif %}>

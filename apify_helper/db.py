@@ -64,6 +64,11 @@ def now_iso():
     return dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def is_ours(grp):
+    """分组 自家 / 自家-US / 自家-BR 都算自家。"""
+    return bool(grp) and grp.startswith("自家")
+
+
 def safe_div(a, b):
     try:
         return a / b if a is not None and b else None
@@ -237,7 +242,7 @@ class DB:
 
     def dashboard(self, ov):
         active = [m for m in ov if m["status"] == "ok" and m["snap_id"]]
-        ours = [m for m in active if m["grp"] == "自家"]
+        ours = [m for m in active if is_ours(m["grp"])]
 
         def avg(vals):
             vals = [v for v in vals if v is not None]
@@ -255,19 +260,8 @@ class DB:
         }
         top = sorted([m for m in active if m["delta_play"] is not None],
                      key=lambda m: -m["delta_play"])[:5]
-        alerts = []
-        for m in ov:
-            if m["status"] == "error":
-                alerts.append({"level": "critical", "sid": m["series_id"], "title": m["title"] or m["series_id"],
-                               "msg": m["status_msg"] or "抓取失败"})
-            elif m["status"] == "ok" and m["stale"]:
-                alerts.append({"level": "warning", "sid": m["series_id"], "title": m["title"] or m["series_id"],
-                               "msg": f"超过 48 小时未更新（最后 {m['last_taken_at']}）"})
-        last_job = self.one("SELECT * FROM job ORDER BY id DESC LIMIT 1")
-        if last_job and last_job["status"] == "error":
-            alerts.insert(0, {"level": "critical", "sid": None, "title": "最近一次抓取失败",
-                              "msg": last_job["error"] or ""})
-        return {"kpi": kpi, "top": top, "trend": self.trend_by_group(), "alerts": alerts}
+        # 抓取失败 / 过期不在首页告警，运营看数据；失败原因在操作台的剧管理状态列和抓取日志里
+        return {"kpi": kpi, "top": top, "trend": self.trend_by_group()}
 
     def series_trend(self, sid):
         return self.q("""SELECT s.id, s.taken_at, SUM(e.play) play,

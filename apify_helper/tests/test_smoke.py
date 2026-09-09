@@ -112,7 +112,7 @@ def main():
     assert dash["kpi"]["delta_play"] == exp_delta + mB["delta_play"]
     assert dash["kpi"]["n_series"] == 2 and dash["kpi"]["n_ours"] == 1
     assert dash["top"][0]["series_id"] == SID_A
-    assert any(a["level"] == "critical" and a["sid"] == SID_C for a in dash["alerts"])
+    assert "alerts" not in dash and next(m for m in db.overview(True) if m["series_id"] == SID_C)["status"] == "error"
     assert {r["grp"] for r in dash["trend"]} == {"自家", "竞品"}
     hist, deltas = db.episode_history(SID_A, 4)
     assert len(hist) == 3 and len(deltas) == 1 and deltas[0]["play"] == int(30000 * 1.1) - 30000

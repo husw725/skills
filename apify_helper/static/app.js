@@ -16,7 +16,8 @@ if (window.Chart) {
 const data = () => { const el = document.getElementById('data'); return el ? JSON.parse(el.textContent) : {}; };
 const fmtNum = v => v == null ? '—' : Math.abs(v) >= 1e8 ? (v / 1e8).toFixed(2) + '亿' : Math.abs(v) >= 1e4 ? (v / 1e4).toFixed(1) + '万' : Math.round(v).toLocaleString();
 const fmtPct = (v, d = 0) => v == null ? '—' : (v * 100).toFixed(d) + '%';
-const grpColor = g => g === '自家' ? PAL.ours : g === '竞品' ? PAL.rival : PAL.other;
+const OURS_SHADES = ['#2a78d6', '#1baf7a', '#7c5cd6', '#0e9cb8', '#5b8def'];
+const grpColor = (g, i = 0) => g === '自家' ? PAL.ours : g === '竞品' ? PAL.rival : g.startsWith('自家') ? OURS_SHADES[i % OURS_SHADES.length] : PAL.other;
 const shortT = t => (t || '').slice(5, 16);
 
 /* 付费墙竖线：在最后一集免费和第一集付费之间画虚线 */
@@ -61,8 +62,8 @@ function initIndex() {
   const d = data();
   if (d.trend && d.trend.length) {
     const days = [...new Set(d.trend.map(r => r.d))].sort();
-    const grps = [...new Set(d.trend.map(r => r.grp))].sort((a, b) => (a === '自家' ? -1 : b === '自家' ? 1 : a.localeCompare(b)));
-    const ds = grps.map(g => line(grpColor(g), g, days.map(day => { const r = d.trend.find(x => x.d === day && x.grp === g); return r ? r.play : null; })));
+    const grps = [...new Set(d.trend.map(r => r.grp))].sort((a, b) => (a.startsWith('自家') !== b.startsWith('自家') ? (a.startsWith('自家') ? -1 : 1) : a.localeCompare(b)));
+    const ds = grps.map((g, i) => line(grpColor(g, i), g, days.map(day => { const r = d.trend.find(x => x.d === day && x.grp === g); return r ? r.play : null; })));
     mk('trendChart', { type: 'line', data: { labels: days.map(x => x.slice(5)), datasets: ds }, options: baseOpts({ legend: grps.length > 1 }) });
   }
   if (d.top && d.top.length) {
@@ -79,7 +80,8 @@ function initIndex() {
   let grp = '', q = '';
   const sortSel = document.getElementById('sortSel');
   const apply = () => {
-    cards.forEach(c => c.classList.toggle('hide', (grp && c.dataset.grp !== grp) || (q && !c.dataset.title.includes(q))));
+    const inGrp = g => !grp || g === grp || (grp === '自家' && g.startsWith('自家'));   // 点「自家」包含 自家-US 等子组
+    cards.forEach(c => c.classList.toggle('hide', !inGrp(c.dataset.grp) || (q && !c.dataset.title.includes(q))));
     const key = sortSel.value;
     const num = c => { const v = parseFloat(c.dataset[key]); return Number.isNaN(v) ? -Infinity : v; };
     const cmp = (a, b) => key === 'title' ? a.dataset.title.localeCompare(b.dataset.title)
