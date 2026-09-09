@@ -19,7 +19,17 @@ This skill allows Gemini CLI to quickly send messages to a user's DingTalk group
 
 Use the `run_shell_command` tool to execute the included Python script. 
 
-Ensure the message string is properly enclosed in quotes.
+### Recommended Approach (Cross-platform Stability)
+
+To avoid character encoding issues on Windows, it is highly recommended to pipe the message into the script's standard input:
+
+```bash
+echo "Your markdown message here" | python "${__dirname}/scripts/send.py" "https://oapi.dingtalk.com/robot/send?access_token=..."
+```
+
+### Alternative Approach (Simple Arguments)
+
+Ensure the message string is properly enclosed in quotes. Note that on Windows, long or complex markdown might fail if passed as a single argument.
 
 ```bash
 python "${__dirname}/scripts/send.py" "https://oapi.dingtalk.com/robot/send?access_token=..." "Your markdown message here"
@@ -27,4 +37,6 @@ python "${__dirname}/scripts/send.py" "https://oapi.dingtalk.com/robot/send?acce
 
 ## Troubleshooting
 
-- If DingTalk returns an error about keywords (e.g., `keywords not in content`), remind the user that their DingTalk robot's Security Settings require a specific Custom Keyword, and ensure their message text includes that keyword.
+- **Windows Garbled Characters (乱码)**: If messages are garbled on Windows, ensure your shell environment (like Git Bash or PowerShell) uses UTF-8. Using the `echo "..." | python ...` method is the most robust way to avoid these issues.
+- **Keyword Error**: If DingTalk returns `keywords not in content`, verify that your message contains the "Custom Keyword" set in your DingTalk robot's security settings.
+- **Connection Issues**: Check your network or firewall if the script reports `HTTP Error` or connection timeout.
