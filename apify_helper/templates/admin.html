@@ -111,7 +111,7 @@
       <td>
         {% if m.status == 'ok' %}<span class="badge ok">正常</span>
         {% elif m.status == 'pending' %}<span class="badge">抓取中</span>
-        {% else %}<span class="badge bad" title="{{ m.status_msg }}">失败</span> <span class="muted small">{{ m.status_msg }}</span>{% endif %}
+        {% else %}<span class="badge bad" title="{{ m.status_msg }}">失败</span> <span class="muted small msg" title="{{ m.status_msg }}">{{ m.status_msg }}</span>{% endif %}
       </td>
       <td class="r">{{ m.ep_n or '—' }}</td>
       <td class="r">{{ m.total_play|num }}</td>
