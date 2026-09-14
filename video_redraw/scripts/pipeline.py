@@ -55,6 +55,8 @@ def fmt_tc(sec: float) -> str:
 RECOG_MODEL = os.environ.get("VIDEO_REDRAW_RECOG_MODEL", "sonnet")
 MERGE_MODEL = os.environ.get("VIDEO_REDRAW_MERGE_MODEL", "sonnet")
 PARALLEL = int(os.environ.get("VIDEO_REDRAW_PARALLEL", "4"))
+# Windows 上 claude 是 .cmd/.exe, CreateProcess 不查 PATHEXT, 传裸名字会 FileNotFoundError, 必须给全路径
+CLAUDE = shutil.which("claude") or "claude"
 
 
 def extract_json(text: str):
@@ -70,9 +72,10 @@ def extract_json(text: str):
 def claude_json(prompt: str, model: str, timeout: int = 900):
     """走本机 claude CLI 订阅做多模态分析, 输出 JSON; 解析失败重试后抛错。"""
     for attempt in range(3):
-        r = subprocess.run(["claude", "-p", prompt, "--model", model,
+        r = subprocess.run([CLAUDE, "-p", prompt, "--model", model,
                             "--allowedTools", "Read"],
-                           capture_output=True, text=True, timeout=timeout)
+                           capture_output=True, text=True, timeout=timeout,
+                           encoding="utf-8", errors="replace")  # 不显式指定时 Windows 按 cp936 解码, 中文全乱
         data = extract_json(r.stdout)
         if data is not None:
             return data

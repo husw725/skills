@@ -5,8 +5,12 @@
 # 幂等: 已有 output/<prefix>_epNNN/storyboard.json 的集跳过; pipeline 自身各阶段也存在即跳过, 中断可直接重跑。
 set -euo pipefail
 dir=${1:?capture_dir}; speed=${2:?speed}; prefix=${3:?name_prefix}; dry=${4:-}
-export PATH=/opt/homebrew/bin:$PATH
-PY=/Users/husw/anaconda3/bin/python3
+# Mac: Homebrew 的 ffmpeg(带 AV1) + Anaconda 的 python; 其它机器用 PATH 上的 python/ffmpeg
+if [ -d /opt/homebrew/bin ]; then export PATH=/opt/homebrew/bin:$PATH; fi   # 裸 && 在 set -e 下会直接退出
+PY=${PY:-/Users/husw/anaconda3/bin/python3}
+[ -x "$PY" ] || PY=$(command -v python3 || command -v python)
+# Windows 默认 cp936: 中文分镜表读写和 claude CLI 输出解码都会乱码
+export PYTHONUTF8=1
 cd "$(dirname "$0")/.."
 n=0; skipped=0
 for mp4 in "$dir"/episodes/ep_*.mp4; do
