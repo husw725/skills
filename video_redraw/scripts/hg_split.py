@@ -28,6 +28,11 @@ ENC = ["-fps_mode", "cfr", "-r", "30", "-video_track_timescale", "30000",
        "-c:v", "libx264", "-preset", "slow", "-tune", "animation", "-crf", "23", "-c:a", "aac", "-b:a", "96k"]
 
 
+def chunk_files(d: Path) -> dict[int, Path]:
+    """{块号: 文件}; 首轮录的是 mp4 分块, 现在是单文件 mkv, 两种都认。"""
+    return {int(p.stem.split("_")[1]): p for p in sorted(d.glob("chunk_*.m??")) if p.suffix in (".mp4", ".mkv")}
+
+
 def probe_dur(p: Path) -> float:
     out = subprocess.run([FP, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)],
                          capture_output=True, text=True).stdout.strip()
@@ -111,10 +116,10 @@ def pieces_for(start: float, end: float, chunk_start: dict[int, float], chunk_du
     return out
 
 
-def cut(dir_: Path, out: Path, episode: int, pieces):
+def cut(files: dict[int, Path], out: Path, episode: int, pieces):
     tmp = []
     for i, (c, a, b) in enumerate(pieces):
-        src = dir_ / f"chunk_{c:03d}.mp4"
+        src = files[c]
         seg = out / f"_ep{episode:03d}_part{i}.mp4"
         subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-ss", str(a), "-to", str(b), "-i", str(src),
                         "-vf", CROP, *ENC, "-movflags", "+faststart", str(seg)], check=True)
@@ -144,7 +149,8 @@ def main():
         return
     d = Path(args.dir)
     entries = [json.loads(l) for l in (d / "capture_log.jsonl").read_text().splitlines() if l.strip()]
-    chunk_durs = {int(p.stem.split("_")[1]): probe_dur(p) for p in sorted(d.glob("chunk_*.mp4"))}
+    files = chunk_files(d)
+    chunk_durs = {c: probe_dur(p) for c, p in files.items()}
     eps, chunk_start = analyze(entries, args.speed, chunk_durs)
     out = d / "episodes"
     out.mkdir(exist_ok=True)
@@ -153,7 +159,7 @@ def main():
         if not pcs:
             print(f"ep{e['episode']}: 区间落在录像之外, 跳过")
             continue
-        f = cut(d, out, e["episode"], pcs)
+        f = cut(files, out, e["episode"], pcs)
         meta = {**e, "pieces": pcs, "speed": args.speed, "duration_wall": round(e["end"] - e["start"], 2),
                 "duration_content": round((e["end"] - e["start"]) * args.speed, 2)}
         (out / f"ep_{e['episode']:03d}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))

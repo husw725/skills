@@ -157,17 +157,18 @@ def ensure_playing(log) -> dict:
 
 
 class Recorder:
-    """scrcpy 分块录制; 每块 --time-limit 自然到点封装, 崩了只丢一块。"""
+    """scrcpy 单文件连续录制, 容器用 MKV: 没有 trailer 也能读, 崩了不丢已录内容, 所以不再按 --time-limit 分块。
+    (首轮用 mp4 每 1200s 分块, 换块只在 60s 看门狗轮询里做, 每次换块丢 ~55s 录像, 8 集内容残缺。)
+    只有 scrcpy 意外退出时 tick() 才补开下一段 chunk_00N.mkv。"""
 
-    def __init__(self, out: Path, chunk_sec: int):
-        self.out, self.chunk_sec, self.n, self.proc, self.started = out, chunk_sec, 0, None, None
+    def __init__(self, out: Path):
+        self.out, self.n, self.proc, self.started = out, 0, None, None
 
     def start_chunk(self):
         self.n += 1
-        f = self.out / f"chunk_{self.n:03d}.mp4"
+        f = self.out / f"chunk_{self.n:03d}.mkv"
         self.proc = subprocess.Popen(
-            ["scrcpy", "--no-playback", "--max-fps", "30", "--video-bit-rate", "12M",
-             "--time-limit", str(self.chunk_sec), "--record", str(f)],
+            ["scrcpy", "--no-playback", "--max-fps", "30", "--video-bit-rate", "12M", "--record", str(f)],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         time.sleep(2.5)                  # scrcpy 起流
         self.started = time.time()
@@ -177,7 +178,7 @@ class Recorder:
         return round(time.time() - self.started, 2)
 
     def tick(self):
-        """块到点自动退出 → 立刻开下一块(丢 ~2.5s)。"""
+        """scrcpy 意外死了(USB 抖动等) → 补开下一段, 日志里 chunk 号随之 +1。"""
         if self.proc and self.proc.poll() is not None:
             self.start_chunk()
 
@@ -202,7 +203,6 @@ def main():
     ap.add_argument("--out", default="output/hg_capture", help="录像与日志输出目录")
     ap.add_argument("--episodes", type=int, default=81, help="预期总集数, 换集计数到此停止")
     ap.add_argument("--interval", type=int, default=90, help="看门狗读状态间隔(秒); 每次会让控件入镜~3s")
-    ap.add_argument("--chunk", type=int, default=1200, help="每块录像时长(秒)")
     ap.add_argument("--max-hours", type=float, default=3.0, help="总时长保险丝")
     ap.add_argument("--goto", type=int, help="开录后先跳到第 N 集(1-24)再起播, 保证该集从 0:00 完整入镜")
     ap.add_argument("--self-test", action="store_true")
@@ -220,7 +220,7 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     logf = (out / "capture_log.jsonl").open("a")
-    rec = Recorder(out, args.chunk)
+    rec = Recorder(out)
 
     def log(d):
         d.update(t=round(time.time(), 2), chunk=rec.n, off=rec.offset() if rec.started else None)

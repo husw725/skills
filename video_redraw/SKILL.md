@@ -55,8 +55,9 @@ pipeline 跑完后，读取 `output/<项目名>/storyboard.json`，由你（Clau
 
 ```bash
 export PATH=$PATH:/opt/homebrew/bin
-# 1) 无人采集: 先开录再跳到第1集, 自动连播, 看门狗每60s无损读状态(暂停就点回去), 到第N+1集开始时停录
-python3 scripts/hg_capture.py --goto 1 --episodes 81 --interval 60 --chunk 1200 --out output/wytl_s1
+# 1) 无人采集: 先开录再跳到第1集, 自动连播, 看门狗每60s无损读状态(暂停就点回去), 到第N+1集开始/末集重播时停录
+#    单文件 MKV 连续录(chunk_001.mkv), 不分块: 首轮 mp4 分块在 60s 轮询里换块, 每次丢 ~55s, 8 集残缺
+python3 scripts/hg_capture.py --goto 1 --episodes 81 --interval 60 --out output/wytl_s1
 # 2) 按集切分(起点=t-cur/speed 取中位数, 坏读数过滤+链式兜底+跳过短集补齐), 产出 ep_NNN.mp4 + 入镜窗口 json
 #    单集裁掉 2400x1080 左右黑边并用 x264 slow crf23 压(约 2 Mbps, 比原始录屏小 80%); 切完抽查无误后原始 chunk_*.mp4 可删
 python3 scripts/hg_split.py --dir output/wytl_s1 --speed 1.5
