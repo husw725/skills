@@ -33,7 +33,7 @@ BOX_TOT = (1900, 810, 2350, 900)    # 总时长
 BOX_ICON = (1080, 420, 1320, 660)   # 中央播放图标
 BOX_TITLE = (320, 90, 900, 170)     # 左上标题「万妖图录传第一季 第N集」(字高 y≈97-160, 全分辨率 OCR 定位)
 BTN_EPISODES = (2099, 974)          # 控件行「选集」(全分辨率 OCR 定位, conf 96)
-GRID_X0, GRID_Y0, GRID_DX, GRID_DY, GRID_COLS = 1844, 227, 151, 147, 4   # 选集抽屉首屏 1-24 集格中心
+GRID_X0, GRID_Y0, GRID_DX, GRID_DY, GRID_COLS, GRID_ROWS = 1844, 227, 151, 147, 4, 6   # 选集抽屉格中心: 4 列 × 屏内 6 行
 ASSETS = Path(__file__).resolve().parent / "hg_assets"
 TC_RE = re.compile(r"(\d\d):(\d\d):(\d\d)")
 EP_RE = re.compile(r"第\s*(\d+)\s*集")
@@ -114,19 +114,70 @@ def read_episode_no(img):
     return None
 
 
+def grid_layout(img):
+    """选集抽屉当前屏: (首个完整格的集号, [每行中心 y])。抽屉是可滚动网格(无分页标签), 打开时自动滚到当前集附近,
+    滚动位置不一定整行对齐(实测 --goto 48 按固定行高点到了 44), 所以行的 y 从像素上扫: 沿格子左缘内侧一列,
+    亮度 >32 的连续段就是格(背景 22 / 格 46 / 数字 130), 高度不足 100 的是被裁掉的半格, 跳过。抽屉没开返回 (None, [])。"""
+    import pytesseract
+    g = img.convert("L")
+    x = GRID_X0 - 45
+    col = [g.getpixel((x, y)) for y in range(0, g.height)]
+    rows, start = [], None
+    for y, v in enumerate(col + [0]):
+        if v > 32 and start is None:
+            start = y
+        elif v <= 32 and start is not None:
+            if y - start >= 100:
+                rows.append((start + y - 1) // 2)
+            start = None
+    if not rows:
+        return None, []
+    y = rows[0]
+    crop = g.crop((GRID_X0 - 55, y - 40, GRID_X0 + 55, y + 40))
+    big = crop.resize((crop.width * 4, crop.height * 4))
+    for v in (ImageOps.autocontrast(big), big.point(lambda p: 255 if p > 120 else 0)):
+        s = pytesseract.image_to_string(v, config="--psm 7 -c tessedit_char_whitelist=0123456789").strip()
+        if s.isdigit() and int(s) % GRID_COLS == 1 and int(s) < 1000:   # 首格必是 1/5/9/...(实测 35 曾被读成 395)
+            return int(s), rows
+    return None, rows
+
+
+def open_drawer():
+    """调出控件 → 点「选集」; 抽屉没开(上次读状态留下的控件正好在自动隐藏边缘, 首点被吞)就关掉/重来, 最多 3 次。"""
+    for _ in range(3):
+        wait = 5.5 - (time.time() - _last_tap)
+        if wait > 0:
+            time.sleep(wait)
+        tap()
+        time.sleep(1.0)                          # 控件出现
+        tap(*BTN_EPISODES)
+        time.sleep(2.5)                          # 抽屉展开
+        base, rows = grid_layout(cap())
+        if base is not None:
+            return base, rows
+        tap()                                    # 抽屉若半开则关掉; 否则只是切一下播放状态, 下一轮 ensure_playing 会纠正
+    sys.exit("选集抽屉 3 次都没打开")
+
+
 def goto_episode(n: int, log):
-    """调出控件 → 开「选集」抽屉 → 点第 n 集(首屏 1-24)。点完立刻从 0:00 开始播。"""
-    if not 1 <= n <= 24:
-        sys.exit("--goto 目前只支持抽屉首屏 1-24 集(翻页还没做)")
-    wait = 5.2 - (time.time() - _last_tap)
-    if wait > 0:
-        time.sleep(wait)
-    tap()
-    time.sleep(1.0)                              # 控件出现
-    tap(*BTN_EPISODES)
-    time.sleep(2.5)                              # 抽屉展开
-    col, row = (n - 1) % GRID_COLS, (n - 1) // GRID_COLS
-    tap(GRID_X0 + GRID_DX * col, GRID_Y0 + GRID_DY * row)
+    """开抽屉 → 用首格集号 + 像素扫出的行位置定位第 n 集, 不在屏内就按行慢滑再读(最多 6 次) → 点它。点完立刻从 0:00 起播。"""
+    time.sleep(6)                                # 上一进程可能刚点过屏, 等控件自动隐藏, 让第一下 tap 语义确定为「调出控件」
+    base, rows = open_drawer()
+    for _ in range(6):
+        row, col = divmod(n - base, GRID_COLS)
+        if 0 <= row < len(rows):
+            tap(GRID_X0 + GRID_DX * col, rows[row])
+            break
+        need = row - (len(rows) - 1) if row >= len(rows) else row    # 正=内容上滑 need 行, 负=下滑
+        dy = max(-4, min(4, need)) * GRID_DY                          # 每次最多滑 4 行, 慢滑抑制惯性, 读完再校正
+        x, y0 = GRID_X0 + GRID_DX, 850 if dy > 0 else 300
+        sh(ADB, "shell", "input", "swipe", str(x), str(y0), str(x), str(y0 - dy), "600")
+        time.sleep(1.2)
+        base, rows = grid_layout(cap())
+        if base is None:
+            sys.exit("滑动后选集抽屉首格 OCR 失败")
+    else:
+        sys.exit(f"选集抽屉滑了 6 次仍没找到第 {n} 集")
     time.sleep(2.0)                              # 已跳到第 n 集并从 0:00 起播, 但抽屉仍开着
     tap()                                        # 抽屉开着时点视频区 = 关抽屉(不是调出控件)
     log({"event": "goto", "episode": n})         # 此前 ~2s 画面右侧有抽屉入镜, 切分时可据此裁掉
@@ -231,14 +282,14 @@ def main():
 
     rec.start_chunk()                    # 先开录, 跳集/起播全程入镜, 首集 0:00 不丢
     log({"event": "start"})
-    if args.goto:
-        goto_episode(args.goto, log)
-    st = ensure_playing(log)             # 起播(若停着) 并记录首个状态
-    log({"event": "state", **{k: st[k] for k in ("icon", "cur", "tot", "ep")}})
-    episode = st["ep"] or args.goto or 1
-    prev_cur, prev_tot, stuck, t0 = st["cur"], st["tot"], 0, time.time()
-
-    try:
+    episode = args.goto or 1
+    try:                                 # goto/起播失败 sys.exit 也要走 finally 收录, 否则 scrcpy 成孤儿继续录(实测过)
+        if args.goto:
+            goto_episode(args.goto, log)
+        st = ensure_playing(log)         # 起播(若停着) 并记录首个状态
+        log({"event": "state", **{k: st[k] for k in ("icon", "cur", "tot", "ep")}})
+        episode = st["ep"] or episode
+        prev_cur, prev_tot, stuck, t0 = st["cur"], st["tot"], 0, time.time()
         while time.time() - t0 < args.max_hours * 3600:
             time.sleep(args.interval)
             rec.tick()
@@ -299,7 +350,13 @@ def self_test():
     # 标题集号: 暗背景帧 + 亮背景(金光)帧都是「第4集」
     assert read_episode_no(playing) == 4, read_episode_no(playing)
     assert read_episode_no(paused) == 4, read_episode_no(paused)
-    print("self-test ok: icon ▶/⏸ + 时码 OCR + 标题集号 在真实帧上全部通过")
+    # 真实抽屉截图(裁掉左侧视频区只留 x≥1700, 贴回原位): 滚到 29-52, 6 行完整格
+    drawer = Image.new("L", (2400, 1080))
+    drawer.paste(Image.open(ASSETS / "sample_drawer.png").convert("L"), (1700, 0))
+    base, rows = grid_layout(drawer)
+    assert base == 29 and rows == [234, 381, 528, 675, 822, 969], (base, rows)
+    assert grid_layout(playing)[0] is None, "没开抽屉的帧不该读出首格集号"
+    print("self-test ok: icon ▶/⏸ + 时码 OCR + 标题集号 + 选集抽屉行位/首格 在真实帧上全部通过")
 
 
 if __name__ == "__main__":
