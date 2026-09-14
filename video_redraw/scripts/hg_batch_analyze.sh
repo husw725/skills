@@ -12,17 +12,26 @@ PY=${PY:-/Users/husw/anaconda3/bin/python3}
 # Windows 默认 cp936: 中文分镜表读写和 claude CLI 输出解码都会乱码
 export PYTHONUTF8=1
 cd "$(dirname "$0")/.."
-n=0; skipped=0
+n=0; skipped=0; failed=""
 for mp4 in "$dir"/episodes/ep_*.mp4; do
   ep=$(basename "$mp4" .mp4)                # ep_001
   name="${prefix}_${ep#ep_}"                # wytl_001
   json="${mp4%.mp4}.json"
   if [ -f "output/$name/storyboard.json" ]; then skipped=$((skipped+1)); continue; fi
   cmd=($PY scripts/pipeline.py --video "$mp4" --name "$name" --speed "$speed")
-  [ -f "$json" ] && cmd+=(--overlays "$json")
+  if [ -f "$json" ]; then cmd+=(--overlays "$json"); fi   # 同上: 裸 && 在 set -e 下缺 json 会整批退出
   if [ "$dry" = "--dry-run" ]; then echo "${cmd[*]}"; continue; fi
   echo "=== $name ($(date +%H:%M)) ==="
-  "${cmd[@]}" 2>&1 | grep -vE "^\[ WARN|^objc|Warning|from pandas" | tail -3
-  n=$((n+1))
+  # 73 集无人值守: 单集失败不能带走整批。重试一次, 再失败记下来继续下一集。
+  # 状态必须直接取 pipeline 的退出码 —— 过 grep -v 管道的话, 输出被过滤干净时 grep 返回 1, 会把成功误判成失败。
+  log=$(mktemp); ok=0
+  for try in 1 2; do
+    if "${cmd[@]}" >"$log" 2>&1; then ok=1; break; fi
+    echo "  ! $name 第 $try 次失败"
+  done
+  grep -vE "^\[ WARN|^objc|Warning|from pandas" "$log" | tail -3 || true
+  rm -f "$log"
+  if [ "$ok" = 1 ]; then n=$((n+1)); else failed="$failed $name"; fi
 done
 echo "完成 $n 集, 跳过(已有) $skipped 集"
+[ -n "$failed" ] && echo "失败:$failed" || true

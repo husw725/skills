@@ -72,9 +72,11 @@ def extract_json(text: str):
 def claude_json(prompt: str, model: str, timeout: int = 900):
     """走本机 claude CLI 订阅做多模态分析, 输出 JSON; 解析失败重试后抛错。"""
     for attempt in range(3):
-        r = subprocess.run([CLAUDE, "-p", prompt, "--model", model,
+        # prompt 走 stdin 而非 argv: Windows 上 claude 是 .cmd, 经 cmd.exe 转发时多行 argv 会在第一个
+        # 换行处截断 —— 镜头图片路径全丢, 模型收到空图片列表却照样输出散文, 解析必然失败。顺带绕开 argv 32KB 上限
+        r = subprocess.run([CLAUDE, "-p", "--model", model,
                             "--allowedTools", "Read"],
-                           capture_output=True, text=True, timeout=timeout,
+                           input=prompt, capture_output=True, text=True, timeout=timeout,
                            encoding="utf-8", errors="replace")  # 不显式指定时 Windows 按 cp936 解码, 中文全乱
         data = extract_json(r.stdout)
         if data is not None:
