@@ -18,7 +18,10 @@ for mp4 in "$dir"/episodes/ep_*.mp4; do
   name="${prefix}_${ep#ep_}"                # wytl_001
   json="${mp4%.mp4}.json"
   if [ -f "output/$name/storyboard.json" ]; then skipped=$((skipped+1)); continue; fi
-  cmd=($PY scripts/pipeline.py --video "$mp4" --name "$name" --speed "$speed")
+  # 每集 json 里的 speed 优先: 补录时 App 倍速可能被重置(实测第 7/11 集是 1.0x 录的), 命令行 speed 只作兜底
+  ep_speed=$speed
+  if [ -f "$json" ]; then ep_speed=$($PY -c "import json,sys; print(json.load(open(sys.argv[1])).get('speed', sys.argv[2]))" "$json" "$speed"); fi
+  cmd=($PY scripts/pipeline.py --video "$mp4" --name "$name" --speed "$ep_speed")
   if [ -f "$json" ]; then cmd+=(--overlays "$json"); fi   # 同上: 裸 && 在 set -e 下缺 json 会整批退出
   if [ "$dry" = "--dry-run" ]; then echo "${cmd[*]}"; continue; fi
   echo "=== $name ($(date +%H:%M)) ==="
