@@ -127,18 +127,21 @@ def grid_layout(img):
         if v > 32 and start is None:
             start = y
         elif v <= 32 and start is not None:
-            if y - start >= 100:
+            if y - start >= 90:                  # 完整格 113px; 滚到顶时首行被抽屉上沿压成 99px, 仍算完整
                 rows.append((start + y - 1) // 2)
             start = None
     if not rows:
         return None, []
-    y = rows[0]
-    crop = g.crop((GRID_X0 - 55, y - 40, GRID_X0 + 55, y + 40))
-    big = crop.resize((crop.width * 4, crop.height * 4))
-    for v in (ImageOps.autocontrast(big), big.point(lambda p: 255 if p > 120 else 0)):
-        s = pytesseract.image_to_string(v, config="--psm 7 -c tessedit_char_whitelist=0123456789").strip()
-        if s.isdigit() and int(s) % GRID_COLS == 1 and int(s) < 1000:   # 首格必是 1/5/9/...(实测 35 曾被读成 395)
-            return int(s), rows
+    # 首格 OCR 失败(单个数字 "5" 比两位数难认)就用第二行首格减 4 兜底
+    for i, y in enumerate(rows[:2]):
+        crop = g.crop((GRID_X0 - 55, y - 40, GRID_X0 + 55, y + 40))
+        big = crop.resize((crop.width * 4, crop.height * 4))
+        for v in (ImageOps.autocontrast(big), big.point(lambda p: 255 if p > 120 else 0)):
+            for psm in ("7", "8", "10"):
+                s = pytesseract.image_to_string(v, config=f"--psm {psm} -c tessedit_char_whitelist=0123456789").strip()
+                n = int(s) - GRID_COLS * i if s.isdigit() else -1
+                if n >= 1 and n % GRID_COLS == 1 and n < 1000:   # 首格必是 1/5/9/...(实测 35 曾被读成 395)
+                    return n, rows
     return None, rows
 
 
