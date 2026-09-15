@@ -522,6 +522,135 @@ def stage_storyboard(scenes, shots, lines, workdir: Path):
 
 # ---------- 入口 ----------
 
+# ---------- 只要剧本模式(--mode screenplay): 视频直读 → 英文好莱坞剧本 ----------
+# 剧本只要场次级信息(地点/日夜/在场/动作/对白+说话人), 不需要镜头级产物; 一集一次视频理解调用代替 切镜+抽帧+ASR+逐镜识别+归并。
+# 视频理解是 Claude 做不了的(无视频输入)才走 Gemini; 后端做成同一接口, 以后 MCP 上的 Seed 接进 VIDEO_BACKENDS 即可。
+
+VIDEO_MODEL = os.environ.get("VIDEO_REDRAW_VIDEO_MODEL", "gemini-flash-latest")
+VIDEO_BACKEND = os.environ.get("VIDEO_REDRAW_VIDEO_BACKEND", "gemini")
+WRITE_MODEL = os.environ.get("VIDEO_REDRAW_WRITE_MODEL", "sonnet")
+
+
+def understand_video_gemini(video: Path, speed: float, bible: str, label: str) -> dict:
+    """整集视频一次调用 → 场次列表(含逐句对白与说话人) + 出场人物外貌。时间戳按视频时间报, 这里 ×speed 还原真实值;
+    但 Gemini 的视频时间戳本身只是近似(第 1 集实测整体偏大 ~1.4 倍), 剧本只依赖顺序, 别拿 t 当时码用。"""
+    from pydantic import BaseModel
+
+    class Line(BaseModel):
+        t: float
+        speaker: str
+        line: str
+
+    class Scene(BaseModel):
+        start: float
+        end: float
+        int_ext: str
+        location: str
+        time_of_day: str
+        characters: list[str]
+        action: str
+        dialogue: list[Line]
+
+    class Char(BaseModel):
+        name: str
+        look: str
+
+    class Out(BaseModel):
+        scenes: list[Scene]
+        characters: list[Char]
+
+    load_env_key()
+    from google import genai
+    client = genai.Client()
+    f = upload_ready(client, video)
+    prompt = f"""这是一部中文动画短剧的一集({label}), 手机录屏, 以 {speed}x 倍速播放录制(画面和声音都比正常快), 偶尔有播放器控件短暂入镜, 忽略控件。
+请把整集拆成剧本场次, 输出 JSON:
+- scenes: 按时间顺序, 地点或时间(日/夜)变化就分新场。每场: start/end(视频内秒数, 按你看到的视频时间报, 不要换算), int_ext(INT 室内 / EXT 室外), location(简短地点名, 中文), time_of_day(DAY/NIGHT/DAWN/DUSK), characters(在场人物), action(该场发生了什么, 2-5 句中文, 现在时, 只写看得见的动作和表情, 不写镜头术语), dialogue(该场每一句台词: t 秒数, speaker 说话人, line 台词原文——画面底部有硬字幕, 逐字照抄, 一句不漏, 包括旁白和内心独白)。
+- characters: 本集出场的每个人物: name 和 look(外貌一句话: 性别/年龄感/发型/服饰颜色/标志物)。
+人物命名规则: 已有人物表如下, 表里有的必须用表里的名字; 表里没有的新人物, 台词里出现了名字就用名字, 否则用「外貌代号」(如 白衣老者 / 虎妖 / 黑袍男)。人物表:
+{bible or "(空, 这是第一集)"}"""
+    for attempt in range(3):
+        resp = client.models.generate_content(
+            model=VIDEO_MODEL, contents=[f, prompt],
+            config={"response_mime_type": "application/json", "response_schema": Out})
+        if resp.parsed is not None:
+            data = resp.parsed.model_dump()
+            break
+        print(f"  ! 视频理解结构化输出解析失败, 重试 {attempt + 1}/2")
+    else:
+        raise RuntimeError(f"Gemini 视频理解连续解析失败: {str(getattr(resp, 'text', ''))[:200]}")
+    for s in data["scenes"]:
+        s["start"], s["end"] = round(s["start"] * speed, 1), round(s["end"] * speed, 1)
+        for d in s["dialogue"]:
+            d["t"] = round(d["t"] * speed, 1)
+    return data
+
+
+VIDEO_BACKENDS = {"gemini": understand_video_gemini}   # 以后: "seed": understand_video_seed(同签名)
+
+
+def stage_video_scenes(video: Path, workdir: Path, speed: float, bible_path, label: str) -> dict:
+    out_file = workdir / "scenes_direct.json"
+    if out_file.exists():
+        print(f"[视频直读] 已存在, 跳过: {out_file}")
+        return json.loads(out_file.read_text())
+    fn = VIDEO_BACKENDS.get(VIDEO_BACKEND)
+    if fn is None:
+        sys.exit(f"未知视频理解后端 {VIDEO_BACKEND}, 可选: {list(VIDEO_BACKENDS)}")
+    bible = bible_path.read_text() if bible_path and bible_path.exists() else ""
+    print(f"[视频直读] {VIDEO_BACKEND}/{VIDEO_MODEL} 读整集…")
+    data = fn(video, speed, bible, label)
+    n_lines = sum(len(s["dialogue"]) for s in data["scenes"])
+    print(f"[视频直读] {len(data['scenes'])} 场, {n_lines} 句台词, {len(data['characters'])} 个人物")
+    out_file.write_text(json.dumps(data, ensure_ascii=False, indent=1))
+    return data
+
+
+SCREENPLAY_RULES = """Strict Hollywood screenplay in Fountain plain text, English only (no Chinese characters anywhere).
+- Scene heading: `INT./EXT. LOCATION - DAY/NIGHT` in ALL CAPS; use `- CONTINUOUS` for unbroken continuations.
+- Action lines: present tense, lean, max ~4 lines per paragraph, only what can be seen/heard. No camera directions.
+- Character cue in ALL CAPS. On a character's first appearance in the action of this episode: NAME in CAPS + (age impression, one-phrase look).
+- Names: use the canonical English names from the character bible exactly. New named characters: pinyin in CAPS (e.g. LU YUN); unnamed ones: a terse descriptive name (e.g. TIGER DEMON, OLD MAN IN WHITE).
+- Dialogue: translate every source line faithfully and completely into natural spoken English; keep order; do not drop or invent lines. Source lines are subtitle fragments: consecutive fragments by the same speaker that form one utterance MUST be joined into one dialogue block (no chains of (CONT'D) cues for a single sentence); start a new cue only when the speaker changes or an action line intervenes. Use (V.O.) for narration/inner monologue, (O.S.) when the speaker is not on screen.
+- Header: `EPISODE N — "TITLE"` (you invent a short evocative title) then `FADE IN:`. End with `END OF EPISODE N`.
+- Parentheticals sparingly. No footnotes, no notes to the reader, no uncertainty markers."""
+
+
+def stage_screenplay(data: dict, workdir: Path, bible_path, label: str) -> Path:
+    """Claude(默认 sonnet) 把场次 JSON 写成英文 Fountain 剧本; 新人物追加进人物表, 供后续集沿用名字。"""
+    out_file = workdir / "screenplay.fountain"
+    if out_file.exists():
+        print(f"[剧本] 已存在, 跳过: {out_file}")
+        return out_file
+    bible = bible_path.read_text() if bible_path and bible_path.exists() else "(empty — first episode)"
+    prompt = f"""You are converting one episode ({label}) of a Chinese animated short drama into an English Hollywood screenplay.
+Input: a scene breakdown extracted from the footage (Chinese; dialogue lines are verbatim hard subtitles; times are real seconds).
+
+{SCREENPLAY_RULES}
+
+Character bible (canonical names — reuse exactly; propose English names only for characters NOT in it):
+{bible}
+
+Scene breakdown JSON:
+{json.dumps(data, ensure_ascii=False)}
+
+Return ONLY a JSON object: {{"title": "<episode title>", "fountain": "<the full Fountain text>", "new_characters": [{{"name": "<CANONICAL ENGLISH NAME>", "cn": "<中文名或代号>", "look": "<one-phrase look>"}}]}}
+new_characters must list every character that is NOT already in the bible (empty list if none)."""
+    print(f"[剧本] Claude/{WRITE_MODEL} 写 {label}…")
+    res = claude_json(prompt, WRITE_MODEL)
+    text = res["fountain"].strip() + "\n"
+    if re.search(r"[一-鿿]", text):
+        print("  ! 剧本里残留中文字符, 请检查")
+    out_file.write_text(text)
+    if bible_path and res.get("new_characters"):
+        with Path(bible_path).open("a") as fp:
+            for c in res["new_characters"]:
+                fp.write(f"- {c['name']} ({c.get('cn', '')}) — {c.get('look', '')} [first: {label}]\n")
+        print(f"[剧本] 人物表新增 {len(res['new_characters'])} 人 → {bible_path}")
+    print(f"[剧本] {out_file} ({text.count(chr(10))} 行)")
+    return out_file
+
+
 # --force-from 各阶段需要清掉的产物(含下游)
 STAGE_OUTPUTS = {
     "scenes": ["scenes.json", "clips", "frames",
@@ -530,6 +659,8 @@ STAGE_OUTPUTS = {
                    "storyboard.json", "storyboard.md"],
     "analyze": ["shots.json", "shots.partial.jsonl", "character_map.json",
                 "storyboard.json", "storyboard.md"],
+    "video_scenes": ["scenes_direct.json", "screenplay.fountain"],
+    "screenplay": ["screenplay.fountain"],
 }
 
 
@@ -624,6 +755,10 @@ def main():
     ap.add_argument("--speed", type=float, default=1.0,
                     help="源片录制倍速(如手机1.5倍速录屏填1.5); 时间码自动还原真实值, 范围1.0-2.0")
     ap.add_argument("--overlays", help="hg_split 产出的 ep_NNN.json, 抽关键帧时避开其中的控件入镜窗口")
+    ap.add_argument("--mode", choices=["storyboard", "screenplay"], default="storyboard",
+                    help="storyboard: 切镜+分镜表(默认); screenplay: 只要剧本, 整集视频直读(Gemini)→英文好莱坞剧本(Claude), 不切镜不抽帧不转写")
+    ap.add_argument("--bible", help="screenplay 模式: 全季共用的人物表 markdown, 每集读入保证名字一致, 新人物自动追加")
+    ap.add_argument("--episode-label", help="screenplay 模式: 集标签, 如 'EPISODE 7'(默认取项目名)")
     args = ap.parse_args()
 
     if args.self_test:
@@ -662,6 +797,12 @@ def main():
     video = stage_download(args.url, workdir) if args.url else Path(args.video)
     if args.download_only:
         print(f"[下载] --download-only 完成: {video}")
+        return
+    if args.mode == "screenplay":
+        label = args.episode_label or name
+        bible = Path(args.bible) if args.bible else None
+        data = stage_video_scenes(video, workdir, SPEED, bible, label)
+        stage_screenplay(data, workdir, bible, label)
         return
     scenes = stage_scenes(video, workdir)
     lines = [] if args.skip_transcript else stage_transcript(video, workdir)

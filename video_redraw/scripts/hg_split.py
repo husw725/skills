@@ -116,13 +116,16 @@ def pieces_for(start: float, end: float, chunk_start: dict[int, float], chunk_du
     return out
 
 
-def cut(files: dict[int, Path], out: Path, episode: int, pieces):
+def cut(files: dict[int, Path], out: Path, episode: int, pieces, fast: bool = False):
+    """fast=True: -c copy 无损快切, 切点落到前一个关键帧(scrcpy 每 20s 一个, 开头最多多出 ~20s 上集尾巴),
+    不裁边不重编码, 全季 1 分钟 vs 1.3 小时; 只要剧本(视频直读)时用, 分镜表模式仍需精确切点+CFR 重编码。"""
     tmp = []
     for i, (c, a, b) in enumerate(pieces):
         src = files[c]
         seg = out / f"_ep{episode:03d}_part{i}.mp4"
+        enc = ["-c", "copy"] if fast else ["-vf", CROP, *ENC]
         subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-ss", str(a), "-to", str(b), "-i", str(src),
-                        "-vf", CROP, *ENC, "-movflags", "+faststart", str(seg)], check=True)
+                        *enc, "-movflags", "+faststart", str(seg)], check=True)
         tmp.append(seg)
     final = out / f"ep_{episode:03d}.mp4"
     if len(tmp) == 1:
@@ -142,6 +145,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", default="output/hg_capture")
     ap.add_argument("--speed", type=float, default=1.5, help="录制时的播放倍速")
+    ap.add_argument("--fast", action="store_true", help="-c copy 无损快切(关键帧对齐, 开头可能多 ≤20s 上集尾巴); 只要剧本时用")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
     if args.self_test:
@@ -159,7 +163,7 @@ def main():
         if not pcs:
             print(f"ep{e['episode']}: 区间落在录像之外, 跳过")
             continue
-        f = cut(files, out, e["episode"], pcs)
+        f = cut(files, out, e["episode"], pcs, fast=args.fast)
         meta = {**e, "pieces": pcs, "speed": args.speed, "duration_wall": round(e["end"] - e["start"], 2),
                 "duration_content": round((e["end"] - e["start"]) * args.speed, 2)}
         (out / f"ep_{e['episode']:03d}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))

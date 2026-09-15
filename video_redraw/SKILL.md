@@ -1,6 +1,6 @@
 ---
 name: video-redraw-preprocess
-description: 视频重绘项目的素材前置处理 agent。输入原片(YouTube 链接或本地视频)，自动完成：下载、镜头切片、关键帧抽取、台词转写、镜头视觉分析(景别/运镜/场景/人物/动作/情绪)，产出原片分镜表和反向剧本。用户说"处理原片/切片/反推剧本/反向剧本/生成分镜表/原片分析/yt下载素材"时使用。
+description: 视频重绘项目的素材前置处理 agent。输入原片(YouTube 链接或本地视频)，自动完成：下载、镜头切片、关键帧抽取、台词转写、镜头视觉分析(景别/运镜/场景/人物/动作/情绪)，产出原片分镜表和反向剧本；另有"只要剧本"快速模式（整集视频直读 → 英文好莱坞格式 Fountain，不切镜不抽帧）。用户说"处理原片/切片/反推剧本/反向剧本/生成分镜表/原片分析/yt下载素材/只要剧本/好莱坞剧本"时使用。
 ---
 
 # 素材前置处理 (video_redraw)
@@ -12,7 +12,29 @@ description: 视频重绘项目的素材前置处理 agent。输入原片(YouTub
 1. 依赖：`pip install -r requirements.txt`（yt-dlp、scenedetect、google-genai）；ffmpeg 需已安装。
 2. 镜头视觉分析走本机 `claude` CLI（订阅额度，不花 API 钱），两段式：haiku 并行逐镜识别（默认 4 并发，`VIDEO_REDRAW_PARALLEL` 可调）→ sonnet 一次全局归并人物代号与场景写法（模型可用 `VIDEO_REDRAW_RECOG_MODEL`/`VIDEO_REDRAW_MERGE_MODEL` 覆盖）。台词优先用 yt 字幕（`--url` 模式自动抓，注意自动字幕无说话人标注）；没字幕才用 Gemini 转写音频（Claude 不支持音频输入）。`GEMINI_API_KEY` 设环境变量或放本 skill 目录 `.env`；有字幕或 `--skip-transcript` 时不需要。
 
-## 流程
+## 两种模式（先判断用户要什么）
+
+| 用户要的 | 模式 | 一集（2 分钟）耗时 | 产物 |
+|---|---|---|---|
+| 分镜表 / 切片 / 关键帧 / 完整素材包（默认） | `--mode storyboard` | 6–8 分钟 | clips/ frames/ transcript.json storyboard.json/md，再由 Claude 写 script.md |
+| **只要剧本**（"只要剧本""反向剧本就行，不要分镜"） | `--mode screenplay` | **约 2 分钟** | scenes_direct.json + screenplay.fountain（英文好莱坞格式），全季共用人物表 |
+
+`screenplay` 模式一集一次 Gemini 视频直读（整集上传：场次 / 在场人物 / 逐句硬字幕台词 + 说话人 / 人物外貌）→ Claude（默认 sonnet，`VIDEO_REDRAW_WRITE_MODEL` 可改）写英文 Fountain；不切镜、不抽帧、不转写、不逐镜识别。视频理解是 Claude 做不了的才用 Gemini（`VIDEO_REDRAW_VIDEO_MODEL`，默认 gemini-flash-latest）；后端在 `pipeline.py` 的 `VIDEO_BACKENDS` 里可插拔，以后 MCP 上的 Seed 接同一签名即可。注意：Gemini 给的时间戳只是近似（第 1 集实测偏大约 1.4 倍），剧本只用顺序，不要拿它当时码用。
+
+```bash
+# 单集
+python3 scripts/pipeline.py --video ep.mp4 --name wytl_001 --speed 1.5 --mode screenplay \
+  --bible output/wytl_s1/characters.md --episode-label "EPISODE 1"
+# 红果全季（必须顺序跑，人物表逐集累积）；切分用 --fast 无损快切（1 分钟 vs 1.3 小时，关键帧对齐，开头可能多几秒上集尾巴，剧本不在乎）
+python3 scripts/hg_split.py --dir output/wytl_s1 --speed 1.5 --fast          # 或 hg_cut_index.py cut ... --fast
+scripts/hg_batch_analyze.sh output/wytl_s1 1.5 wytl --mode screenplay
+python3 scripts/assemble_screenplay.py --title "WAN YAO TU LU ZHUAN" --subtitle "Season One" \
+  --out output/wytl_s1/WYTL_S01_full output/wytl_*/screenplay.fountain    # 合订 .fountain + Courier 阅读版 HTML
+```
+
+两种模式可共存于同一 `output/<name>/`，批处理按各自的完成标记（storyboard.json / screenplay.fountain）跳过。
+
+## 流程（storyboard 模式）
 
 ### 第一步：跑 pipeline（2.1 下载 + 2.2 切片 + 2.4 分镜表）
 

@@ -42,9 +42,11 @@ def build(d: Path, speed: float) -> dict:
     return {"speed": speed, "source": "chunk_*.mp4 concat in order", "episodes": out}
 
 
-def cut(video: Path, index: dict, out: Path):
+def cut(video: Path, index: dict, out: Path, fast: bool = False):
+    """fast=True: -c copy 关键帧对齐快切(整片是 x264 编的, 关键帧间隔 ≤8s, 开头最多多 8s 上集尾巴); 只要剧本时用。"""
     out.mkdir(parents=True, exist_ok=True)
     speed = index["speed"]
+    enc = ["-c", "copy"] if fast else ["-c:v", "libx264", "-preset", "fast", "-crf", "20", "-c:a", "aac"]
     for e in index["episodes"]:
         if e.get("damaged_content_sec"):
             print(f"ep{e['episode']:>3}: 缺 {e['damaged_content_sec']}s 内容(待重录), 跳过")
@@ -52,7 +54,7 @@ def cut(video: Path, index: dict, out: Path):
         f = out / f"ep_{e['episode']:03d}.mp4"
         if not f.exists():
             subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-ss", str(e["start"]), "-to", str(e["end"]),
-                            "-i", str(video), "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-c:a", "aac", str(f)], check=True)
+                            "-i", str(video), *enc, str(f)], check=True)
         wall = e["end"] - e["start"]
         (out / f"ep_{e['episode']:03d}.json").write_text(json.dumps(
             {**e, "speed": speed, "duration_wall": round(wall, 2), "duration_content": round(wall * speed, 2)},
@@ -85,6 +87,7 @@ def main():
     c.add_argument("--video", required=True)
     c.add_argument("--index", required=True)
     c.add_argument("--out", required=True)
+    c.add_argument("--fast", action="store_true", help="-c copy 关键帧对齐快切; 只要剧本时用")
     sub.add_parser("self-test")
     args = ap.parse_args()
     if args.cmd == "self-test":
@@ -95,7 +98,7 @@ def main():
         p.write_text(json.dumps(idx, ensure_ascii=False, indent=1))
         print(f"{len(idx['episodes'])} 集 -> {p}")
     else:
-        cut(Path(args.video), json.loads(Path(args.index).read_text()), Path(args.out))
+        cut(Path(args.video), json.loads(Path(args.index).read_text()), Path(args.out), fast=args.fast)
 
 
 if __name__ == "__main__":

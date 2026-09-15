@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 # 把 hg_split 切出的各集顺序喂给 pipeline(--speed 还原时码, --overlays 避开控件帧)。
-# 用法: scripts/hg_batch_analyze.sh <capture_dir> <speed> <name_prefix> [--dry-run]
-#   例: scripts/hg_batch_analyze.sh output/wytl_s1 1.5 wytl
-# 幂等: 已有 output/<prefix>_epNNN/storyboard.json 的集跳过; pipeline 自身各阶段也存在即跳过, 中断可直接重跑。
+# 用法: scripts/hg_batch_analyze.sh <capture_dir> <speed> <name_prefix> [--dry-run] [--mode storyboard|screenplay]
+#   例: scripts/hg_batch_analyze.sh output/wytl_s1 1.5 wytl                       # 分镜表(默认)
+#       scripts/hg_batch_analyze.sh output/wytl_s1 1.5 wytl --mode screenplay     # 只要剧本: 视频直读 → 英文 Fountain
+# 幂等: 已有 output/<prefix>_epNNN/storyboard.json(剧本模式: screenplay.fountain) 的集跳过; pipeline 各阶段也存在即跳过。
+# 剧本模式全季人物表在 <capture_dir>/characters.md, 每集读入并追加新人物, 保证名字跨集一致 —— 所以必须顺序跑。
 set -euo pipefail
-dir=${1:?capture_dir}; speed=${2:?speed}; prefix=${3:?name_prefix}; dry=${4:-}
+dir=${1:?capture_dir}; speed=${2:?speed}; prefix=${3:?name_prefix}; shift 3
+dry=""; mode=storyboard
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) dry=--dry-run; shift;;
+    --mode) mode=${2:?--mode 需要值}; shift 2;;
+    *) echo "未知参数 $1" >&2; exit 2;;
+  esac
+done
+done_file=storyboard.json; [ "$mode" = screenplay ] && done_file=screenplay.fountain
 # Mac: Homebrew 的 ffmpeg(带 AV1) + Anaconda 的 python; 其它机器用 PATH 上的 python/ffmpeg
 if [ -d /opt/homebrew/bin ]; then export PATH=/opt/homebrew/bin:$PATH; fi   # 裸 && 在 set -e 下会直接退出
 PY=${PY:-/Users/husw/anaconda3/bin/python3}
@@ -17,12 +28,14 @@ for mp4 in "$dir"/episodes/ep_*.mp4; do
   ep=$(basename "$mp4" .mp4)                # ep_001
   name="${prefix}_${ep#ep_}"                # wytl_001
   json="${mp4%.mp4}.json"
-  if [ -f "output/$name/storyboard.json" ]; then skipped=$((skipped+1)); continue; fi
+  if [ -f "output/$name/$done_file" ]; then skipped=$((skipped+1)); continue; fi
   # 每集 json 里的 speed 优先: 补录时 App 倍速可能被重置(实测第 7/11 集是 1.0x 录的), 命令行 speed 只作兜底
   ep_speed=$speed
   if [ -f "$json" ]; then ep_speed=$($PY -c "import json,sys; print(json.load(open(sys.argv[1])).get('speed', sys.argv[2]))" "$json" "$speed"); fi
-  cmd=($PY scripts/pipeline.py --video "$mp4" --name "$name" --speed "$ep_speed")
-  if [ -f "$json" ]; then cmd+=(--overlays "$json"); fi   # 同上: 裸 && 在 set -e 下缺 json 会整批退出
+  cmd=($PY scripts/pipeline.py --video "$mp4" --name "$name" --speed "$ep_speed" --mode "$mode")
+  if [ "$mode" = screenplay ]; then
+    cmd+=(--bible "$dir/characters.md" --episode-label "EPISODE $((10#${ep#ep_}))")   # 10#: 去掉前导零(007→7)
+  elif [ -f "$json" ]; then cmd+=(--overlays "$json"); fi   # 同上: 裸 && 在 set -e 下缺 json 会整批退出
   if [ "$dry" = "--dry-run" ]; then echo "${cmd[*]}"; continue; fi
   echo "=== $name ($(date +%H:%M)) ==="
   # 73 集无人值守: 单集失败不能带走整批。重试一次, 再失败记下来继续下一集。
