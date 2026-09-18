@@ -12,7 +12,7 @@
 """
 import argparse, datetime, json, os, re, subprocess, sys, time
 
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout, Error as PWError
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, 'data')
@@ -602,14 +602,42 @@ def run(push, headless):
             # 一律先落到 .candidate，验收通过才按"真实截止日"改名入库。已入库的好快照
             # 绝不能被一份未验收的导出覆盖。
             cand = os.path.join(DATA, f'content_performance_{dd}.candidate.xlsx')
-            try:
-                with page.expect_download(timeout=30000) as dl:
-                    page.get_by_text('Export Data').first.click()
-                dl.value.save_as(cand)
-            except PWTimeout:
-                log('导出失败：点击 Export Data 后 30 秒内没有产生下载。')
+            # 下载偶发被浏览器提前关掉（TargetClosedError），同口径实测约 38% 轮次崩。
+            # 原来只 catch PWTimeout，save_as 抛的 TargetClosedError 会把整个脚本崩掉。
+            # 改成最多重试 3 次，崩了就重开一个干净 context 再来；仍失败才告警退出。
+            last_err = None
+            for attempt in range(1, 4):
+                try:
+                    with page.expect_download(timeout=30000) as dl:
+                        page.get_by_text('Export Data').first.click()
+                    dl.value.save_as(cand)
+                    last_err = None
+                    break
+                except PWTimeout:
+                    last_err = 'timeout'
+                    log(f'导出失败：点击 Export Data 后 30 秒内没有产生下载。（第 {attempt}/3 次）')
+                except PWError as e:
+                    last_err = 'closed'
+                    log(f'导出中断：{type(e).__name__}: {str(e).splitlines()[0]}（第 {attempt}/3 次）')
+                if attempt < 3:
+                    time.sleep(3)
+                    try:
+                        ctx.close()
+                    except Exception:
+                        pass
+                    ctx, page = open_page(p, headless)   # 重开干净页面，goto 会回到数据页
+                    if not logged_in(page):
+                        log('重试时发现登录态失效，放弃本轮导出。')
+                        last_err = 'timeout'
+                        break
+            if last_err == 'timeout':
                 notify_once('export_timeout',
-                            '【TikTok短剧日报】导出失败（页面可能改版），今日数据未更新，请人工检查。')
+                            '【TikTok短剧日报】导出失败（页面可能改版或反复超时），今日数据未更新，请人工检查。')
+                return 3
+            if last_err == 'closed':
+                notify_once('export_crash',
+                            '【TikTok短剧日报】导出连续 3 次被浏览器中断（TargetClosedError），'
+                            '今日数据未更新，下一轮定时任务会自动重试。')
                 return 3
             if os.path.getsize(cand) < 1000:
                 size = os.path.getsize(cand)
