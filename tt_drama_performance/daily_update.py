@@ -225,6 +225,26 @@ def audit_all(write=True):
     return au, problems
 
 
+def purge_profile_db():
+    """把 browser_profile/Default/shared_proto_db 挪进 data/_quarantine/ 留证，Chrome 下次启动自动重建。
+
+    这个 LevelDB 存的是下载进行中记录之类的共享 proto 数据，不含登录态（cookie 在 Default/ 别处）。
+    2026-09-20 实测一条脏记录让 Chrome 152 在每次下载启动时于同一地址访问违例，重开
+    context/重试/换 headless 都无效，只去掉这一个目录就恢复。返回是否真的挪走了东西。"""
+    src = os.path.join(PROFILE, 'Default', 'shared_proto_db')
+    if not os.path.isdir(src):
+        return False
+    os.makedirs(QUAR, exist_ok=True)
+    dst = os.path.join(QUAR, f'shared_proto_db__{datetime.datetime.now():%m%d-%H%M%S}')
+    try:
+        os.replace(src, dst)
+        log(f'已清理 profile 的 shared_proto_db（脏记录会让 Chrome 在下载时崩溃），留证于 {os.path.basename(dst)}')
+        return True
+    except OSError as e:
+        log(f'清理 shared_proto_db 失败（{e.__class__.__name__}: {e}），继续重试')
+        return False
+
+
 def quarantine(src, dd, why):
     """驳回的导出不删除，挪进 data/_quarantine/ 留证（本地取证用，已 gitignore）。
     关键是把数据日文件名腾出来——被坏文件占住的数据日会被跳过逻辑永久堵死。"""
@@ -625,6 +645,11 @@ def run(push, headless):
                         ctx.close()
                     except Exception:
                         pass
+                    if last_err == 'closed':
+                        # TargetClosedError = Chrome 主进程崩了（Crashpad 里有转储）。2026-09-20 实测
+                        # 根因是 profile 里 shared_proto_db 的脏记录：同一 profile 重开多少次都在
+                        # 同一地址崩。不清库的话这 3 次重试等于撞三次同一堵墙。
+                        purge_profile_db()
                     ctx, page = open_page(p, headless)   # 重开干净页面，goto 会回到数据页
                     if not logged_in(page):
                         log('重试时发现登录态失效，放弃本轮导出。')
