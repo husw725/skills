@@ -198,7 +198,7 @@ class TranslationTests(unittest.TestCase):
         path = self.root / "in.json"
         tr.save_json(path, [row()])
         with contextlib.redirect_stdout(io.StringIO()), patch.object(tr.MiniMax, "complete") as call:
-            self.assertEqual(tr.main([str(path), "--dry-run", "--output-dir", str(self.root / "no-output")]), 0)
+            self.assertEqual(tr.main([str(path), "--dry-run", "--subtitle-only", "--output-dir", str(self.root / "no-output")]), 0)
         call.assert_not_called()
         self.assertFalse((self.root / "no-output").exists())
 
@@ -206,7 +206,7 @@ class TranslationTests(unittest.TestCase):
         path = self.root / "translated.json"
         tr.save_json(path, [row()])
         with self.assertRaises(ValueError):
-            tr.main([str(path), "--dry-run", "--output-dir", str(self.root)])
+            tr.main([str(path), "--dry-run", "--subtitle-only", "--output-dir", str(self.root)])
 
 
 class ApiTests(unittest.TestCase):

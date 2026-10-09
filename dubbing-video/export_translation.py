@@ -4,6 +4,8 @@ import csv
 from pathlib import Path
 import sys
 
+from screenplay_context import load_screenplay_context, annotate_rows
+
 from translate import estimate_duration, fingerprint, load_segments, read_json, save_json, validate_bible, write_srt
 
 
@@ -11,6 +13,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path)
     parser.add_argument("translation", type=Path)
+    parser.add_argument("--screenplay-context", type=Path)
+    parser.add_argument("--subtitle-only", action="store_true")
     parser.add_argument("--bible", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
@@ -27,6 +31,12 @@ def main():
     canonical = [{k: row[k] for k in ("id", "text", "start", "end")} for row in source]
     if draft.get("source_fingerprint") != fingerprint(canonical):
         raise ValueError("Source content/timing differs from the translation's source")
+    if not args.screenplay_context and not args.subtitle_only:
+        parser.error("Provide --screenplay-context; subtitle-only is an explicit exception")
+    screenplay = load_screenplay_context(args.screenplay_context, source) if args.screenplay_context else None
+    source = annotate_rows(source, screenplay)
+    if screenplay and draft.get("screenplay_context_fingerprint") != fingerprint(screenplay):
+        raise ValueError("Translation was not reviewed against this screenplay context")
     entries = draft["segments"]
     by_id = {row["id"]: row for row in entries}
     if len(by_id) != len(entries) or set(by_id) != {row["id"] for row in source}:
@@ -52,6 +62,8 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     save_json(output / "translated.json", {"episode": episode, "language": "pt-BR",
         "source_fingerprint": draft["source_fingerprint"], "bible_fingerprint": fingerprint(bible),
+        "screenplay_context_fingerprint": fingerprint(screenplay) if screenplay else None,
+        "screenplay_sources": screenplay["sources"] if screenplay else [],
         "segments": rows, "review_method": "main assistant contextual semantic review; no independent native listening review"})
     write_srt(output / "translated.pt-BR.srt", rows)
     review = [r for r in rows if r["timing_needs_review"] or r["review_issues"]]
@@ -71,6 +83,8 @@ def main():
         members = [rows[i] for i in positions]
         if any(b["start"]-a["end"] > .3 or b["start"] < a["start"] for a,b in zip(members,members[1:])):
             raise ValueError("Speech groups cannot absorb long pauses or reorder cues")
+        if len({r["speaker"] for r in members}) != 1:
+            raise ValueError("Speech groups cannot merge different screenplay speakers")
         grouped.update(group)
         starts[group[0]] = group
     units = []
@@ -83,12 +97,14 @@ def main():
                       "text": " ".join(r["text"] for r in members),
                       "translation": " ".join(r["translation"] for r in members),
                       "source_cue_windows": [{k:r[k] for k in ("id","start","end")} for r in members],
-                      "speaker": "unknown", "grouping_verified": False, "tts_timing_verified": False})
+                      "speaker": members[0]["speaker"], "speaker_audio_verified": False,
+                      "screenplay_annotations": [r.get("screenplay_annotation") for r in members],
+                      "grouping_verified": False, "tts_timing_verified": False})
         offset += len(group)
     save_json(output / "speech-units.draft.json", {"schema_version": 1, "language":"pt-BR",
         "notes": ["Proposed utterance grouping; verify against original audio before voice generation.",
                   "Future MCP adapter must handle speaker assignment and measured TTS timing."], "units": units})
-    fields = ["id", "start", "end", "text", "translation", "estimated_duration_s",
+    fields = ["id", "start", "end", "speaker", "text", "translation", "estimated_duration_s",
               "duration_ratio", "timing_needs_review", "tts_timing_verified", "translator_notes"]
     with (output / "translation-comparison.csv").open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")

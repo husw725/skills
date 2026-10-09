@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "filename": "fictional-example.txt",
+      "sha256": "3e1ae8a271b3f884c0e11c60615d69edc1ecc20e2f5a0bdc630a2aa81b2bc929",
+      "version": 1,
+      "note": "Fictional schema example, not a production script"
+    }
+  ],
+  "story_notes": [
+    "虚构格式示例：林薇与陆景川是恋人，陆夫人是陆景川的母亲。"
+  ],
+  "episodes": {
+    "1": {
+      "match_status": "matched_main_dialogue",
+      "script_excerpt": "林薇: 陆景川，你终于来了。\n陆景川: 薇薇，我答应过你，不会让你一个人面对。\n林薇: 可陆夫人说，我配不上你。",
+      "cue_annotations": {
+        "e01-001": {
+          "source_text": "陆景川，你终于来了。",
+          "speaker": "林薇",
+          "script_evidence": "林薇: 陆景川，你终于来了。",
+          "speaker_audio_verified": false
+        },
+        "e01-002": {
+          "source_text": "薇薇，我答应过你，不会让你一个人面对。",
+          "speaker": "陆景川",
+          "script_evidence": "陆景川: 薇薇，我答应过你，不会让你一个人面对。",
+          "speaker_audio_verified": false
+        },
+        "e01-003": {
+          "source_text": "可陆夫人说，我配不上你。",
+          "speaker": "林薇",
+          "script_evidence": "林薇: 可陆夫人说，我配不上你。",
+          "speaker_audio_verified": false
+        }
+      }
+    },
+    "2": {
+      "match_status": "matched_main_dialogue",
+      "script_excerpt": "陆景川: 我妈不能替我做决定。薇薇，我爱你。",
+      "cue_annotations": {
+        "e02-001": {
+          "source_text": "我妈不能替我做决定。薇薇，我爱你。",
+          "speaker": "陆景川",
+          "script_evidence": "陆景川: 我妈不能替我做决定。薇薇，我爱你。",
+          "speaker_audio_verified": false
+        }
+      }
+    }
+  }
+}

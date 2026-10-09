@@ -40,7 +40,7 @@ class SubtitlePreparationTests(unittest.TestCase):
                             ("bible.json",{"glossary":[{"source":"Laura","target":"Laura","kind":"person"}]})):
             (root/name).write_text(json.dumps(value), encoding="utf-8")
         return ["export_translation.py",str(root/"source.json"),str(root/"draft.json"),
-                "--bible",str(root/"bible.json"),"--output-dir",str(root/"out")]
+                "--subtitle-only", "--bible",str(root/"bible.json"),"--output-dir",str(root/"out")]
 
     def test_rejects_translation_after_source_timecode_changes(self):
         with tempfile.TemporaryDirectory() as directory:

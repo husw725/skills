@@ -39,7 +39,7 @@ python smoke_test.py
 条目按时间排序，但保留原编号与所有时码；原文件不修改。
 
 也可由编辑/当前助手先完成文本译稿，再用
-`export_translation.py SOURCE_JSON DRAFT_JSON --bible BIBLE_JSON --output-dir OUTPUT_DIR`
+`export_translation.py SOURCE_JSON DRAFT_JSON --bible BIBLE_JSON --screenplay-context CONTEXT_JSON --output-dir OUTPUT_DIR`
 在 Windows 核验并导出。这条路径不调用 MiniMax：检查台词 ID、源文本/时码指纹和锁定人名，
 生成巴葡 SRT、原译文 CSV、JSON、复核清单和供后续配音接入的 `speech-units.draft.json`。
 原字幕中的分句可提出连续配音分组，分组须核听，不能当成已确认的角色对白切片。
@@ -69,13 +69,13 @@ Windows 使用：
 ```powershell
 Set-Location E:\workspace\dubbing-video-smoke\dubbing-video
 # 先验证输入，不调用模型、不产生翻译费用：
-python translate.py examples/dialogue.json --dry-run
+python translate.py examples/dialogue.json --dry-run --subtitle-only
 
 # 在运行进程环境中配置 MINIMAX_API_KEY 后，准备全剧角色、称呼和术语表：
-python translate.py input/drama-01.json --output-dir output/drama-01 --prepare-only
+python translate.py input/drama-01.json --screenplay-context input/drama-01.screenplay-context.json --output-dir output/drama-01 --prepare-only
 
 # 可编辑角色表，固定巴西姓名、昵称、家族姓氏和称呼，再执行翻译：
-python translate.py input/drama-01.json --bible output/drama-01/series-bible.json --output-dir output/drama-01
+python translate.py input/drama-01.json --screenplay-context input/drama-01.screenplay-context.json --bible output/drama-01/series-bible.json --output-dir output/drama-01
 ```
 
 也可省略 `--prepare-only`，一次完成准备与翻译。默认人名本地化为自然的巴西姓名；
@@ -83,6 +83,14 @@ python translate.py input/drama-01.json --bible output/drama-01/series-bible.jso
 `examples/name-overrides.json`；这是虚构示例，实际项目需要自己的映射。
 API Key 只从进程环境变量读取，不写入项目文件或日志。国内与国际站账户分别配置；
 国际站可显式使用 `--base-url https://api.minimax.io/v1`。
+
+后续所有剧集都先核对剧本与成片/字幕版本，再结合剧本优化译文。
+`--screenplay-context` 使用编辑核对过的 JSON，结构参考 `examples/screenplay-context.json`。
+记录剧本文件名、版本和 SHA-256，以及每集匹配状态、原文摘录和每条字幕的角色/表演证据。
+说话人不能确认时保留 `unknown`；剧本依据不等于原声听审。每个待译集/字幕都须覆盖，
+源字幕变化、剧本版本变化会拒绝复用旧上下文或断点。人工译稿还必须携带上下文指纹。
+剧本仅用于关系、指代和表演解释，不能将未出现在成片中的台词、画面文字补入配音。
+缺少匹配剧本时先补齐；`--subtitle-only` 仅供明确授权的例外或虚构测试，不是生产默认。
 
 处理规则：
 
