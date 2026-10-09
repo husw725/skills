@@ -1,0 +1,54 @@
+"""Prepare the next episode's assets and reviewed translation for ordered production."""
+import argparse
+from pathlib import Path
+import subprocess
+import sys
+
+from translate import read_json,save_json
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--episode',required=True,type=int);p.add_argument('--ffmpeg',required=True,type=Path)
+    args=p.parse_args()
+    if sys.platform!='win32':p.error('Business execution is Windows-only')
+    episode=args.episode;folder=Path(f'output/drama-01/episode-{episode:02d}')
+    source=Path(f'input/drama-01/episode-{episode:02d}')
+    files=list(source.iterdir())
+    def unique(test):
+        matches=[f for f in files if f.is_file() and test(f)]
+        if len(matches)!=1:raise ValueError('Missing or ambiguous episode asset')
+        return matches[0]
+    video=unique(lambda f:f.suffix.lower()=='.mp4')
+    bgm=unique(lambda f:f.name.lower().endswith('_bgm.wav'))
+    sfx=unique(lambda f:f.name.lower().endswith('_sfx.wav'))
+    media=folder/'media';subprocess.run([sys.executable,'prepare_media.py','--video',str(video),'--bgm',str(bgm),
+       '--sfx',str(sfx),'--output-dir',str(media),'--ffmpeg',str(args.ffmpeg)],check=True)
+    data=read_json(folder/'translation/speech-units.draft.json');units=data['units'];voices={}
+    bank_path=Path('output/drama-01/voice-bank.json');bank=read_json(bank_path)
+    for unit in units:
+        name=unit['speaker'] if unit['speaker']!='unknown' else f'Narrator_EP{episode:02d}'
+        unit['production_voice']=name
+        annotations=[a for a in unit.get('screenplay_annotations',[]) if a]
+        emotion=annotations[0].get('emotion_intent','calm') if annotations else 'calm'
+        unit['emotion']=emotion if emotion in ('auto','happy','sad','angry','fearful','disgusted','surprised','calm','fluent','whisper') else 'calm'
+        unit['speed']=1.05;voices.setdefault(name,{})
+    for name in voices:
+        if name in bank['voices']:continue
+        candidates=sorted([u for u in units if u['production_voice']==name],key=lambda u:u['end']-u['start'],reverse=True)
+        segments=[];duration=0
+        for u in candidates:
+            start=max(0,u['start']);end=u['end']
+            segments.append([start,end]);duration+=end-start
+            if duration>=14:break
+        if duration<10:raise ValueError(f'{name} has <10 seconds reference in this episode; collect more actual source voice first')
+        voices[name]={'segments_seconds':sorted(segments)}
+    manifest=read_json(media/'media-manifest.json')
+    plan={'project_id':59,'episode':episode,'assets':{'video':str(video),'bgm':str(bgm),'sfx':str(sfx),
+        'source_audio':str(media/'source-audio.wav')},'voice_bank':str(bank_path),'voices':voices,'units':units,
+        'tts_workers':3,'output_dir':str(folder/'dub-v1'),'warnings':manifest['warnings']+
+        ['Speaker and emotion annotations are screenplay-supported candidates; native listening review pending.']}
+    save_json(folder/'dub-plan-v1.json',plan);print('Plan ready',episode,'utterances',len(units),'voices',list(voices))
+
+
+if __name__=='__main__':main()
