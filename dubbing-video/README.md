@@ -133,3 +133,10 @@ MCP认证 JSON 只放忽略目录；不要放入 plan 或 Git。API 返回的任
 原英语对白不进入输出音轨；新对白与独立BGM/SFX混合。视频流直接复制，验证视频有效载荷哈希相同。
 完成后的MP4为待听审版本，render-report.json记录实际时长、任务ID、语速调整和质量标记。
 顺序生产每集；全部字幕/素材齐备不等于配音完成。
+
+## S3 进度页面
+
+`publish_dashboard.py --config PRIVATE_S3_CONFIG` 在Windows后台轮询。用户已批准目录
+`aigc/drama/dubbing-video/carmilla-20261009/`。只上传已验证成片及单个index.html，
+原片、音轨、字幕、剧本、任务日志和密钥不上传。页面内嵌纯进度数据，每30秒刷新，
+每10分钟追加进度记录；新成片立即加入。全部32集发布后发布器自动停止。
