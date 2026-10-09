@@ -39,3 +39,10 @@
 - 已新增 `prepare_media.py`，提交 `736b1db` 经 Mac push / Windows pull 执行成功；完整解码三素材、记录 SHA-256、提取视频第一音轨为 PCM 及 16 kHz 单声道 ASR WAV。输出目录 `output\drama-01\episode-01\media`，包括 manifest 和两份音频。视频 H.264 1080×1920 / 30 fps，含 AAC 44.1 kHz 双声道；视频容器 67.082449 秒，BGM/SFX 均 67.012789 秒，无 >150 ms 时长差告警。对白纯净度与背景起点同步未听审确认。
 - 原始素材下载及识别前准备完成；真实 ASR、翻译、TTS 与混音尚未运行。MiniMax 配置问题仍待用户回复，不能报告首集全流程已完成。
 - CLI 事实已独立审核放行：`https://github.com/qjfoidnh/BaiduPCS-Go` 为第三方 CLI，支持 Windows、下载/断点续传及带提取码分享转存。桌面 App 登录不等于 CLI 登录；未安装或实测本次分享的 CLI 下载，不声称官方或提速。
+- 最新范围：用户说明配音能力将由后续生产 MCP 提供，目前先做字幕整理和翻译；本轮不生成语音。提供了第二个百度分享“06SRT字幕”，用户重新登录网盘。通过已登录 Windows 浏览器的“普通下载”取下全 32 集字幕 ZIP，用于全剧一致性；未增下其他集的视频或音轨。
+- 字幕已在 Windows 解包至 `input\drama-01\subtitles\original`，保留源 ZIP 和原文件。新增 `prepare_subtitles.py` 整理 32 集 / 643 条；EP01 `.str`、EP05 `.st` 为 SRT 扩展名误写；9 集（3/5/6/10/15/20/21/27/30）条目顺序错乱，规范副本及合并 JSON 按原时码排序，保留原编号和时间值，不移动台词。
+- 全剧英语字幕已通读；用户未回答可选翻译后端问题，按已告知默认由当前 Codex 助手直接完成首集译文，不依赖 MiniMax Key，不改变既有 MiniMax 翻译后端代码。全剧姓名/术语表已建立：Laura 保留；Carmilla/Camilla/Kamila → Camila；历史本名 Mircalla 保留并记录同一角色身份；Irina 保留，Elisabeth → Elisabete，Miller 姓氏保留。Connor 等疑似识别错误不编造角色。
+- 实际完成首集 24 条巴葡译文，输出保留时码的 SRT、原译文 CSV、JSON 和复核清单；文字音节估时 10 条超出 ±20%，未声明真实音频时长匹配。新增 `export_translation.py` 依据源文本/时码指纹、台词 ID 和锁定名称核验，导出 21 个拟配音单元覆盖全部 24 条；拟合并 4–5、8–9、23–24 的连续分句，所有分组、角色及 TTS 时长仍待原音频核验。
+- 代码提交 `102e547` 已 Mac push / Windows pull；Windows 26 项 unittest（新增 5 项 + 原 21 项）通过，真实 643 条字幕整理和 24 条译文导出成功，保存数据重新读取核验通过。未调用付费 API，未做巴葡母语听审；后续集译文尚未生成，不能称全剧翻译已完成。
+- Windows 产物：`output\drama-01\episode-01\translation`；准备包 `output\drama-01\carmilla-episode01-ptBR-preparation.zip` 含 8 文件，ZIP CRC 核验通过。复制供用户查看至本项目 `output/carmilla-episode01-ptBR-preparation.zip`。真实字幕/译文仅放 input/output 忽略目录及 Windows，不提交公开 GitHub；全剧角色表草稿在 `output\drama-01\subtitles\carmilla-series-bible.json`。
+- 后续：首集文本可审阅；接入生产 MCP 时确认角色、实际语音窗口、分句连读、音色及实测时长。源字幕已有截断/识别疑点（EP5 Connor、EP18 lava、EP27 两个截断句、EP29 years），其他集翻译前需核听疑点。代码审查入口 `/review` 或 `codex review`。
