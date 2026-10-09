@@ -50,3 +50,7 @@
 - 2026-10-09 MCP最新：用户更新认证，已更新本机原认证配置，不记录敏感值。mflix和mflix-review均远端initialize成功；review tools/list、getProjects、getProjectReviewMaterials成功。Carmilla项目ID59。
 - Windows已下载并校验 `input/drama-01/screenplay/Carmilla_Complete_32_Episodes_FINAL.v1.docx`（asset319，95108bytes，32集）及 `Carmilla_Revised_Episodes_1-3.v2.pdf`（asset333，103561bytes，8页），DOCX CRC/PDF解析通过。同目录download-manifest.json保存SHA256、ID/版本，无认证/下载URL；另有txt和版本说明。Mac审阅副本在output/carmilla-screenplay。
 - 首集字幕主要对白与完整稿吻合；修订稿开场及对白有变化，留作对照。两份平台状态均待审核，不能视为审批定稿。剩余31集未逐集核对，未修改现有翻译，无平台上传、评论或审核操作。
+
+- 2026-10-09 用户授权 MiniMax MCP 小样实测：Windows 从首集 source-audio.wav 截取 Laura 候选声段0.8–8.4/25.6–34.8秒，拼成16.8秒、1,481,838bytes单声道WAV（未人工听审说话人）。通过mflix createFilePresignedUrl上传成功，再uploadMiniMaxVoice创建 `studio_carmilla_laura_test_80bf6efd4dce`，克隆调用8.35秒。
+- 使用已保存音色调用generateAudio：speech-2.8-hd / Portuguese / fearful / speed1.0，测试文本“Sete dias. É só o que me resta.”；任务36533状态2成功。下载WAV232,994bytes，PCM16bit/32kHz/mono，3.622344秒；完整解码及Mac副本SHA256通过。首两字幕语音窗口合计3.1秒、含停顿跨幅7.2秒，本次未做时码对齐。
+- 小样路径 Windows `output/drama-01/episode-01/minimax-smoke`；Mac `output/minimax-smoke`有生成WAV、参考WAV、test-report.json。临时认证文件两端已删除；服务返回文件仅留忽略目录。实测费用接口未返回；不能把接口支持fearful等同原句情绪自动迁移，音色相似度、巴西口音和表达效果均待试听。只做一次克隆/一次合成，无全剧生成。
