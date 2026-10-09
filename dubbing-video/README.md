@@ -24,6 +24,14 @@ python smoke_test.py
 
 代码传递与远程运行已验证；当前已实现内容翻译模块，语音生成与混音后续接入。
 
+## 素材准备
+
+`prepare_media.py` 在 Windows 校验裸片、BGM、SFX，完整解码检查并记录 SHA-256，
+从裸片第一条音轨导出原采样率 PCM 和 16 kHz 单声道识别音频。
+指定 `--video`、`--bgm`、`--sfx`、`--output-dir`；FFmpeg 不在 PATH 时用 `--ffmpeg` 指定完整路径。
+源素材保持不变，输出包括 `media-manifest.json`、`source-audio.wav` 和 `asr-source.wav`。
+这一步不调用付费 API。音轨是否纯对白、背景轨的起点是否同步仍需听审；时长相近不能证明同步。
+
 ## 巴西葡语内容翻译
 
 `translate.py` 使用 MiniMax 文本模型（默认 `MiniMax-M2.7`），不依赖第三方 Python 包。
