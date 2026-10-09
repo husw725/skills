@@ -34,6 +34,16 @@ python smoke_test.py
 
 ## 巴西葡语内容翻译
 
+整季字幕可用 `prepare_subtitles.py SOURCE_DIR --output-dir OUTPUT_DIR` 整理：
+识别 `.srt` 及误写的 `.str`/`.st`，生成每集规范字幕、全剧台词 JSON 和原文件校验清单。
+条目按时间排序，但保留原编号与所有时码；原文件不修改。
+
+也可由编辑/当前助手先完成文本译稿，再用
+`export_translation.py SOURCE_JSON DRAFT_JSON --bible BIBLE_JSON --output-dir OUTPUT_DIR`
+在 Windows 核验并导出。这条路径不调用 MiniMax：检查台词 ID、源文本/时码指纹和锁定人名，
+生成巴葡 SRT、原译文 CSV、JSON、复核清单和供后续配音接入的 `speech-units.draft.json`。
+原字幕中的分句可提出连续配音分组，分组须核听，不能当成已确认的角色对白切片。
+
 `translate.py` 使用 MiniMax 文本模型（默认 `MiniMax-M2.7`），不依赖第三方 Python 包。
 正式业务执行限定 Windows；本阶段生成译文与配音准备数据，不生成语音。
 

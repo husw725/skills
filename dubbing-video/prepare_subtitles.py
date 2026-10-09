@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import sys
 
-from translate import load_segments, save_json, write_srt
+from translate import load_segments, save_json, srt_time
 
 
 def main():
@@ -38,17 +38,22 @@ def main():
         normalized.parent.mkdir(parents=True, exist_ok=True)
         normalized.write_text(text, encoding="utf-8")
         cues = load_segments(normalized)
+        out_of_order = any(b["start"] < a["start"] for a,b in zip(cues,cues[1:]))
         for cue in cues:
             cue.update({"original_cue_id": cue["id"], "episode": str(episode),
                         "id": f"e{episode:02d}-{cue['id']}", "source_file": source.name,
                         "timing_source": "subtitle_display_window",
                         "speaker_verified": False, "speech_timing_verified": False})
-        # Canonical SRT keeps original cue numbers; merged JSON uses globally unique IDs.
+        cues.sort(key=lambda c: (c["start"], c["end"]))
+        # Preserve IDs and every timecode; repair ordering only, never retime dialogue.
+        normalized.write_text("\n\n".join(
+            f"{c['original_cue_id']}\n{srt_time(c['start'])} --> {srt_time(c['end'])}\n{c['text']}"
+            for c in cues) + "\n", encoding="utf-8")
         manifest.append({"episode": episode, "source_file": source.name,
                          "source_sha256": hashlib.sha256(raw).hexdigest(), "encoding": encoding,
                          "extension_corrected": source.suffix.lower() != ".srt",
                          "cues": len(cues), "end": max(c["end"] for c in cues),
-                         "out_of_order": any(b["start"] < a["start"] for a,b in zip(cues,cues[1:]))})
+                         "out_of_order": out_of_order, "chronological_order_normalized": out_of_order})
         rows.extend(cues)
     save_json(output / "dialogue.en.json", {"segments": rows})
     # Validate the saved representation using the translation module, including global IDs.
