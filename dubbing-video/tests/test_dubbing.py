@@ -30,3 +30,32 @@ class DubbingTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+class MCPTransportTests(unittest.TestCase):
+    def config(self,root):
+        p=Path(root)/'private.json';save_json(p,{'url':'https://example.invalid/mcp','headers':{'Authorization':'Bearer fixture-only'}});return p
+
+    def response(self,result):
+        from unittest.mock import Mock
+        import json
+        return Mock(status_code=200,headers={},text=json.dumps({'jsonrpc':'2.0','id':1,'result':result}))
+
+    def test_generation_connection_failure_is_not_retried(self):
+        import requests
+        from unittest.mock import patch
+        from mflix_client import Mflix
+        with tempfile.TemporaryDirectory() as root,patch('requests.Session') as session:
+            session.return_value.post.side_effect=[self.response({'serverInfo':{}}),requests.ConnectionError('fixture')]
+            client=Mflix(self.config(root))
+            with self.assertRaisesRegex(RuntimeError,'submission status'):
+                client.rpc('tools/call',{'name':'generateAudio','arguments':{}})
+            self.assertEqual(session.return_value.post.call_count,2)
+
+    def test_read_only_connection_failure_can_retry(self):
+        import requests
+        from unittest.mock import patch
+        from mflix_client import Mflix
+        with tempfile.TemporaryDirectory() as root,patch('requests.Session') as session,patch('mflix_client.time.sleep'):
+            session.return_value.post.side_effect=[self.response({'serverInfo':{}}),requests.ConnectionError('fixture'),self.response({'content':[]})]
+            client=Mflix(self.config(root));client.rpc('tools/call',{'name':'getTaskById','arguments':{'taskId':42}})
+            self.assertEqual(session.return_value.post.call_count,3)
