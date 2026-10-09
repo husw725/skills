@@ -4,6 +4,7 @@
 
 - 日期：2026-10-09。
 - 目标：Mac 编写并推送 GitHub，Windows 拉取代码并执行；业务运行端固定为 Windows。
+- 最新用户长期要求：后续所有剧/集翻译都先取得并核对匹配剧本，结合人物关系、场景与表演意图优化。无匹配剧本时继续查找，只有用户明确同意才以字幕单独翻译。对白/时间码仍以本次成片字幕为准。
 - 项目新建，原目录无 CLAUDE.md 和历史交接文件；沿用上级工作区规则。
 - 测试代码：`smoke_test.py`，仅使用 Python 标准库。
 - GitHub：`husw725/skills` 的 `codex/dubbing-video-win-smoke` 分支，仅提交本项目文件。
@@ -54,3 +55,8 @@
 - 2026-10-09 用户授权 MiniMax MCP 小样实测：Windows 从首集 source-audio.wav 截取 Laura 候选声段0.8–8.4/25.6–34.8秒，拼成16.8秒、1,481,838bytes单声道WAV（未人工听审说话人）。通过mflix createFilePresignedUrl上传成功，再uploadMiniMaxVoice创建 `studio_carmilla_laura_test_80bf6efd4dce`，克隆调用8.35秒。
 - 使用已保存音色调用generateAudio：speech-2.8-hd / Portuguese / fearful / speed1.0，测试文本“Sete dias. É só o que me resta.”；任务36533状态2成功。下载WAV232,994bytes，PCM16bit/32kHz/mono，3.622344秒；完整解码及Mac副本SHA256通过。首两字幕语音窗口合计3.1秒、含停顿跨幅7.2秒，本次未做时码对齐。
 - 小样路径 Windows `output/drama-01/episode-01/minimax-smoke`；Mac `output/minimax-smoke`有生成WAV、参考WAV、test-report.json。临时认证文件两端已删除；服务返回文件仅留忽略目录。实测费用接口未返回；不能把接口支持fearful等同原句情绪自动迁移，音色相似度、巴西口音和表达效果均待试听。只做一次克隆/一次合成，无全剧生成。
+
+- 2026-10-09 剧本优化完成首集v2：24条逐句对照asset319/v1；7条调整措辞/停顿。Laura恐惧追踪、母亲虚弱临终、Camila痛苦悔意有逐句剧本依据。17条角色由剧本支持；7条说明原稿标SUPERIMPOSE，实际朗读者未知，已标待核听。全24条原文/时间码保留，人名术语映射不变；12条文本估时超出±20%，未重新合成或声称对齐成功。
+- 持久化流程：新增AGENTS.md规则和screenplay_context.py；translate.py准备角色表、翻译、审核均带匹配剧本上下文；默认要求--screenplay-context。上下文包含SHA256/版本/逐cue源文和角色证据，匹配状态或源文变化拒绝导入，指纹变化拒绝旧断点/未重审人工译稿；禁止跨角色合并拟配音单元。真实剧本、译文仍仅留忽略目录，不公开提交。
+- 提交d8bc2fe已push/Windows pull；32项测试通过（新增6项覆盖版本不匹配、遗漏/陈旧cue、模型上下文、旧断点拒绝、导出指纹、跨角色分组）。真实首集导出、字幕时码、人名一致性、剧本SHA256及11文件ZIP CRC全部核验通过；旧译文仍保留可读。未调用付费翻译或新增TTS。
+- 新输出 Windows output/drama-01/episode-01/translation-v2；准备包output/drama-01/carmilla-episode01-ptBR-script-v2.zip，Mac同名output副本。当前仅首集完成剧本优化，剩余31集译文未生成；后续按新流程逐集核对剧本，再翻译及实测配音时长。代码审查用/review或codex review。
