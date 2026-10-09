@@ -103,12 +103,11 @@ def safe_submit(client,name,arguments,path):
 
 def wait_task(client,task_id,state_file):
     state=read_json(state_file) if state_file.exists() else {'task_id':task_id,'last_poll':0}
-    if state.get('result',{}).get('taskStatus')==2:return state['result']
+    if state.get('result',{}).get('taskStatus') in (2,3):return state['result']
     delay=max(0,10-(time.time()-state.get('last_poll',0)))
     if delay:time.sleep(delay)
     state['last_poll']=time.time();save_json(state_file,state)
     result=client.task(task_id);state['result']=result;save_json(state_file,state)
-    if result['taskStatus']==3:raise RuntimeError(f'Generation task {task_id} failed; inspect private task record')
     return result
 
 
@@ -117,11 +116,13 @@ def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
     target=unit['end']-unit['start']
     speed=float(unit.get('speed',1.0))
     attempts=[]
+    actual_emotion=unit['emotion']
     for attempt in range(3):
         request={'projectId':project_id,'model':'speech-2.8-hd','text':unit['translation'],
                  'voiceId':voice_id,'referenceAudioList':[],'referenceVideoList':[],
-                 'languageBoost':'Portuguese','format':'wav','speed':speed,'vol':1.0,'pitch':0,
-                 'emotion':unit['emotion'],'duration':None,'prompt':None}
+                 'languageBoost':'Portuguese','format':'wav','speed':speed,
+                 'vol':0.7 if unit['emotion']=='whisper' and actual_emotion=='calm' else 1.0,'pitch':0,
+                 'emotion':actual_emotion,'duration':None,'prompt':None}
         path=folder/f'attempt-{attempt}.json'
         if path.exists():
             accepted=read_json(path)
@@ -133,8 +134,15 @@ def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
         state_file=folder/f'task-{attempt}.private.json'
         while True:
             result=wait_task(client,accepted['task_id'],state_file)
-            if result['taskStatus']==2:break
+            if result['taskStatus'] in (2,3):break
             print(f"{unit['id']} task {accepted['task_id']} running",flush=True)
+        if result['taskStatus']==3:
+            if actual_emotion=='whisper' and "don't support whisper" in str(result.get('taskMessage','')):
+                attempts.append({'task_id':accepted['task_id'],'status':'failed','reason':'Service does not support whisper for speech 2.8'})
+                actual_emotion='calm'
+                print(unit['id'],'whisper rejected; using calm at lower volume',flush=True)
+                continue
+            raise RuntimeError(f'Generation task {accepted["task_id"]} failed; inspect private task record')
         url=result.get('resultAudioUrl') or (result.get('resultAudioUrls') or [None])[0]
         if not isinstance(url,str) or not url.startswith('https://'):raise RuntimeError('Task has no HTTPS output audio')
         original=folder/f'original-{attempt}.wav'
@@ -164,7 +172,8 @@ def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
         if np.max(np.abs(extra))>.003:raise RuntimeError('Fit would cut audible words at cue end')
         fitted_samples=fitted_samples[:math.ceil(target*RATE)];write_audio(fitted,fitted_samples)
     item={'id':unit['id'],'cue_ids':unit['cue_ids'],'voice':unit['production_voice'],'voice_id':voice_id,
-          'start':unit['start'],'end':unit['end'],'translation':unit['translation'],'emotion':unit['emotion'],
+          'start':unit['start'],'end':unit['end'],'translation':unit['translation'],'emotion':actual_emotion,
+          'requested_emotion':unit['emotion'],'emotion_fallback':actual_emotion!=unit['emotion'],
           'attempts':attempts,'atempo_factor':factor,'fitted_duration_seconds':len(fitted_samples)/RATE,
           'timing_quality_review_required':factor>1.25 or speed>1.4,
           'fitted_path':str(fitted),'fitted_sha256':digest(fitted)}
