@@ -28,3 +28,8 @@
 - 验证：实现提交 `dd7f09b` 已 push GitHub，Windows pull 后 21 项 unittest 全通过（使用模拟 API），4句/2集示例 dry-run 成功，原 smoke_test 回归通过；没有在 Mac 执行业务代码。未配置密钥时明确报错且不产生假译文。
 - 实测边界：Windows 进程未配置 `MINIMAX_API_KEY`，且尚无用户真实台词/字幕路径，未调用付费翻译 API，未验证真实巴葡质量与配音时长。示例姓名和台词完全虚构。
 - 后续：提供实际输入路径并在 Windows 配置 API Key 后，先生成/检查角色表，再跑代表性翻译及 TTS 时长校准；不把模型语义复核当人工巴葡验收。代码审查使用 `codex review` 或 `/review`。
+- 首部素材（2026-10-09）：用户提供百度网盘分享，明确只下载第一集相关素材并跑通流程。分享目录为《Carmilla》，裸片目录含 32 集；另一目录为“05纯 BGM+纯SFX分离轨”，下有 SFX、纯 BGM 两个子目录。禁止误下整季。
+- 已在 Windows 网页确认 EP01 裸片 `Carmilla_EP01_纯净裸片版.mp4`（页面约 81.6 MB）及 `Carmilla_Ep01_SFX.wav`（约 11.3 MB）；第一集 BGM 文件名与大小尚待核验。暂未发现独立对白目录，需下载后用 FFprobe 核验裸片中的音轨，不能直接假定存在纯对白。
+- 下载目标目录已建：`E:\workspace\dubbing-video-smoke\dubbing-video\input\drama-01\episode-01`。截至本次核验未有文件落盘；百度分享下载触发登录。Windows `agent-browser` 会话 `dubbing-baidu` 保持在扫码登录页，已向用户展示二维码并请求完成登录；二维码及登录状态不提交 Git。
+- 同时核验 Windows 进程和用户环境均未配置 `MINIMAX_API_KEY`；已询问现有配置位置或请用户在 Windows 配置环境变量。不得把模拟翻译测试描述为真实配音流程已跑通。
+- 下一步：登录后明确仅选 EP01，下载裸片/BGM/SFX，逐项校验文件与轨道时间基准，确认对白来源；然后接入真实识别、巴葡翻译、角色 TTS 测时、混音及原视频流复制，记录实际费用与耗时。
