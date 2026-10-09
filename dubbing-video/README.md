@@ -123,6 +123,7 @@ python -m unittest discover -s tests -v
 ## 逐集配音与输出
 
 `dub_episode.py PLAN_JSON --mcp-config PRIVATE_CONFIG --ffmpeg FFMPEG_EXE` 在 Windows 执行。
+配音脚本需要 Windows Python 中安装 `requests` 与 `numpy`（本机已核验存在）。
 每集 plan 包含 project_id、episode、assets(video/bgm/sfx/source_audio)、voices、voice_bank、
 units 和 output_dir；先核对角色/翻译，明确 production_voice、emotion 和原 start/end。
 音色克隆按角色保存并复用，参考真实原声须10–300秒/20MB以内。
