@@ -155,9 +155,18 @@ def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
         if not isinstance(url,str) or not url.startswith('https://'):raise RuntimeError('Task has no HTTPS output audio')
         original=folder/f'original-{attempt}.wav'
         if not original.exists():
-            import urllib.request
-            with urllib.request.urlopen(url,timeout=90) as r:audio=r.read()
-            original.write_bytes(audio)
+            import requests
+            for download_attempt in range(3):
+                try:
+                    response=client.http.get(url,timeout=90)
+                    response.raise_for_status();audio=response.content
+                    expected=response.headers.get('Content-Length')
+                    if expected and len(audio)!=int(expected):raise requests.ConnectionError('Incomplete audio response')
+                    original.write_bytes(audio)
+                    break
+                except requests.RequestException:
+                    if download_attempt==2:raise RuntimeError(f"{unit['id']} audio download failed; saved task can resume") from None
+                    time.sleep(2**download_attempt)
         samples=read_audio(original,ffmpeg);samples,leading,trailing=trim_edges(samples)
         measured=len(samples)/RATE
         attempts.append({'task_id':accepted['task_id'],'speed':speed,'duration_seconds':measured,
@@ -229,12 +238,12 @@ def main():
     import threading
     workers=int(plan.get('tts_workers',3))
     if not 1<=workers<=3:raise ValueError('Use 1–3 TTS workers per episode')
-    progress_lock=threading.Lock();completed=[]
+    progress_lock=threading.Lock();completed=[u["id"] for u in units if (root/"utterances"/u["id"]/"result.json").exists()]
     def produce(unit):
         local_client=Mflix(args.mcp_config)
         result=synthesize(local_client,unit,bank['voices'][unit['production_voice']]['voice_id'],root/'utterances',plan['project_id'],args.ffmpeg)
         with progress_lock:
-            completed.append(unit['id'])
+            if unit['id'] not in completed:completed.append(unit['id'])
             save_json(root/'progress.json',{'episode':plan['episode'],'completed_units':completed,'total_units':len(units),'updated_at':time.time()})
             print(f'Episode {plan["episode"]}: completed {len(completed)}/{len(units)} {unit["id"]}',flush=True)
         return result

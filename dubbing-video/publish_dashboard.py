@@ -79,7 +79,12 @@ def main():
     while True:
         try:
             changed=False
-            for report_path in sorted((project/'output/drama-01').glob('episode-*/dub-*/render-report.json')):
+            latest_reports={}
+            for candidate in (project/'output/drama-01').glob('episode-*/dub-*/render-report.json'):
+                episode_folder=candidate.parent.parent.name
+                if episode_folder not in latest_reports or candidate.stat().st_mtime>latest_reports[episode_folder].stat().st_mtime:
+                    latest_reports[episode_folder]=candidate
+            for report_path in sorted(latest_reports.values()):
                 report=safe_read(report_path,{})
                 if report.get('status')!='rendered_draft' or not report.get('video_payload_identical'):continue
                 number=str(int(report['episode']));path=Path(report['output'])
@@ -104,7 +109,7 @@ def main():
                     state['history'].append({'time':time.time(),'message':message});state['history']=state['history'][-200:]
                     state['last_history']=time.time()
                 status['history']=state['history'];save_json(root/'status.json',status)
-                html=build_html(template,status);(root/'index.html').write_text(html,encoding='utf-8')
+                html=build_html((project/'dashboard.html').read_text(encoding='utf-8'),status);(root/'index.html').write_text(html,encoding='utf-8')
                 s3.put_object(Bucket=bucket,Key=prefix+'index.html',Body=html.encode(),ContentType='text/html; charset=utf-8',CacheControl='no-cache,max-age=0')
                 state['last_publish']=time.time();save_json(state_path,state)
                 print('STATUS_PUBLISHED',message,flush=True)
