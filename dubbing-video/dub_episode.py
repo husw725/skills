@@ -1,0 +1,250 @@
+"""Clone reusable voices, synthesize ordered dialogue, mix backgrounds and copy video."""
+import argparse
+import hashlib
+import json
+import math
+from pathlib import Path
+import subprocess
+import sys
+import time
+import uuid
+import wave
+
+from mflix_client import Mflix
+from translate import fingerprint, read_json, save_json
+
+RATE=48000
+
+
+def run(command):
+    r=subprocess.run([str(x) for x in command],capture_output=True,text=True,encoding='utf-8',errors='replace')
+    if r.returncode:raise RuntimeError(r.stderr[-2000:] or 'Media command failed')
+    return r.stdout
+
+
+def digest(path):
+    h=hashlib.sha256()
+    with Path(path).open('rb') as f:
+        for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+    return h.hexdigest()
+
+
+def probe(path,ffmpeg):
+    return json.loads(run([Path(ffmpeg).with_name('ffprobe.exe'),'-v','error','-show_streams','-show_format','-of','json',path]))
+
+
+def read_audio(path,ffmpeg):
+    import numpy as np
+    cmd=[str(ffmpeg),'-v','error','-i',str(path),'-vn','-ar',str(RATE),'-ac','1','-f','f32le','pipe:1']
+    r=subprocess.run(cmd,capture_output=True)
+    if r.returncode:raise RuntimeError('Audio decode failed')
+    return np.frombuffer(r.stdout,dtype='<f4').copy()
+
+
+def trim_edges(samples):
+    import numpy as np
+    frame=480
+    count=len(samples)//frame
+    if count<1:return samples,0,0
+    rms=np.sqrt(np.mean(samples[:count*frame].reshape(count,frame)**2,axis=1))
+    audible=np.flatnonzero(rms>max(0.001, float(rms.max())*.005))
+    if not len(audible):raise ValueError('Synthesized audio is silent')
+    first=max(0,int(audible[0]*frame)-3840)
+    last=min(len(samples),int((audible[-1]+1)*frame)+4800)
+    return samples[first:last],first/RATE,(len(samples)-last)/RATE
+
+
+def write_audio(path,samples):
+    import numpy as np
+    with wave.open(str(path),'wb') as w:
+        w.setnchannels(1);w.setsampwidth(2);w.setframerate(RATE)
+        w.writeframes((np.clip(samples,-1.,1.)*32767).astype('<i2').tobytes())
+
+
+def validate_units(units,voices,duration):
+    ids=set()
+    for u in units:
+        if u['id'] in ids:raise ValueError('Duplicate speech unit')
+        ids.add(u['id'])
+        if not isinstance(u.get('translation'),str) or not u['translation'].strip():raise ValueError('Missing translation')
+        if not all(math.isfinite(u[k]) for k in ('start','end')) or not 0<=u['start']<u['end']<=duration+.1:
+            raise ValueError('Speech unit outside source timeline')
+        if u.get('production_voice') not in voices:raise ValueError('Unknown production voice; annotate before dubbing')
+        if u.get('emotion') not in ('auto','happy','sad','angry','fearful','disgusted','surprised','calm','fluent','whisper'):
+            raise ValueError('Unsupported MiniMax emotion')
+
+
+def make_reference(source,segments,destination,ffmpeg):
+    if not segments:raise ValueError('Voice clone needs source segments')
+    pieces=[]
+    for i,(start,end) in enumerate(segments):
+        if not 0<=start<end:raise ValueError('Invalid reference segment')
+        pieces.append(f'[0:a]atrim=start={start}:end={end},asetpts=PTS-STARTPTS[a{i}]')
+    pieces.append(''.join(f'[a{i}]' for i in range(len(segments)))+f'concat=n={len(segments)}:v=0:a=1[out]')
+    run([ffmpeg,'-v','error','-y','-i',source,'-filter_complex',';'.join(pieces),'-map','[out]',
+         '-ar','44100','-ac','1','-c:a','pcm_s16le',destination])
+    p=probe(destination,ffmpeg);duration=float(p['format']['duration'])
+    if not 10<=duration<=300 or Path(destination).stat().st_size>20*1024*1024:
+        raise ValueError('Cloning reference must be 10–300 seconds and <=20MB')
+    return duration
+
+
+def safe_submit(client,name,arguments,path):
+    """An unresolved submission may have been charged; never retry it automatically."""
+    pending=path.with_suffix('.submission-pending.json')
+    if path.exists():return read_json(path)
+    if pending.exists():raise RuntimeError(f'Ambiguous earlier submission: inspect {pending.name} before retry')
+    save_json(pending,{'tool':name,'argument_fingerprint':fingerprint(arguments),'started_at':time.time()})
+    result=client.call(name,arguments)
+    save_json(path,result)
+    pending.unlink()
+    return result
+
+
+def wait_task(client,task_id,state_file):
+    state=read_json(state_file) if state_file.exists() else {'task_id':task_id,'last_poll':0}
+    if state.get('result',{}).get('taskStatus')==2:return state['result']
+    delay=max(0,10-(time.time()-state.get('last_poll',0)))
+    if delay:time.sleep(delay)
+    state['last_poll']=time.time();save_json(state_file,state)
+    result=client.task(task_id);state['result']=result;save_json(state_file,state)
+    if result['taskStatus']==3:raise RuntimeError(f'Generation task {task_id} failed; inspect private task record')
+    return result
+
+
+def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
+    folder=root/unit['id'];folder.mkdir(parents=True,exist_ok=True)
+    target=unit['end']-unit['start']
+    speed=float(unit.get('speed',1.0))
+    attempts=[]
+    for attempt in range(3):
+        request={'projectId':project_id,'model':'speech-2.8-hd','text':unit['translation'],
+                 'voiceId':voice_id,'referenceAudioList':[],'referenceVideoList':[],
+                 'languageBoost':'Portuguese','format':'wav','speed':speed,'vol':1.0,'pitch':0,
+                 'emotion':unit['emotion'],'duration':None,'prompt':None}
+        path=folder/f'attempt-{attempt}.json'
+        if path.exists():
+            accepted=read_json(path)
+            if accepted['request_fingerprint']!=fingerprint(request):raise ValueError('TTS checkpoint does not match request')
+        else:
+            result=safe_submit(client,'generateAudio',{'request':request},folder/f'submission-{attempt}.json')
+            accepted={'request_fingerprint':fingerprint(request),'task_id':result['taskId'],'speed':speed}
+            save_json(path,accepted)
+        state_file=folder/f'task-{attempt}.private.json'
+        while True:
+            result=wait_task(client,accepted['task_id'],state_file)
+            if result['taskStatus']==2:break
+            print(f"{unit['id']} task {accepted['task_id']} running",flush=True)
+        url=result.get('resultAudioUrl') or (result.get('resultAudioUrls') or [None])[0]
+        if not isinstance(url,str) or not url.startswith('https://'):raise RuntimeError('Task has no HTTPS output audio')
+        original=folder/f'original-{attempt}.wav'
+        if not original.exists():
+            import urllib.request
+            with urllib.request.urlopen(url,timeout=90) as r:audio=r.read()
+            original.write_bytes(audio)
+        samples=read_audio(original,ffmpeg);samples,leading,trailing=trim_edges(samples)
+        measured=len(samples)/RATE
+        attempts.append({'task_id':accepted['task_id'],'speed':speed,'duration_seconds':measured,
+                         'trimmed_leading_seconds':leading,'trimmed_trailing_seconds':trailing})
+        ratio=measured/target
+        if ratio<=1.25 or attempt==2 or speed>=1.6:break
+        speed=round(min(1.6,max(speed+.1,speed*ratio/1.1)),2)
+    trimmed=folder/'trimmed.wav';write_audio(trimmed,samples)
+    fitted=folder/'fitted.wav'
+    factor=max(1.0,measured/target)
+    # Do not truncate spoken words. Excessive fitting remains visible in the report.
+    run([ffmpeg,'-v','error','-y','-i',trimmed,'-af',f'atempo={factor:.8f}',
+         '-ar',str(RATE),'-ac','1','-c:a','pcm_s16le',fitted])
+    fitted_samples=read_audio(fitted,ffmpeg)
+    if len(fitted_samples)>math.ceil(target*RATE)+960:
+        raise RuntimeError('Fitted audio exceeds assigned window')
+    if len(fitted_samples)>math.ceil(target*RATE):
+        extra=fitted_samples[math.ceil(target*RATE):]
+        import numpy as np
+        if np.max(np.abs(extra))>.003:raise RuntimeError('Fit would cut audible words at cue end')
+        fitted_samples=fitted_samples[:math.ceil(target*RATE)];write_audio(fitted,fitted_samples)
+    item={'id':unit['id'],'cue_ids':unit['cue_ids'],'voice':unit['production_voice'],'voice_id':voice_id,
+          'start':unit['start'],'end':unit['end'],'translation':unit['translation'],'emotion':unit['emotion'],
+          'attempts':attempts,'atempo_factor':factor,'fitted_duration_seconds':len(fitted_samples)/RATE,
+          'timing_quality_review_required':factor>1.25 or speed>1.4,
+          'fitted_path':str(fitted),'fitted_sha256':digest(fitted)}
+    save_json(folder/'result.json',item)
+    return item
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('plan',type=Path);parser.add_argument('--mcp-config',required=True,type=Path)
+    parser.add_argument('--ffmpeg',required=True,type=Path)
+    args=parser.parse_args()
+    if sys.platform!='win32':parser.error('Business execution is Windows-only')
+    plan=read_json(args.plan);assets={k:Path(v) for k,v in plan['assets'].items()}
+    for k in ('video','bgm','sfx','source_audio'):
+        if not assets[k].is_file():raise ValueError('Missing '+k)
+    root=Path(plan['output_dir']);root.mkdir(parents=True,exist_ok=True)
+    video_meta=probe(assets['video'],args.ffmpeg);duration=float(video_meta['format']['duration'])
+    units=plan['units'];validate_units(units,plan['voices'],duration)
+    signature=fingerprint({'plan':plan,'source_sha256':{k:digest(p) for k,p in assets.items()}})
+    signature_path=root/'input-fingerprint.json'
+    if signature_path.exists() and read_json(signature_path)['fingerprint']!=signature:
+        raise ValueError('Episode input changed; use a new output directory')
+    save_json(signature_path,{'fingerprint':signature})
+    bank_path=Path(plan['voice_bank']);bank=read_json(bank_path) if bank_path.exists() else {'schema_version':1,'voices':{}}
+    client=Mflix(args.mcp_config)
+    for name,reference in plan['voices'].items():
+        if name in bank['voices']:continue
+        if reference.get('existing_voice_id'):
+            bank['voices'][name]={'voice_id':reference['existing_voice_id'],'source':'prior-smoke-test','listening_verified':False}
+        else:
+            ref=root/f'reference-{name}.wav'
+            ref_duration=make_reference(assets['source_audio'],reference['segments_seconds'],ref,args.ffmpeg)
+            private_path=root/f'clone-{name}.private.json'
+            if private_path.exists():result=read_json(private_path)
+            else:
+                url=client.upload(ref)
+                voice_id='studio_carmilla_'+name.lower()+'_'+uuid.uuid4().hex[:12]
+                result=safe_submit(client,'uploadMiniMaxVoice',{'request':{'projectId':plan['project_id'],
+                    'referenceAudioUrl':url,'voiceId':voice_id}},private_path)
+            bank['voices'][name]={'voice_id':result['voiceId'],'reference_sha256':digest(ref),'reference_seconds':ref_duration,
+                                  'source_episode':plan['episode'],'listening_verified':False}
+        save_json(bank_path,bank);print('Voice ready',name,flush=True)
+    results=[]
+    for index,unit in enumerate(units,1):
+        print(f'Episode {plan["episode"]}: dubbing {index}/{len(units)} {unit["id"]}',flush=True)
+        results.append(synthesize(client,unit,bank['voices'][unit['production_voice']]['voice_id'],root/'utterances',plan['project_id'],args.ffmpeg))
+    import numpy as np
+    size=math.ceil(duration*RATE);dialogue=np.zeros(size,dtype=np.float32)
+    for result in results:
+        samples=read_audio(Path(result['fitted_path']),args.ffmpeg);start=round(result['start']*RATE)
+        if start+len(samples)>size:raise ValueError('Dialogue extends past video')
+        dialogue[start:start+len(samples)]+=samples
+    dialogue_file=root/'dialogue-ptBR.wav';write_audio(dialogue_file,dialogue)
+    combined=root/'mix-ptBR.wav'
+    run([args.ffmpeg,'-v','error','-y','-i',dialogue_file,'-i',assets['bgm'],'-i',assets['sfx'],
+         '-filter_complex',f'[0:a]apad,atrim=duration={duration}[d];[1:a]apad,atrim=duration={duration}[b];[2:a]apad,atrim=duration={duration}[s];[d][b][s]amix=inputs=3:duration=first:normalize=0,alimiter=limit=0.95:level=false:latency=true[out]',
+         '-map','[out]','-ar',str(RATE),'-ac','2','-c:a','pcm_s16le',combined])
+    final=root/f'Carmilla_EP{int(plan["episode"]):02d}_pt-BR.mp4'
+    run([args.ffmpeg,'-v','error','-y','-i',assets['video'],'-i',combined,'-map','0:v:0','-map','1:a:0',
+         '-c:v','copy','-c:a','aac','-b:a','192k','-movflags','+faststart',final])
+    run([args.ffmpeg,'-v','error','-xerror','-i',final,'-f','null','-'])
+    hashes=[]
+    for path in (assets['video'],final):
+        hashes.append(run([args.ffmpeg,'-v','error','-i',path,'-map','0:v:0','-c:v','copy','-f','hash','-hash','sha256','-']).strip())
+    if hashes[0]!=hashes[1]:raise RuntimeError('Output video payload differs from original')
+    final_meta=probe(final,args.ffmpeg)
+    report={'episode':plan['episode'],'status':'rendered_draft','output':str(final),'output_sha256':digest(final),
+            'video_payload_identical':True,'duration_seconds':float(final_meta['format']['duration']),
+            'source_duration_seconds':duration,'utterances':results,'voice_bank':str(bank_path),
+            'source_audio_in_output':False,'background_tracks':['bgm','sfx'],'timing_fitted':True,
+            'native_ptBR_listening_reviewed':False,'speaker_audio_verified':False,
+            'timing_quality_review_count':sum(x['timing_quality_review_required'] for x in results),
+            'warnings':plan.get('warnings',[]),'completed_at':time.time()}
+    save_json(root/'render-report.json',report)
+    assert read_json(root/'render-report.json')['video_payload_identical']
+    print('RENDERED',final,'timing_review',report['timing_quality_review_count'],flush=True)
+
+
+if __name__=='__main__':
+    try:main()
+    except Exception as exc:
+        print('FAILED',type(exc).__name__,str(exc),file=sys.stderr,flush=True);sys.exit(1)

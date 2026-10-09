@@ -119,3 +119,16 @@ python -m unittest discover -s tests -v
 
 测试模拟 API，不调用付费模型。覆盖跨批/跨集上下文、人名锁定、时码保留、
 语义修订、未解决问题标记、断点续跑与 HTTP 错误处理。真实模型质量需要样片验证。
+
+## 逐集配音与输出
+
+`dub_episode.py PLAN_JSON --mcp-config PRIVATE_CONFIG --ffmpeg FFMPEG_EXE` 在 Windows 执行。
+每集 plan 包含 project_id、episode、assets(video/bgm/sfx/source_audio)、voices、voice_bank、
+units 和 output_dir；先核对角色/翻译，明确 production_voice、emotion 和原 start/end。
+音色克隆按角色保存并复用，参考真实原声须10–300秒/20MB以内。
+MCP认证 JSON 只放忽略目录；不要放入 plan 或 Git。API 返回的任务/临时 URL 仅存忽略目录。
+生成任务逐条持久化，查询间隔至少10秒；提交网络中断视为状态不明，禁止自动重提导致重复扣费。
+每句实际测时，必要时最多3次语速调整，再用FFmpeg保音高压缩至窗口；过快结果在报告中标记听审。
+原英语对白不进入输出音轨；新对白与独立BGM/SFX混合。视频流直接复制，验证视频有效载荷哈希相同。
+完成后的MP4为待听审版本，render-report.json记录实际时长、任务ID、语速调整和质量标记。
+顺序生产每集；全部字幕/素材齐备不等于配音完成。
