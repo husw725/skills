@@ -46,3 +46,7 @@
 - 代码提交 `102e547` 已 Mac push / Windows pull；Windows 26 项 unittest（新增 5 项 + 原 21 项）通过，真实 643 条字幕整理和 24 条译文导出成功，保存数据重新读取核验通过。未调用付费 API，未做巴葡母语听审；后续集译文尚未生成，不能称全剧翻译已完成。
 - Windows 产物：`output\drama-01\episode-01\translation`；准备包 `output\drama-01\carmilla-episode01-ptBR-preparation.zip` 含 8 文件，ZIP CRC 核验通过。复制供用户查看至本项目 `output/carmilla-episode01-ptBR-preparation.zip`。真实字幕/译文仅放 input/output 忽略目录及 Windows，不提交公开 GitHub；全剧角色表草稿在 `output\drama-01\subtitles\carmilla-series-bible.json`。
 - 后续：首集文本可审阅；接入生产 MCP 时确认角色、实际语音窗口、分句连读、音色及实测时长。源字幕已有截断/识别疑点（EP5 Connor、EP18 lava、EP27 两个截断句、EP29 years），其他集翻译前需核听疑点。代码审查入口 `/review` 或 `codex review`。
+
+- 2026-10-09 MCP最新：用户更新认证，已更新本机原认证配置，不记录敏感值。mflix和mflix-review均远端initialize成功；review tools/list、getProjects、getProjectReviewMaterials成功。Carmilla项目ID59。
+- Windows已下载并校验 `input/drama-01/screenplay/Carmilla_Complete_32_Episodes_FINAL.v1.docx`（asset319，95108bytes，32集）及 `Carmilla_Revised_Episodes_1-3.v2.pdf`（asset333，103561bytes，8页），DOCX CRC/PDF解析通过。同目录download-manifest.json保存SHA256、ID/版本，无认证/下载URL；另有txt和版本说明。Mac审阅副本在output/carmilla-screenplay。
+- 首集字幕主要对白与完整稿吻合；修订稿开场及对白有变化，留作对照。两份平台状态均待审核，不能视为审批定稿。剩余31集未逐集核对，未修改现有翻译，无平台上传、评论或审核操作。
