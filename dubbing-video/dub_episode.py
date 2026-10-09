@@ -113,10 +113,18 @@ def wait_task(client,task_id,state_file):
 
 def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
     folder=root/unit['id'];folder.mkdir(parents=True,exist_ok=True)
+    cached=folder/'result.json'
+    if cached.exists():
+        saved=read_json(cached)
+        if Path(saved['fitted_path']).exists() and digest(saved['fitted_path'])==saved['fitted_sha256']:
+            return saved
     target=unit['end']-unit['start']
     speed=float(unit.get('speed',1.0))
     attempts=[]
     actual_emotion=unit['emotion']
+    # Runtime confirmed that speech 2.8 rejects whisper despite the tool catalog.
+    # Legacy attempt records are still replayed faithfully to preserve checkpoints.
+    if actual_emotion=='whisper' and not (folder/'attempt-0.json').exists():actual_emotion='calm'
     for attempt in range(3):
         request={'projectId':project_id,'model':'speech-2.8-hd','text':unit['translation'],
                  'voiceId':voice_id,'referenceAudioList':[],'referenceVideoList':[],
@@ -217,10 +225,22 @@ def main():
             bank['voices'][name]={'voice_id':result['voiceId'],'reference_sha256':digest(ref),'reference_seconds':ref_duration,
                                   'source_episode':plan['episode'],'listening_verified':False}
         save_json(bank_path,bank);print('Voice ready',name,flush=True)
-    results=[]
-    for index,unit in enumerate(units,1):
-        print(f'Episode {plan["episode"]}: dubbing {index}/{len(units)} {unit["id"]}',flush=True)
-        results.append(synthesize(client,unit,bank['voices'][unit['production_voice']]['voice_id'],root/'utterances',plan['project_id'],args.ffmpeg))
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    workers=int(plan.get('tts_workers',3))
+    if not 1<=workers<=3:raise ValueError('Use 1–3 TTS workers per episode')
+    progress_lock=threading.Lock();completed=[]
+    def produce(unit):
+        local_client=Mflix(args.mcp_config)
+        result=synthesize(local_client,unit,bank['voices'][unit['production_voice']]['voice_id'],root/'utterances',plan['project_id'],args.ffmpeg)
+        with progress_lock:
+            completed.append(unit['id'])
+            save_json(root/'progress.json',{'episode':plan['episode'],'completed_units':completed,'total_units':len(units),'updated_at':time.time()})
+            print(f'Episode {plan["episode"]}: completed {len(completed)}/{len(units)} {unit["id"]}',flush=True)
+        return result
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures=[pool.submit(produce,unit) for unit in units]
+        results=[future.result() for future in futures]
     import numpy as np
     size=math.ceil(duration*RATE);dialogue=np.zeros(size,dtype=np.float32)
     for result in results:
