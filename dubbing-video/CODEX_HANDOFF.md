@@ -34,3 +34,8 @@
 - 同时核验 Windows 进程和用户环境均未配置 `MINIMAX_API_KEY`；已询问现有配置位置或请用户在 Windows 配置环境变量。不得把模拟翻译测试描述为真实配音流程已跑通。
 - 下一步：登录后明确仅选 EP01，下载裸片/BGM/SFX，逐项校验文件与轨道时间基准，确认对白来源；然后接入真实识别、巴葡翻译、角色 TTS 测时、混音及原视频流复制，记录实际费用与耗时。
 - 登录窗口修正：原自动化浏览器为后台会话，用户在 Windows 桌面不可见。现通过一次性 Interactive 任务启动 Chrome，已核验进程在用户桌面会话 SessionId=1；启动任务随即删除。可见浏览器使用独立 `baidu-browser-profile`，仅本机 CDP 端口 9333，自动化连接会话改为 `dubbing-baidu-visible`。用户应在此窗口登录；旧二维码属于后台会话，不应继续使用。
+- 下载更新：用户点击网页下载后启动已登录的官方 Windows 百度网盘 App（`E:\soft\baidunetdisk\baidunetdisk.exe`），无需网页扫码。通过用户桌面会话中的窗口操作仅下载 EP01 的裸片/BGM/SFX，各选择对话框核验单文件名，未下载整季。下载默认目录 `C:\Users\melot\Desktop\res\pics`，完成后复制到上述项目输入目录，保留下载原文件。
+- 三文件已完成：裸片 85,531,919 字节；`Carmilla_Ep01_BGM.wav` 和 `Carmilla_Ep01_SFX.wav` 各 11,821,100 字节。实际客户端下载速率约 114 KB/s；此速度不代表配音处理速度。
+- 已新增 `prepare_media.py`，提交 `736b1db` 经 Mac push / Windows pull 执行成功；完整解码三素材、记录 SHA-256、提取视频第一音轨为 PCM 及 16 kHz 单声道 ASR WAV。输出目录 `output\drama-01\episode-01\media`，包括 manifest 和两份音频。视频 H.264 1080×1920 / 30 fps，含 AAC 44.1 kHz 双声道；视频容器 67.082449 秒，BGM/SFX 均 67.012789 秒，无 >150 ms 时长差告警。对白纯净度与背景起点同步未听审确认。
+- 原始素材下载及识别前准备完成；真实 ASR、翻译、TTS 与混音尚未运行。MiniMax 配置问题仍待用户回复，不能报告首集全流程已完成。
+- CLI 事实已独立审核放行：`https://github.com/qjfoidnh/BaiduPCS-Go` 为第三方 CLI，支持 Windows、下载/断点续传及带提取码分享转存。桌面 App 登录不等于 CLI 登录；未安装或实测本次分享的 CLI 下载，不声称官方或提速。
