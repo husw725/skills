@@ -272,8 +272,10 @@ class ProtectedGlossary:
         self.targets = {self.tokens[source]: self.mapping[source] for source in self.forms}
         # Latin names need word boundaries: Ana must not match the inside of banana.
         def pattern(source):
-            left = r"(?<!\w)" if source[0].isascii() and source[0].isalnum() else ""
-            right = r"(?!\w)" if source[-1].isascii() and source[-1].isalnum() else ""
+            def latin_or_digit(char):
+                return char.isdigit() or "LATIN" in unicodedata.name(char, "")
+            left = r"(?<!\w)" if latin_or_digit(source[0]) else ""
+            right = r"(?!\w)" if latin_or_digit(source[-1]) else ""
             return left + re.escape(source) + right
         self.pattern = re.compile("|".join(pattern(x) for x in self.forms)) if self.forms else None
 
@@ -368,9 +370,11 @@ def choose_rows(reply, batch, glossary, rate, tolerance):
             raise ValueError(f"No valid candidate preserving locked terms for {row['id']}")
         _, protected, text, duration = min(valid, key=lambda value: value[0])
         ratio = duration / row["source_duration_s"]
+        uncertain_timing = bool(re.search(r"\d|\b(?:Sr|Sra|Dr|Dra)\.", text))
         selected.append({**row, "translation_protected": protected, "translation": text,
                          "estimated_duration_s": duration, "duration_ratio": round(ratio, 3),
-                         "timing_needs_review": abs(ratio - 1) > tolerance,
+                         "timing_needs_review": abs(ratio - 1) > tolerance or uncertain_timing,
+                         "timing_estimate_uncertain": uncertain_timing,
                          "tts_timing_verified": False, "emotion_note": entry.get("emotion_note", "unknown"),
                          "translator_notes": entry.get("notes", ""), "review_issues": []})
     return selected

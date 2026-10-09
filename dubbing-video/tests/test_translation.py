@@ -81,6 +81,19 @@ class TranslationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 glossary.check(source, bad)
 
+    def test_accented_name_not_substring(self):
+        glossary = tr.ProtectedGlossary({"glossary": [{"source": "João", "target": "João"}]})
+        self.assertEqual(glossary.protect("Joãozinho"), "Joãozinho")
+        self.assertEqual(glossary.expand(glossary.protect("João, vem!")), "João, vem!")
+
+    def test_numbers_require_audio_duration_verification(self):
+        glossary = tr.ProtectedGlossary(BIBLE)
+        source = {**row(text="五百元", end=2), "protected_source": "五百元", "source_duration_s": 2}
+        selected = tr.choose_rows({"segments": [{"id": "1", "candidates": ["500 reais."]}]},
+                                  [source], glossary, 5, 1)
+        self.assertTrue(selected[0]["timing_estimate_uncertain"])
+        self.assertTrue(selected[0]["timing_needs_review"])
+
     def test_locked_name_change_rejected(self):
         with self.assertRaises(ValueError):
             tr.merge_bible(BIBLE, {"glossary": [{"source": "林薇", "target": "Julia"}], "story_notes": []})
