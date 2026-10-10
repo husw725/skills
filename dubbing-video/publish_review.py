@@ -112,13 +112,13 @@ def inventory(project, film, source_project_id, project_id, folder):
         if digest(video_path)!=video['sha256']:raise ValueError('Local video differs from published version')
         subtitle_path=project/f'output/dashboard/subtitles/{film}_EP{number:02d}_pt-BR.srt'
         if digest(subtitle_path)!=subtitle['sha256']:raise ValueError('Local final subtitle changed')
-        note=f'Source film: {film}; original Review project: {source_project_id}; episode: {number:02d}; language: pt-BR. Native pronunciation, voice and performance review pending.'
+        note=f'{film}; source #{source_project_id}; EP{number:02d}; pt-BR; native listening pending. '
         duration=float(report['duration_seconds'])
         if not math.isfinite(duration):raise ValueError('Invalid duration')
         specs.append({'projectId':project_id,'gateType':'FINAL_CUT','name':f'{film} | EP.{number:02d} | pt-BR',
             'url':base+video['key'],'tags':[film,'pt-BR'],'durationSeconds':round(duration),'note':note+' Video SHA256: '+video['sha256']})
         specs.append({'projectId':project_id,'gateType':'DOCUMENT','documentKind':'DOCUMENT','name':f'{film} | EP.{number:02d} | pt-BR subtitles.srt',
-            'url':base+subtitle['key'],'note':note+' Final subtitle SHA256: '+subtitle['sha256']+'; bound video SHA256: '+video['sha256']})
+            'url':base+subtitle['key'],'note':note+'SRT SHA256: '+subtitle['sha256']})
         dialogue.extend(['',f'EP.{number:02d}'])
         for row in report['utterances']:
             dialogue.append(f"[{row['start']:.3f}–{row['end']:.3f}] {row['voice']}: {row['translation']}")
@@ -137,7 +137,7 @@ def inventory(project, film, source_project_id, project_id, folder):
     for filename,kind,paragraphs in docs:
         path=folder/filename;document(path,paragraphs)
         specs.append({'projectId':project_id,'gateType':'DOCUMENT','documentKind':kind,'name':filename,'local_file':str(path),
-            'note':f'{film}; pt-BR; source Review project {source_project_id}; actual final dubbing records; native listening review pending.'})
+            'note':f'{film}; pt-BR; source #{source_project_id}; final dubbing; native listening pending.'})
     return specs
 
 
