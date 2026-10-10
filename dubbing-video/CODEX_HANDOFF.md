@@ -2,6 +2,14 @@
 
 ## 当前接力记录
 
+### 2026-10-11 英文原字幕/最终巴葡译文左右对照文档已上传
+
+- 用户要求整理左原字幕、右译文的一个文档并直接上传Review Document。本轮继续用户授权Mac直连Review，未等待/使用Windows；不调用付费生成或改成片。
+- 找到Mac已有完整原字幕副本/tmp/carmilla-dialogue.en.json，32集643条，SHA256 cd58d86dad68bd64baf65c45ffb1addea160420660705213bec888ea50b99707；复制保留在忽略output/review-publication/148/Carmilla/comparison/original-subtitle-source.json。左栏使用真实源字幕，未用旧剧本替代。右栏GET32份最终SRT、SHA256匹配S3元数据，保持最终译文完整。
+- 按正时间重叠建立二部对应关系：一对多拆句/多对一合句置同一行，各自完整显示时间码及编号。完整覆盖643原cue、642最终配音字幕cue，640对照行，32个按集分页的双栏表。原拼写/ASR/截断疑点保留；时间窗口不是词级对齐。所有映射/源SHA/每集字幕SHA/文档SHA落comparison-validation.json。
+- python-docx输出Carmilla_EN_pt-BR_Subtitle_Comparison.docx（65942bytes），A4、等宽两列、重复表头、行不跨页、章节与页码。保存后重新读取确认32表/2列/640行/每条原文与每条译文在正确侧，ZIP CRC通过。
+- 用Review预签名PUT上传该单一DOCX，再createReviewMaterial DOCUMENT/documentKind DOCUMENT至PT Transalte #148，名称Carmilla | EN ↔ pt-BR | 字幕对照（32集）.docx，assetId2419；读取返回ID/URL关联一致，公开下载SHA256及ZIP CRC核验通过。真实回执review-upload-result.json、统一receipts.private.json持久化去重。项目现共67项已核验（视频32、字幕32、文档3）。原项目59未修改，新文档未审核/发评论；不把签名URL或文件内容提交Git。
+
 ### 2026-10-11 按用户授权绕过Windows直接登记Review成果
 
 - 用户明确本轮不通过Windows做Review上传，覆盖此前本项目Mac代码/Windows业务规则在该登记任务上的限制。Windows留公司，Mac家中VPNppp0已连接且网关172.16.11.1可Ping，10.20.1.30 Ping/SSH均超时；不因旧Windowspending自行再起producer。新剧仍暂停。
