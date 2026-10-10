@@ -7,7 +7,7 @@
 - 新剧分享用户明确先停，未下载/翻译/配音；本轮仅上一部Carmilla收尾。已核验上一部32集成片render完成、publication-state videos32，用户授权将每集字幕增加到现有S3成果页面，覆盖旧“只成片”上传限制的这部分。
 - 提交bd3e023已Mac push/Windows pull；publish_dashboard从render-report.utterances实际配音文本/制作窗口导出UTF-8 SRT，绑定output_sha256，保留旧videos/history状态并增加subtitles。字幕不同视频版本不展示；已验证上传按SRT内容SHA去重，S3 HEAD核验长度、内容SHA及video-sha256，Content-Disposition attachment确保下载。未重传成片/重渲染/新增MiniMax费用。
 - dashboard选择集数后出现下载巴葡字幕（SRT），切换和刷新更新链接，不把内部文件路径/认证数据放网页。SRT按最终配音单元导出，可能合并原字幕连续分句，32含拆分后的两人对白；属于制作时间窗口，未声称词级精准或母语听审完成。
-- Windows针对dashboard6项测试通过，真实--once已发布全部32字幕和新版index。Windows Chrome实际选择32：按钮inline-block、下载文件名Carmilla_EP32_pt-BR.srt、S3链接正确、32按钮齐全。公开GET全部32文件的SHA/UTF-8/attachment/对应成片版本核验进行中，结果随后补记。通用代码仅发布字幕，不包含新剧任务。安全复核仅新增最终字幕公开对象，密钥不入Git，已有视频缓存不变。可用codex review复审。
+- Windows针对dashboard6项测试通过，真实--once已发布全部32字幕和新版index。Windows Chrome实际选择32：按钮inline-block、下载文件名Carmilla_EP32_pt-BR.srt、S3链接正确、32按钮齐全。公开GET全部32文件SHA/UTF-8/attachment/对应成片版本核验已全部通过（32/32）；公开index含32个subtitle_url。通用代码仅发布字幕，不包含新剧任务。安全复核仅新增最终字幕公开对象，密钥不入Git，已有视频缓存不变。可用codex review复审。
 
 ### 2026-10-10 最后一集双说话人字幕已拆分并恢复
 
