@@ -102,7 +102,13 @@ if __name__=='__main__':
         if isinstance(exc,RuntimeError) and 'production-queue.lock' in str(exc):
             # A duplicate scheduler must not overwrite the active owner's state.
             raise
-        save_json(Path('output/drama-01/queue-progress.json'),{'stage':'stopped','detail':type(exc).__name__,
+        state=Path('output/drama-01/queue-progress.json');previous=read_json(state) if state.exists() else {}
+        detail='配音生产异常停止，已保留断点，请核查日志'
+        if isinstance(exc,subprocess.CalledProcessError) and 'build_episode_plan.py' in exc.cmd:
+            number=exc.cmd[exc.cmd.index('--episode')+1]
+            previous['episode']=int(number)
+            detail=f'第 {number} 集配音计划准备未通过：角色选角或素材需核查；未自动新增克隆'
+        save_json(state,{**previous,'stage':'stopped','detail':type(exc).__name__,'public_detail':detail,
                    'message':str(exc) if isinstance(exc,(ValueError,RuntimeError)) else 'See private runner log',
                    'updated_at':time.time()})
         raise
