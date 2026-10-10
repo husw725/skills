@@ -15,6 +15,21 @@ from process_lock import process_lock
 from translate import fingerprint, read_json, save_json
 
 
+class ReviewClient(Mflix):
+    def __init__(self,config,error_path):
+        self.error_path=error_path
+        super().__init__(config)
+
+    def call(self,name,arguments):
+        result=self.rpc('tools/call',{'name':name,'arguments':arguments})
+        texts=[c['text'] for c in result.get('content',[]) if c.get('type')=='text']
+        obj=json.loads(texts[0]) if texts else {}
+        if result.get('isError') or obj.get('code') not in (None,200):
+            save_json(self.error_path,{'tool':name,'response':result,'time':time.time()})
+            raise RuntimeError(f'Review tool {name} rejected request (code {obj.get("code")}); private response saved')
+        return obj['data'] if obj.get('data') is not None else obj.get('msg',obj)
+
+
 def document(path, paragraphs):
     """Small deterministic DOCX; no new package dependency or stale script content."""
     text=''.join('<w:p><w:r><w:t xml:space="preserve">'+escape(str(p))+'</w:t></w:r></w:p>' for p in paragraphs)
@@ -139,7 +154,7 @@ def main():
     with process_lock(folder/'publication.lock',timeout=0):
         ledger=read_json(path) if path.exists() else {'project_id':args.project_id,'film':args.film,'items':{},'uploads':{}}
         if ledger['project_id']!=args.project_id or ledger['film']!=args.film:raise ValueError('Registration scope changed')
-        client=Mflix(args.config)
+        client=ReviewClient(args.config,folder/'service-error.private.json')
         projects=client.call('getProjects',{'pageNum':1,'pageSize':100})
         target=[r for r in projects if r['id']==args.project_id and r['name']==args.project_name]
         if len(target)!=1:raise ValueError('Explicit target project identity not found')
