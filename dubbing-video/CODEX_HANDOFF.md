@@ -2,6 +2,17 @@
 
 ## 当前接力记录
 
+### 2026-10-10 当前核验与恢复（优先于下方历史）
+
+- 全32集原视频/BGM/SFX均已下载至Windows并校验；第1、2集合成草稿已发布，视频流保持一致。巴葡母语听审仍未完成；时长质量提示分别2条、5条。
+- HTML地址：https://starlitshorts.s3.amazonaws.com/aigc/drama/dubbing-video/carmilla-20261009/index.html 。仅发布HTML与成片；进度嵌入HTML，每30秒刷新、每10分钟记历史。
+- 昨晚EP02于上海时间19:57完成，但未接上EP03；尚无整季自动编排，不能宣称无人值守连续运行。页面最后本地更新时间21:57，末尾两次SSLError；今次配音/发布进程均未运行，退出原因尚未证实，Windows最近启动时间10月8日。
+- 实际分工：Codex在Mac会话中基于匹配剧本+字幕编写译稿；Windows导出校验、下载、参考音频准备、调用MiniMax、音频对齐混音、无损复制视频流及S3上传。MiniMax语音运算在云端。旧“全业务Windows”措辞需按此澄清。
+- 已恢复EP03：24条已导出，计划已生成，通过SSH直接Start-Process的两个子进程未能在断开后存活，改为Windows计划任务Codex-Carmilla-dub和Codex-Carmilla-publish（当前登录用户Interactive，已启动），不依赖SSH会话。日志output/drama-01/episode-03/runner.log和runner.err.log；发布日志output/dashboard/publisher-recovery.log。必须核验计划任务状态和日志，不能只依据启动成功。
+- EP03背景轨比视频短1.479秒，同步仍待核验，不能将填充尾部当同步验证。EP04本地editorial草稿待传输/导出；EP05以后未完成翻译。
+- 后续继续逐集翻译审核与生产，并补全持久化编排/停机状态显示。付费任务回执与pending防重机制必须保留，不盲重试克隆/生成。代码分支codex/dubbing-video-win-smoke，最新业务提交ea73df5。
+- 认证仅存在本机私密配置，不记录/打印/提交。Windows生产和发布配置需保留至任务结束。
+
 - 日期：2026-10-09。
 - 目标：Mac 编写并推送 GitHub，Windows 拉取代码并执行；业务运行端固定为 Windows。
 - 最新用户长期要求：后续所有剧/集翻译都先取得并核对匹配剧本，结合人物关系、场景与表演意图优化。无匹配剧本时继续查找，只有用户明确同意才以字幕单独翻译。对白/时间码仍以本次成片字幕为准。

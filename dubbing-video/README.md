@@ -134,6 +134,18 @@ MCP认证 JSON 只放忽略目录；不要放入 plan 或 Git。API 返回的任
 完成后的MP4为待听审版本，render-report.json记录实际时长、任务ID、语速调整和质量标记。
 顺序生产每集；全部字幕/素材齐备不等于配音完成。
 
+### 并发与防重复付费
+
+`production_queue.py --start-episode 4 --ffmpeg FFMPEG_EXE --mcp-config PRIVATE_CONFIG`
+在Windows后台运行：最多两路准备当前/下一集素材和已审译稿，每集三路台词TTS，
+按集数顺序合成；发布器独立运行。缺少已审译稿时等待，不生成假译文。
+队列锁阻止重复启动，同集生产锁阻止两进程重复配音。
+全剧voice-bank由跨进程锁保护，新增角色克隆串行；克隆回执集中存放，
+跨集恢复旧回执后复用voice_id。调用结果未知时停下核查，不自动再次克隆或生成。
+读者身份unknown时不得自动按集新建旁白声音，须先确认可复用角色。
+准备阶段不调用付费语音接口。每句仍可能因时长需要最多三次有记录的合成，
+属于调整费用，与意外重复提交分别管理。不要同时启动未加锁的旧版本生产脚本。
+
 ## S3 进度页面
 
 `publish_dashboard.py --config PRIVATE_S3_CONFIG` 在Windows后台轮询。用户已批准目录

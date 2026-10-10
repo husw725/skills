@@ -12,6 +12,7 @@ import wave
 
 from mflix_client import Mflix
 from translate import fingerprint, read_json, save_json
+from process_lock import process_lock
 
 RATE=48000
 
@@ -91,6 +92,11 @@ def make_reference(source,segments,destination,ffmpeg):
 
 def safe_submit(client,name,arguments,path):
     """An unresolved submission may have been charged; never retry it automatically."""
+    with process_lock(path.with_suffix('.lock')):
+        return _safe_submit(client,name,arguments,path)
+
+
+def _safe_submit(client,name,arguments,path):
     pending=path.with_suffix('.submission-pending.json')
     if path.exists():return read_json(path)
     if pending.exists():raise RuntimeError(f'Ambiguous earlier submission: inspect {pending.name} before retry')
@@ -99,6 +105,53 @@ def safe_submit(client,name,arguments,path):
     save_json(path,result)
     pending.unlink()
     return result
+
+
+def ensure_voices(plan, assets, root, client, ffmpeg):
+    """Serialize all clones against the series bank, including receipt recovery."""
+    bank_path=Path(plan['voice_bank'])
+    with process_lock(bank_path.with_suffix('.lock')):
+        bank=read_json(bank_path) if bank_path.exists() else {'schema_version':1,'voices':{}}
+        if bank.get('project_id',plan['project_id'])!=plan['project_id']:
+            raise ValueError('Voice bank belongs to another project')
+        bank['project_id']=plan['project_id']
+        for name,reference in plan['voices'].items():
+            if name in bank['voices']:continue
+            if reference.get('existing_voice_id'):
+                record={'voice_id':reference['existing_voice_id'],'source':'prior-smoke-test','listening_verified':False}
+            else:
+                # Receipt location is independent of episode, so a crash cannot
+                # cause a later episode to pay for the same role again.
+                role_key=fingerprint({'project':plan['project_id'],'role':name})
+                private_path=bank_path.parent/'voice-clone-receipts'/f'{role_key}.private.json'
+                pending=private_path.with_suffix('.submission-pending.json')
+                legacy=[]
+                for folder in bank_path.parent.glob('episode-*/dub-*'):
+                    candidate=folder/f'clone-{name}.private.json'
+                    if candidate.exists():legacy.append(read_json(candidate))
+                    if candidate.with_suffix('.submission-pending.json').exists():
+                        raise RuntimeError(f'Ambiguous earlier clone for {name}; inspect saved receipt before retry')
+                if private_path.exists():legacy.append(read_json(private_path))
+                if pending.exists():
+                    raise RuntimeError(f'Ambiguous earlier clone for {name}; inspect saved receipt before retry')
+                ids={r['voiceId'] for r in legacy}
+                if len(ids)>1:raise ValueError(f'Conflicting clone receipts for {name}; reconcile voice bank')
+                if legacy:
+                    result=legacy[0]
+                    record={'voice_id':result['voiceId'],'source':'recovered-clone-receipt','listening_verified':False}
+                else:
+                    ref=root/f'reference-{name}.wav'
+                    ref_duration=make_reference(assets['source_audio'],reference['segments_seconds'],ref,ffmpeg)
+                    url=client.upload(ref)
+                    voice_id='studio_carmilla_'+name.lower()+'_'+uuid.uuid4().hex[:12]
+                    result=safe_submit(client,'uploadMiniMaxVoice',{'request':{'projectId':plan['project_id'],
+                        'referenceAudioUrl':url,'voiceId':voice_id}},private_path)
+                    record={'voice_id':result['voiceId'],'reference_sha256':digest(ref),'reference_seconds':ref_duration,
+                            'source_episode':plan['episode'],'listening_verified':False}
+            bank['voices'][name]=record
+            save_json(bank_path,bank)
+            print('Voice ready',name,flush=True)
+        return bank
 
 
 def wait_task(client,task_id,state_file):
@@ -204,7 +257,15 @@ def main():
     parser.add_argument('--ffmpeg',required=True,type=Path)
     args=parser.parse_args()
     if sys.platform!='win32':parser.error('Business execution is Windows-only')
-    plan=read_json(args.plan);assets={k:Path(v) for k,v in plan['assets'].items()}
+    plan=read_json(args.plan)
+    # Includes receipt writes and final rendering: accidentally starting the same
+    # episode twice must never race a paid TTS submission or overwrite its output.
+    with process_lock(Path(plan['output_dir']).parent/'production.lock',timeout=0):
+        render_episode(args,plan)
+
+
+def render_episode(args,plan):
+    assets={k:Path(v) for k,v in plan['assets'].items()}
     for k in ('video','bgm','sfx','source_audio'):
         if not assets[k].is_file():raise ValueError('Missing '+k)
     root=Path(plan['output_dir']);root.mkdir(parents=True,exist_ok=True)
@@ -215,25 +276,9 @@ def main():
     if signature_path.exists() and read_json(signature_path)['fingerprint']!=signature:
         raise ValueError('Episode input changed; use a new output directory')
     save_json(signature_path,{'fingerprint':signature})
-    bank_path=Path(plan['voice_bank']);bank=read_json(bank_path) if bank_path.exists() else {'schema_version':1,'voices':{}}
+    bank_path=Path(plan['voice_bank'])
     client=Mflix(args.mcp_config)
-    for name,reference in plan['voices'].items():
-        if name in bank['voices']:continue
-        if reference.get('existing_voice_id'):
-            bank['voices'][name]={'voice_id':reference['existing_voice_id'],'source':'prior-smoke-test','listening_verified':False}
-        else:
-            ref=root/f'reference-{name}.wav'
-            ref_duration=make_reference(assets['source_audio'],reference['segments_seconds'],ref,args.ffmpeg)
-            private_path=root/f'clone-{name}.private.json'
-            if private_path.exists():result=read_json(private_path)
-            else:
-                url=client.upload(ref)
-                voice_id='studio_carmilla_'+name.lower()+'_'+uuid.uuid4().hex[:12]
-                result=safe_submit(client,'uploadMiniMaxVoice',{'request':{'projectId':plan['project_id'],
-                    'referenceAudioUrl':url,'voiceId':voice_id}},private_path)
-            bank['voices'][name]={'voice_id':result['voiceId'],'reference_sha256':digest(ref),'reference_seconds':ref_duration,
-                                  'source_episode':plan['episode'],'listening_verified':False}
-        save_json(bank_path,bank);print('Voice ready',name,flush=True)
+    bank=ensure_voices(plan,assets,root,client,args.ffmpeg)
     from concurrent.futures import ThreadPoolExecutor
     import threading
     workers=int(plan.get('tts_workers',3))

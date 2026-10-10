@@ -46,6 +46,11 @@ def collect(project,published,base):
         current=next((e['episode'] for e in episodes if e['status']!='completed'),None)
         if current:current_detail=next(e['status_label'] for e in episodes if e['episode']==current)
     bank=safe_read(project/'output/drama-01/voice-bank.json',{'voices':{}})
+    queue=safe_read(project/'output/drama-01/queue-progress.json',{})
+    if queue.get('stage')=='stopped':
+        current_detail='生产队列已停止，等待核查；不会自动重复付费请求'
+    elif queue.get('stage')=='waiting' and current==queue.get('episode'):
+        current_detail=queue.get('detail',current_detail)
     return {'project':'Carmilla','language':'pt-BR','total_episodes':32,'updated_at':time.time(),
             'complete':playable==32,'summary':{'playable':playable,'assets_ready':assets_ready,'voices':len(bank['voices']),
                 'current_episode':current,'current_detail':current_detail},'episodes':episodes}

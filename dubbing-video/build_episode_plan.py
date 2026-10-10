@@ -28,6 +28,9 @@ def main():
     bank_path=Path('output/drama-01/voice-bank.json');bank=read_json(bank_path)
     for unit in units:
         name=unit['speaker'] if unit['speaker']!='unknown' else f'Narrator_EP{episode:02d}'
+        name={'Camila':'Carmilla','Camilla':'Carmilla','Kamila':'Carmilla'}.get(name,name)
+        if unit['speaker']=='unknown' and name not in bank['voices']:
+            raise ValueError('Unknown reader: identify and assign a reusable voice before any new clone; no per-episode automatic narrator cloning')
         unit['production_voice']=name
         annotations=[a for a in unit.get('screenplay_annotations',[]) if a]
         emotion=annotations[0].get('emotion_intent','calm') if annotations else 'calm'
