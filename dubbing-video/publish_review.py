@@ -77,11 +77,11 @@ def register(client, spec, ledger, path):
     ledger['items'][identity]={'fingerprint':signature,'status':'submitting','material':spec,'started_at':time.time()}
     save_json(path,ledger)
     # Never retry a create after a timeout. Reconcile through a read on the next run.
-    # The advertised schema requires even response-only DTO fields. Empty
-    # placeholders satisfy that schema; status 8 requests no approval.
-    material={'artDirectionSubMaterials':[],'assetId':0,'category':'','createdAt':'1970-01-01T00:00:00Z',
-        'documentKind':'DOCUMENT','durationSeconds':0,'note':'','parentAssetId':0,'status':8,
-        'tags':[],'updatedAt':'1970-01-01T00:00:00Z','version':1,**spec}
+    # Response-only fields appear as required integers in the advertised schema,
+    # but the actual service requires null IDs when creating a new material.
+    material={'artDirectionSubMaterials':[],'assetId':None,'category':None,'createdAt':None,
+        'documentKind':'DOCUMENT','durationSeconds':0,'note':'','parentAssetId':None,'status':None,
+        'tags':[],'updatedAt':None,'version':None,**spec}
     result=client.call('createReviewMaterial',{'material':material})
     ledger['items'][identity].update(status='awaiting_readback',response=result)
     save_json(path,ledger)

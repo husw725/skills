@@ -19,6 +19,7 @@ class ReviewPublicationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             path=Path(root)/'ledger.json';ledger={'items':{}};client=FakeReview()
             self.assertEqual(register(client,self.spec(),ledger,path),123)
+            self.assertIsNone(client.rows[0]['parentAssetId'])
             register(client,self.spec(),read_json(path),path)
             self.assertEqual(client.creates,1)
     def test_ambiguous_create_reconciles_and_missing_outcome_blocks(self):
