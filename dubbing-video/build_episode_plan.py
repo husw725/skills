@@ -7,6 +7,29 @@ import sys
 from translate import fingerprint,read_json,save_json
 
 
+def apply_casting(units,bank,path):
+    """Explicit production casting preserves unknown source identity and reuses only existing voices."""
+    if not path.exists():return {}
+    casting=read_json(path)
+    if casting.get('units_fingerprint')!=fingerprint(units):
+        raise ValueError('Production casting inputs changed; review assignments again')
+    assignments=casting.get('assignments',{})
+    known={cue for unit in units for cue in unit['cue_ids']}
+    if set(assignments)-known:raise ValueError('Casting references absent source cues')
+    selected={}
+    for unit in units:
+        choices=[assignments.get(cue) for cue in unit['cue_ids']]
+        if not any(choices):continue
+        if unit['speaker']!='unknown' or not all(choices) or any(c!=choices[0] for c in choices):
+            raise ValueError('Casting must cover a complete unknown-speaker unit consistently')
+        choice=choices[0]
+        if choice.get('voice') not in bank['voices'] or not choice.get('reason'):
+            raise ValueError('Casting requires an existing reusable voice and decision evidence')
+        selected[unit['id']]=choice['voice']
+        unit['production_casting']={**choice,'source_speaker_verified':False}
+    return selected
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--episode',required=True,type=int);p.add_argument('--ffmpeg',required=True,type=Path)
@@ -26,8 +49,9 @@ def main():
        '--sfx',str(sfx),'--output-dir',str(media),'--ffmpeg',str(args.ffmpeg)],check=True)
     data=read_json(folder/'translation/speech-units.draft.json');units=data['units'];voices={}
     bank_path=Path('output/drama-01/voice-bank.json');bank=read_json(bank_path)
+    casting=apply_casting(units,bank,folder/'production-casting.json')
     for unit in units:
-        name=unit['speaker'] if unit['speaker']!='unknown' else f'Narrator_EP{episode:02d}'
+        name=casting.get(unit['id']) or (unit['speaker'] if unit['speaker']!='unknown' else f'Narrator_EP{episode:02d}')
         name={'Camila':'Carmilla','Camilla':'Carmilla','Kamila':'Carmilla'}.get(name,name)
         unit['production_voice']=name
         annotations=[a for a in unit.get('screenplay_annotations',[]) if a]

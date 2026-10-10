@@ -15,6 +15,15 @@ from test_translation import FakeClient
 
 
 class ScreenplayContextTests(unittest.TestCase):
+    def test_locked_terms_match_whole_source_forms(self):
+        glossary={'curse':'maldição','Ana':'Ana'}
+        export_translation.validate_locked_terms('I am cursed.','Sou amaldiçoada.',glossary,'a')
+        export_translation.validate_locked_terms('banana','banana',glossary,'a')
+        with self.assertRaisesRegex(ValueError,'Locked name/term'):
+            export_translation.validate_locked_terms('The curse.','O destino.',glossary,'a')
+        with self.assertRaisesRegex(ValueError,'Locked name/term'):
+            export_translation.validate_locked_terms('Ana, come.','Venha.',glossary,'a')
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

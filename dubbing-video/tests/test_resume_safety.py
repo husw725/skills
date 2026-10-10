@@ -50,6 +50,21 @@ class ImmutablePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'existing plan preserved'):self.build()
         self.assertEqual(path.read_bytes(),before)
 
+    def test_unknown_casting_reuses_existing_voice_without_claiming_source_identity(self):
+        units=[{'id':'u','cue_ids':['c'],'speaker':'unknown','translation':'Oi.'}]
+        path=self.folder/'production-casting.json'
+        save_json(path,{'units_fingerprint':fingerprint(units),'assignments':{'c':{'voice':'Mother','reason':'Diary flashback casting'}}})
+        self.assertEqual(build.apply_casting(units,{'voices':{'Mother':{}}},path),{'u':'Mother'})
+        self.assertEqual(units[0]['speaker'],'unknown')
+        self.assertFalse(units[0]['production_casting']['source_speaker_verified'])
+
+    def test_unknown_casting_cannot_clone_missing_voice_or_use_stale_input(self):
+        units=[{'id':'u','cue_ids':['c'],'speaker':'unknown'}];path=self.folder/'production-casting.json'
+        save_json(path,{'units_fingerprint':fingerprint(units),'assignments':{'c':{'voice':'New','reason':'choice'}}})
+        with self.assertRaisesRegex(ValueError,'existing reusable voice'):build.apply_casting(units,{'voices':{}},path)
+        units[0]['translation']='changed'
+        with self.assertRaisesRegex(ValueError,'inputs changed'):build.apply_casting(units,{'voices':{'New':{}}},path)
+
 
 class SynthesisBindingTests(unittest.TestCase):
     def unit(self):

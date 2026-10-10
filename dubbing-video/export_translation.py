@@ -6,7 +6,16 @@ import sys
 
 from screenplay_context import load_screenplay_context, annotate_rows
 
-from translate import estimate_duration, fingerprint, load_segments, read_json, save_json, validate_bible, write_srt
+from translate import ProtectedGlossary, estimate_duration, fingerprint, load_segments, read_json, save_json, validate_bible, write_srt
+
+
+def validate_locked_terms(source, translation, glossary, cue_id):
+    # Use the same exact-form boundaries as translation's protected glossary.
+    # "curse" must not require the noun maldição when the source says "cursed".
+    for name, target in glossary.items():
+        matcher=ProtectedGlossary({'glossary':[{'source':name,'target':target}]})
+        if matcher.pattern.search(source) and target.lower() not in translation.lower():
+            raise ValueError(f"Locked name/term missing for {cue_id}: {target}")
 
 
 def main():
@@ -47,9 +56,7 @@ def main():
         text = entry["translation"]
         if not isinstance(text, str) or not text.strip():
             raise ValueError("Blank translation")
-        for name, target in glossary.items():
-            if name in row["text"] and target not in text and target.lower() not in text.lower():
-                raise ValueError(f"Locked name/term missing for {row['id']}: {target}")
+        validate_locked_terms(row['text'],text,glossary,row['id'])
         duration = estimate_duration(text)
         ratio = duration / (row["end"] - row["start"])
         rows.append({**row, "translation": text, "estimated_duration_s": duration,
