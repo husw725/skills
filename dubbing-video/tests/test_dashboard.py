@@ -45,5 +45,13 @@ class DashboardTests(unittest.TestCase):
             self.assertIn('第 9 集',data['summary']['translation_detail'])
             self.assertEqual(data['summary']['production_stage'],'stopped')
 
+    def test_render_start_is_visible_before_first_unit_finishes(self):
+        with tempfile.TemporaryDirectory() as root:
+            project=Path(root)
+            save_json(project/'output/drama-01/queue-progress.json',{'stage':'rendering','episode':1,'detail':'配音启动中'})
+            data=collect(project,{},'https://example.invalid/')
+            self.assertEqual(data['episodes'][0]['status'],'rendering')
+            self.assertEqual(data['summary']['current_detail'],'配音启动中')
+
 
 if __name__=='__main__':unittest.main()

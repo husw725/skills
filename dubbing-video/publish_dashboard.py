@@ -57,6 +57,11 @@ def collect(project,published,base):
         current_detail=queue.get('public_detail') or '生产队列已停止，等待核查；不会自动重复付费请求'
     elif queue.get('stage')=='waiting' and current==queue.get('episode'):
         current_detail=queue.get('detail',current_detail)
+    elif queue.get('stage')=='rendering' and current==queue.get('episode'):
+        item=next(e for e in episodes if e['episode']==current)
+        if item['status']!='rendering':
+            current_detail=queue.get('detail','配音启动中')
+            item.update(status='rendering',status_label='配音启动中')
     translation_detail=f'译稿已审阅 {editorial_ready}/32 集'
     if translation.get('stage')=='translating':
         translation_detail+=f"；正在翻译第 {translation.get('episode','—')} 集"
