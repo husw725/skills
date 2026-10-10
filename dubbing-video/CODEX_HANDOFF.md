@@ -2,6 +2,16 @@
 
 ## 当前接力记录
 
+### 2026-10-10 提升并发至6，减少顺序队列空等（最新）
+
+- 用户要求更多并发加快。开工核验已有EP01–16真实成片，译稿已审至30；生产17因Two days left未知倒计时reader停止，翻译31主对白版本不匹配停止。没有活跃renderer需中断。
+- 提交6ac8057已push/Windows pull，66项unittest通过。dub_episode/production_queue增加--tts-workers 1–6运行覆盖，不修改plan/paid signature；旧plan仍3但运行6，已完成单元缓存身份与全局bank/单集/付费pending锁保持。线程本地复用Mflix session，减少每句重新initialize，不跨线程共用HTTP session。
+- 队列等待/renderer完成检查30s改5s（原来每集有最多30s空等）；当前/下一集准备仍2路，单集TTS6路，合成仍按集顺序，不启动多份付费producer。Windows忽略wrapper output/run-production-queue.py已加--tts-workers 6，原wrapper备份保留。
+- EP17倒计时显式cast已有Narrator_EP01，与EP09保持制作选角一致；源speakerunknown/期限Two days不变，新增克隆0。EP18原review全部12条未知annotation已明确引用WOODSMAN，与匹配剧本逐句相符；本代理重新审核script-supported role，修正Woodsman角色，保留audio_verified=false。旧editorial在editorial-before-woodsman-role-review备份，重新生成context fingerprint及translation绑定，role-review.json留据，无已有18TTS/plan覆盖。新Woodsman为真实新增角色，后续如clone由原bank全局锁集中一次创建，不与未知旁白混淆。
+- 31 mismatched_main_dialogue现在抛EditorialReviewRequired：保持隔离/pending，不生产该集，但后续32文本可继续。没有放宽cut gate或subtitle-only；当前32翻译中，pending=[31]，须再找匹配剧本/核对成片。
+- 实际17renderer PID31928命令含--tts-workers6；已核验六个不同句子同时有接受task回执37106–37111。不能将并发翻倍称耗时必然减半；当前只是6路真实试跑。近期3路EP12–16单集耗时约290/144/131/103/158秒（私有report completed_at减input marker mtime，含API/合成）。下一步比较17/18完成耗时和失败率，如限流/歧义stop按回执核查，不能自动付费重试。
+- MiniMax官方rate-limits文档speech-2.8-hd标60RPM，未给T2A CONN；这不是mflix网关的已测6并发保证，勿混用账号/接口限制。无新增API并发硬上限假承诺。当前至少16成片网页可播放，publisher持续发布。代码复审入口codex review；费用审查：提高workers不改TTS内容/voice/receipt、无paid自动retry。
+
 ### 2026-10-10 配音恢复，第5集已实际生成（最新）
 
 - 用户再问网页无新成片。核验仍4成片，译稿已审至13；翻译在14导出时错误将curse匹配进cursed，拒绝自然巴葡Sou amaldiçoada。已修复export_translation复用ProtectedGlossary源词边界，不更改锁定名称/术语；14缓存直接复用导出成功，当前15翻译中。
