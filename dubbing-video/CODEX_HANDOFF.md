@@ -2,6 +2,16 @@
 
 ## 当前接力记录
 
+### 2026-10-10 并发、防重复克隆与持续队列
+
+- 用户要求Windows并发，同时千万不能重复clone浪费。代码7802bcf已GitHub push / Windows pull；Windows47项测试全部通过，包含真实独立进程争抢同角色仅一次模拟付费调用、超时跨集禁重提、旧回执恢复和准备阶段不调用配音。测试不调用付费接口。
+- process_lock.py使用Windows msvcrt跨进程锁；全剧voice-bank串行创建新增声音，克隆回执集中voice-clone-receipts，先恢复旧episode回执再决定创建。歧义pending停止核查；同集production.lock和每次付费提交锁防并发重提。旧角色voice_id继续复用，不重新克隆。
+- production_queue.py两路当前/下一集素材/已审稿准备，单集三路TTS，按集数合成。Windows计划任务Codex-Carmilla-queue从EP04运行，Codex-Carmilla-publish独立更新；两项均已核验Running，旧EP03任务已完成。缺已审稿时等待，不自动生成译文；异常停队列而不自动重试付费任务。
+- EP03已完成并上传，当前页面3/32；新增Narrator_EP03已有，仍待听审。EP04的16条已审稿已传Windows、导出/素材检查/计划生成成功，新Father为必要首次角色，后续复用。
+- 未知reader不再按集自动新建旁白：build_episode_plan在新unknown时拒绝克隆，需先确定可复用身份；Camila/Camilla/Kamila统一production_voice Carmilla。EP05以后译稿尚未完成，不能称整季自动完成。
+- 费用边界：防重避免误提交；时长调整每句最多3次合成本来仍有费用，回执记录每次任务，不与意外重复克隆混淆。计划任务无开机触发/自动失败重试，不承诺机器重启后无人值守恢复。
+- 代码审查入口/review或codex review；已自查密钥和素材不入Git、无付费API自动重试。
+
 ### 2026-10-10 当前核验与恢复（优先于下方历史）
 
 - 全32集原视频/BGM/SFX均已下载至Windows并校验；第1、2集合成草稿已发布，视频流保持一致。巴葡母语听审仍未完成；时长质量提示分别2条、5条。
