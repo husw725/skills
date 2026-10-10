@@ -2,6 +2,13 @@
 
 ## 当前接力记录
 
+### 2026-10-10 第25集音频下载失败已安全续跑（最新）
+
+- 用户问配音为什么停止。核验已有24集render-report，queue停25；真实错误episode25/queue-render.log：e25-utterance-001 audio download failed; saved task can resume。其余19/20单元已完成，没有任何submission-pending文件，缺失句已有attempt0任务37317回执。不是选角/剧本匹配，也没有已证实的6并发服务限流。
+- 原GET下载已有3次重试，失败类型被业务日志归并，不能猜具体HTTP状态/网络原因。原task私密记录是封装格式，直接取顶层taskStatus/resultAudioUrl的临时只读探测无效；不得将None/无URL当服务实际无输出，未修改记录。
+- 没动业务代码/计划/声音库，Start-ScheduledTask恢复唯一Codex-Carmilla-queue。原19句通过绑定缓存复用，缺失句复用37317继续下载；实际progress已20/20，不能在未核验前称25成片上传。不存在新增paid ambiguous请求；后续TTS/合成按既有流程执行。钉钉watcher已送本次停止通知，累计sent3/failed0。
+- 下一步核验25视频与网页发布和26后的进度。不要因GET失败重新clone或新建输出目录放弃缓存；当前原因只能准确说音频下载失败，不能编造签名过期/403/限流。
+
 ### 2026-10-10 用户桌面final.html补充分镜参考（最新）
 
 - 用户明确旧剧本不是最新版，授权以桌面final.html作为仅本剧参考，要求不用做到代码里。文件实际在Mac /Users/husw/Desktop/final.html，663681bytes；复制Windows input/drama-01/storyboard/final.html，两端SHA256相同：6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38。未改通用业务代码，未把HTML/字幕/译稿提交Git/S3；只有本接力记录提交。
