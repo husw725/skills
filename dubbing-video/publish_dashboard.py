@@ -16,7 +16,7 @@ def safe_read(path,default):
 
 
 def collect(project,published,base):
-    episodes=[];assets_ready=0;playable=0;current=None;current_detail='等待下一集素材与译稿'
+    episodes=[];assets_ready=0;playable=0;editorial_ready=0;current=None;current_detail='等待下一集素材与译稿'
     downloads=safe_read(project/'output/downloads/download-progress.json',{})
     downloaded={int(e['episode']):e for e in downloads.get('episodes',[])}
     for number in range(1,33):
@@ -31,6 +31,11 @@ def collect(project,published,base):
         status='waiting';label='等待素材';item={'episode':number,'assets_ready':bool(ready)}
         if ready:status='prepared';label='素材齐备'
         if (episode_root/'translation-v2/translated.json').exists() or (episode_root/'translation/translated.json').exists():status='translated';label='译文已准备'
+        if all((episode_root/'editorial'/name).exists() for name in ('source.json','translation.json','screenplay-context.json')):
+            editorial_ready+=1
+            status='translated';label='译文已审阅'
+        elif number==1 and (episode_root/'translation-v2/translated.json').exists():
+            editorial_ready+=1
         progress_paths=list(episode_root.glob('dub-*/progress.json'))
         if progress_paths and not report:
             progress=safe_read(max(progress_paths,key=lambda p:p.stat().st_mtime),{})
@@ -47,13 +52,23 @@ def collect(project,published,base):
         if current:current_detail=next(e['status_label'] for e in episodes if e['episode']==current)
     bank=safe_read(project/'output/drama-01/voice-bank.json',{'voices':{}})
     queue=safe_read(project/'output/drama-01/queue-progress.json',{})
+    translation=safe_read(project/'output/drama-01/translation-progress.json',{})
     if queue.get('stage')=='stopped':
-        current_detail='生产队列已停止，等待核查；不会自动重复付费请求'
+        current_detail=queue.get('public_detail') or '生产队列已停止，等待核查；不会自动重复付费请求'
     elif queue.get('stage')=='waiting' and current==queue.get('episode'):
         current_detail=queue.get('detail',current_detail)
+    translation_detail=f'译稿已审阅 {editorial_ready}/32 集'
+    if translation.get('stage')=='translating':
+        translation_detail+=f"；正在翻译第 {translation.get('episode','—')} 集"
+    elif translation.get('stage')=='stopped':
+        translation_detail+='；翻译已停止，等待核查'
+    elif translation.get('stage')=='complete_with_review':
+        translation_detail+='；部分集待文本复核'
     return {'project':'Carmilla','language':'pt-BR','total_episodes':32,'updated_at':time.time(),
             'complete':playable==32,'summary':{'playable':playable,'assets_ready':assets_ready,'voices':len(bank['voices']),
-                'current_episode':current,'current_detail':current_detail},'episodes':episodes}
+                'current_episode':current,'current_detail':current_detail,'production_stage':queue.get('stage'),
+                'editorial_ready':editorial_ready,'translation_detail':translation_detail,
+                'translation_stage':translation.get('stage')},'episodes':episodes}
 
 
 def build_html(template,status):

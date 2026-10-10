@@ -134,6 +134,8 @@ if __name__=='__main__':
     try:main()
     except Exception as exc:
         if isinstance(exc,RuntimeError) and 'translation-worker.lock' in str(exc):raise
-        save_json(Path('output/drama-01/translation-progress.json'),{'stage':'stopped','detail':type(exc).__name__,
+        progress=Path('output/drama-01/translation-progress.json')
+        previous=read_json(progress) if progress.exists() else {}
+        save_json(progress,{**previous,'stage':'stopped','detail':type(exc).__name__,
                   'updated_at':time.time()})
         raise
