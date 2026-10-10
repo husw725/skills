@@ -2,6 +2,16 @@
 
 ## 当前接力记录
 
+### 2026-10-10 配音恢复，第5集已实际生成（最新）
+
+- 用户再问网页无新成片。核验仍4成片，译稿已审至13；翻译在14导出时错误将curse匹配进cursed，拒绝自然巴葡Sou amaldiçoada。已修复export_translation复用ProtectedGlossary源词边界，不更改锁定名称/术语；14缓存直接复用导出成功，当前15翻译中。
+- 用户前一轮质疑通过剧本无法判断；重新核对第5剧本明确母亲日记FLASHBACK/母亲第一人称视角。按原有整剧配音授权进行制作选角：Mother已有音色；不宣称源reader已识别，原speaker保持unknown。此前等待用户选旁白的记录被本次基于剧本的选角覆盖，没有创建Narrator_EP05。
+- 新增production-casting.json显式复用已有声音，逐cue绑定speech-units指纹，必须完整覆盖unknown单元、给选择依据；声音不在bank、输入变化、已知角色覆盖均拒绝。决定写入plan production_casting并source_speaker_verified=false，受既有不可变计划与TTS指纹保护，不能混用旧断点。
+- Windows已保存EP05三句Mother、EP06尾句If you don't选择Carmilla作上一句的条件续句、EP08尾称Father选择Laura、EP09倒计时Three days remaining选择Narrator_EP01。后三项是上下文制作选角，字幕台词缺剧本直接证据，源speaker仍unknown；不改变台词/时间/三天期限，不据此新增克隆。私密选择文件在忽略output，仅Windows业务生成。
+- 提交5b3858e/aa7f88f已push/Windows pull，64项unittest通过；新增旧术语误命中/真缺词拒绝、unknown身份保留/已有音色限制/陈旧选择拒绝、renderer首句未完页面显示启动。旧EP04不可变计划和旧TTS缓存回归继续通过。
+- 生产队列PID31300、renderer PID29416真实Running；第5配音计划36单元，4角色全部bank复用，没有clone参考/新增clone；最后核验已完成6/36个TTS单元，有已接受MiniMax task回执，三路并发继续。后续顺序渲染、提前准备当前/下一集。翻译PID10036单独处理15，不宣称32完成。
+- publisher重启以加载首句前启动显示修复；S3仍仅成片+index，不上传原素材/译稿/日志。下一步核验第5合成上传，观察后续未识别角色/参考时长不足等停止，付费歧义pending禁止自动重提。代码审查入口codex review；本次费用审查未改paid重试，新增casting只能已存在bank音色。
+
 ### 2026-10-10 第5集暂停诊断与翻译恢复（最新）
 
 - 用户反馈网页第5集停止。实际production queue已退出：build_episode_plan对3条日记unknown reader拒绝自动新克隆，既有防浪费约束正常生效。第5集36条已完成第二轮文本审核并原子暴露editorial，第6–8集也已完成editorial。
