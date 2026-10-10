@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from translate import read_json,save_json
+from translate import fingerprint,read_json,save_json
 
 
 def main():
@@ -29,15 +29,30 @@ def main():
     for unit in units:
         name=unit['speaker'] if unit['speaker']!='unknown' else f'Narrator_EP{episode:02d}'
         name={'Camila':'Carmilla','Camilla':'Carmilla','Kamila':'Carmilla'}.get(name,name)
-        if unit['speaker']=='unknown' and name not in bank['voices']:
-            raise ValueError('Unknown reader: identify and assign a reusable voice before any new clone; no per-episode automatic narrator cloning')
         unit['production_voice']=name
         annotations=[a for a in unit.get('screenplay_annotations',[]) if a]
         emotion=annotations[0].get('emotion_intent','calm') if annotations else 'calm'
         unit['emotion']=emotion if emotion in ('auto','happy','sad','angry','fearful','disgusted','surprised','calm','fluent','whisper') else 'calm'
         unit['speed']=1.05;voices.setdefault(name,{})
+    manifest=read_json(media/'media-manifest.json')
+    plan={'project_id':59,'episode':episode,'assets':{'video':str(video),'bgm':str(bgm),'sfx':str(sfx),
+        'source_audio':str(media/'source-audio.wav')},'voice_bank':str(bank_path),'voices':voices,'units':units,
+        'tts_workers':3,'output_dir':str(folder/'dub-v1'),'warnings':manifest['warnings']+
+        ['Speaker and emotion annotations are screenplay-supported candidates; native listening review pending.']}
+    plan_path=folder/'dub-plan-v1.json'
+    if plan_path.exists():
+        saved=read_json(plan_path)
+        # Clone references are decisions persisted at first preparation, not a
+        # live projection of the bank. A successful clone must not change input.
+        candidate={**plan,'voices':saved['voices']}
+        if fingerprint(candidate)!=fingerprint(saved):
+            raise ValueError('Reviewed episode inputs changed; existing plan preserved, inspect before resuming')
+        print('Existing plan preserved',episode)
+        return
     for name in voices:
         if name in bank['voices']:continue
+        if any(u['speaker']=='unknown' and u['production_voice']==name for u in units):
+            raise ValueError('Unknown reader: identify and assign a reusable voice before any new clone; no per-episode automatic narrator cloning')
         candidates=sorted([u for u in units if u['production_voice']==name],key=lambda u:u['end']-u['start'],reverse=True)
         segments=[];duration=0
         for u in candidates:
@@ -46,12 +61,7 @@ def main():
             if duration>=14:break
         if duration<10:raise ValueError(f'{name} has <10 seconds reference in this episode; collect more actual source voice first')
         voices[name]={'segments_seconds':sorted(segments)}
-    manifest=read_json(media/'media-manifest.json')
-    plan={'project_id':59,'episode':episode,'assets':{'video':str(video),'bgm':str(bgm),'sfx':str(sfx),
-        'source_audio':str(media/'source-audio.wav')},'voice_bank':str(bank_path),'voices':voices,'units':units,
-        'tts_workers':3,'output_dir':str(folder/'dub-v1'),'warnings':manifest['warnings']+
-        ['Speaker and emotion annotations are screenplay-supported candidates; native listening review pending.']}
-    save_json(folder/'dub-plan-v1.json',plan);print('Plan ready',episode,'utterances',len(units),'voices',list(voices))
+    save_json(plan_path,plan);print('Plan ready',episode,'utterances',len(units),'voices',list(voices))
 
 
 if __name__=='__main__':main()

@@ -25,7 +25,7 @@ def rendered(folder):
 
 def prepare(episode,ffmpeg,bible):
     folder=Path(f'output/drama-01/episode-{episode:02d}');editorial=folder/'editorial'
-    with process_lock(folder/'preparation.lock',timeout=0):
+    with process_lock(folder/'preparation.lock',timeout=0),process_lock(folder/'production.lock',timeout=0):
         # Preparation has no cloning/generation calls. A reviewed translation
         # with its matching screenplay fingerprint is mandatory.
         commands=[['export_translation.py',str(editorial/'source.json'),str(editorial/'translation.json'),
@@ -38,6 +38,30 @@ def prepare(episode,ffmpeg,bible):
     return episode
 
 
+class PreparationScheduler:
+    def __init__(self,pool,root,ffmpeg,bible):
+        self.pool=pool;self.root=root;self.ffmpeg=ffmpeg;self.bible=bible;self.futures={}
+
+    def scan(self,episode):
+        for candidate in range(episode,min(32,episode+1)+1):
+            folder=self.root/f'episode-{candidate:02d}'
+            if candidate in self.futures or rendered(folder):continue
+            if all((folder/'editorial'/name).exists() for name in ('source.json','translation.json','screenplay-context.json')):
+                self.futures[candidate]=self.pool.submit(prepare,candidate,self.ffmpeg,self.bible)
+
+
+def supervise_renderer(command,log,scheduler,episode,state):
+    # A blocking run() missed translations delivered during TTS. Continue
+    # discovering work while the subprocess owns its production/paid-call locks.
+    process=subprocess.Popen(command,stdout=log,stderr=log)
+    while process.poll() is None:
+        scheduler.scan(episode)
+        save_json(state,{'episode':episode,'stage':'rendering','detail':'逐句配音（三路并发）与合成','updated_at':time.time()})
+        time.sleep(30)
+    if process.returncode:
+        raise subprocess.CalledProcessError(process.returncode,command)
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--ffmpeg',required=True,type=Path);p.add_argument('--mcp-config',required=True,type=Path)
@@ -48,19 +72,15 @@ def main():
     if not 1<=args.start_episode<=32:p.error('Episode must be 1–32')
     root=Path('output/drama-01');state=root/'queue-progress.json'
     with process_lock(root/'production-queue.lock',timeout=0),ThreadPoolExecutor(max_workers=2) as pool:
-        preparing={}
+        scheduler=PreparationScheduler(pool,root,args.ffmpeg,args.bible)
         for episode in range(args.start_episode,33):
             folder=root/f'episode-{episode:02d}'
             if rendered(folder):continue
             while True:
-                for candidate in range(episode,min(32,episode+1)+1):
-                    other=root/f'episode-{candidate:02d}'
-                    if candidate in preparing or rendered(other):continue
-                    if all((other/'editorial'/name).exists() for name in ('source.json','translation.json','screenplay-context.json')):
-                        preparing[candidate]=pool.submit(prepare,candidate,args.ffmpeg,args.bible)
+                scheduler.scan(episode)
                 # A resumed queue must also wait for the older in-flight episode.
                 prior_ready=all((root/f'episode-{n:02d}/dub-v1/render-report.json').exists() for n in range(1,episode))
-                future=preparing.get(episode)
+                future=scheduler.futures.get(episode)
                 if future and future.done() and prior_ready:
                     future.result();break
                 reason='等待已审译稿' if not future else ('等待前集完成' if not prior_ready else '准备素材与译稿')
@@ -68,8 +88,8 @@ def main():
                 time.sleep(30)
             save_json(state,{'episode':episode,'stage':'rendering','detail':'逐句配音（三路并发）与合成','updated_at':time.time()})
             with (folder/'queue-render.log').open('a',encoding='utf-8') as log:
-                subprocess.run([sys.executable,'-u','dub_episode.py',str(folder/'dub-plan-v1.json'),
-                                '--mcp-config',str(args.mcp_config),'--ffmpeg',str(args.ffmpeg)],stdout=log,stderr=log,check=True)
+                supervise_renderer([sys.executable,'-u','dub_episode.py',str(folder/'dub-plan-v1.json'),
+                                    '--mcp-config',str(args.mcp_config),'--ffmpeg',str(args.ffmpeg)],log,scheduler,episode,state)
             if not rendered(folder):raise RuntimeError('Renderer did not produce a verified report')
         save_json(state,{'stage':'complete','updated_at':time.time()})
 

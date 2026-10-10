@@ -164,11 +164,48 @@ def wait_task(client,task_id,state_file):
     return result
 
 
+def tts_request(unit,voice_id,project_id,speed,emotion):
+    return {'projectId':project_id,'model':'speech-2.8-hd','text':unit['translation'],
+            'voiceId':voice_id,'referenceAudioList':[],'referenceVideoList':[],
+            'languageBoost':'Portuguese','format':'wav','speed':speed,
+            'vol':0.7 if unit['emotion']=='whisper' and emotion=='calm' else 1.0,'pitch':0,
+            'emotion':emotion,'duration':None,'prompt':None}
+
+
+def validate_synthesis_cache(folder,unit,voice_id,project_id):
+    signature=fingerprint({'unit':unit,'voice_id':voice_id,'project_id':project_id,
+                           'settings':tts_request(unit,voice_id,project_id,float(unit.get('speed',1.)),unit['emotion'])})
+    marker=folder/'synthesis-input.json'
+    if marker.exists() and read_json(marker)['fingerprint']!=signature:
+        raise ValueError('Synthesis voice or inputs changed; inspect existing tasks, no automatic regeneration')
+    cached=folder/'result.json'
+    saved=read_json(cached) if cached.exists() else None
+    if saved:
+        expected={'id':unit['id'],'cue_ids':unit['cue_ids'],'voice':unit['production_voice'],
+                  'voice_id':voice_id,'start':unit['start'],'end':unit['end'],
+                  'translation':unit['translation'],'requested_emotion':unit['emotion']}
+        if any(saved.get(k)!=v for k,v in expected.items()):
+            raise ValueError('Cached synthesis voice or inputs differ; inspect before regenerating')
+        if saved.get('input_fingerprint') and saved['input_fingerprint']!=signature:
+            raise ValueError('Cached synthesis settings differ; inspect before regenerating')
+    if not marker.exists() and not (saved and saved.get('input_fingerprint')):
+        attempt=folder/'attempt-0.json'
+        if attempt.exists():
+            emotions=[unit['emotion']]
+            if unit['emotion']=='whisper':emotions.append('calm')
+            permitted={fingerprint(tts_request(unit,voice_id,project_id,float(unit.get('speed',1.)),emotion)) for emotion in emotions}
+            if read_json(attempt).get('request_fingerprint') not in permitted:
+                raise ValueError('Legacy synthesis request differs; inspect before resuming')
+        elif saved or list(folder.glob('submission-*.json')):
+            raise ValueError('Legacy synthesis receipt lacks input binding; inspect before resuming')
+    if not marker.exists():save_json(marker,{'fingerprint':signature})
+    return signature,saved
+
+
 def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
     folder=root/unit['id'];folder.mkdir(parents=True,exist_ok=True)
-    cached=folder/'result.json'
-    if cached.exists():
-        saved=read_json(cached)
+    signature,saved=validate_synthesis_cache(folder,unit,voice_id,project_id)
+    if saved:
         if Path(saved['fitted_path']).exists() and digest(saved['fitted_path'])==saved['fitted_sha256']:
             return saved
     target=unit['end']-unit['start']
@@ -179,11 +216,7 @@ def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
     # Legacy attempt records are still replayed faithfully to preserve checkpoints.
     if actual_emotion=='whisper' and not (folder/'attempt-0.json').exists():actual_emotion='calm'
     for attempt in range(3):
-        request={'projectId':project_id,'model':'speech-2.8-hd','text':unit['translation'],
-                 'voiceId':voice_id,'referenceAudioList':[],'referenceVideoList':[],
-                 'languageBoost':'Portuguese','format':'wav','speed':speed,
-                 'vol':0.7 if unit['emotion']=='whisper' and actual_emotion=='calm' else 1.0,'pitch':0,
-                 'emotion':actual_emotion,'duration':None,'prompt':None}
+        request=tts_request(unit,voice_id,project_id,speed,actual_emotion)
         path=folder/f'attempt-{attempt}.json'
         if path.exists():
             accepted=read_json(path)
@@ -246,7 +279,7 @@ def synthesize(client,unit,voice_id,root,project_id,ffmpeg):
           'requested_emotion':unit['emotion'],'emotion_fallback':actual_emotion!=unit['emotion'],
           'attempts':attempts,'atempo_factor':factor,'fitted_duration_seconds':len(fitted_samples)/RATE,
           'timing_quality_review_required':factor>1.25 or speed>1.4,
-          'fitted_path':str(fitted),'fitted_sha256':digest(fitted)}
+          'fitted_path':str(fitted),'fitted_sha256':digest(fitted),'input_fingerprint':signature}
     save_json(folder/'result.json',item)
     return item
 
