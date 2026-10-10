@@ -2,6 +2,18 @@
 
 ## 当前接力记录
 
+### 2026-10-10 用户桌面final.html补充分镜参考（最新）
+
+- 用户明确旧剧本不是最新版，授权以桌面final.html作为仅本剧参考，要求不用做到代码里。文件实际在Mac /Users/husw/Desktop/final.html，663681bytes；复制Windows input/drama-01/storyboard/final.html，两端SHA256相同：6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38。未改通用业务代码，未把HTML/字幕/译稿提交Git/S3；只有本接力记录提交。
+- HTML const E含33条EP01–33，当前可见DOM为EP32且与内嵌EP32文字一致，原EP20明确整集跳过删除。实际32集的映射：实际1–19对应HTML1–19；实际20–30对应HTML21–31；实际31对应更新HTML32救援/逃离前半段，实际32对应其血液融合/结局后半段。原HTML33另留资料，不增加成片第33集。HTML镜头时间重叠/重置及旧标题85秒/镜头数已过时，不能替代实际字幕timecodes。
+- 已核对分镜明确新对白：实际20的诅咒加速/Irina已到/三天期限由Carmilla说，之前选择得到新版证据支持；实际27两个被截断条件/七日仪式句由Carmilla说，但不添加源字幕缺失后半句；实际30 Open the door/What happen由Irina说；实际32 Your little sanctuary is falling apart由Irina说；实际21三句明确Woodsman。
+- Windows仅在忽略output用一次性资料处理脚本，不新增项目通用功能。已更新尚未付费开始的EP21–32 editorial参考上下文，补final.html版本/hash、对应分镜和集号映射，修正明确角色，重新绑定translation screenplay_context_fingerprint并逐集export核验/保存读回。旧editorial移至editorial-before-final-storyboard，旧casting保留备份。已完成EP01–20 plan/音频完全保留，不改指纹/不重复付费。
+- 第31全9句人工初译后经Windows Codex CLI结构化语义复审（source/reference/bible齐全），match=true且无error，独立reviewed-response及私密日志保留于output/drama-01/final-storyboard-review；原旧DOCX31不适用说明保留。第31初步source-role归属Irina/Laura/Camila（builder canonical到Carmilla）；同一房间被毁、救人、离开、old way都对应新分镜。真实源文Iet's go字母错拼不改，仅按分镜同义译Vamos。source/timecodes及锁定术语导出通过，长句时长仍待TTS。translation-progress.complete/pending空，不能称所有成片已完成。
+- 分镜参考manifest在output/drama-01/final-storyboard-review/reference-manifest.json，各21–32 validation保存。原来源DOCX作旧背景资料仍记录，final.html为本次用户补充制作依据。已读回12集context fps及finalSHA；未对其他剧建立规则/默认映射。
+- 第29 How many years与新版HTML30 shot12 Carmilla Her minions疑似ASR误听，未核原声，保留原字幕/译文的疑点标记，没有直接改字幕。production casting暂选已有Carmilla，source speaker仍unknown/audio_verified=false。23倒计时继续复用原Narrator_EP01，只是重绑新units fingerprint；母亲日记仍不能把作者当已识别reader。
+- 核验本次新停实际21：Irina首次角色只有1.77sec，不足克隆10sec，并非未知reader。从实际26中script支持Irina的窗口收集14.733sec，原ensure_voices全局bank/统一receipt/pending保护下一次新增Irina，不复制角色/不复克隆旧声音。参考池output/drama-01/voice-reference-pool含原视频/音频SHA/actualcue/provenance，bank source_episode26记录，不伪造为21样本。现8声音，旧7个保持。
+- 原6路顺序队列已恢复，实际21renderer接受六个不同任务37230–37235，22plan已准备，未启动重复queue。至少EP01–20已完成，网页publisher持续发布；notify独立watching/sent2/failed0，第二条为21停机通知，不是同一事件刷屏。下一步继续观察21后生产/29疑点原声核听；更新资料不等于原声说话人听审或母语验收。
+
 ### 2026-10-10 停止通知接入钉钉并恢复20（最新）
 
 - 用户明确要求以后停止时向自己的钉钉通知。已读/应用dingtalk-sender技能，用户提供机器人Webhook；秘密只在Windows output/dingtalk-notify.private.json，不写Git/交接/网页。没有加签secret；如果机器人设置变化要在私密配置补secret/keyword。
