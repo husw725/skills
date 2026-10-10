@@ -20,6 +20,11 @@ class CodexEditorialTests(unittest.TestCase):
         data=self.response();data['cues'][0]['review_issues']=[{'severity':'error','reason':'wrong cut'}]
         with self.assertRaises(ValueError):validate_response(data,[{'id':'u1'}])
 
+    def test_first_pass_error_can_reach_review_but_not_production(self):
+        data=self.response();data['cues'][0]['review_issues']=[{'severity':'error','reason':'uncertain vocative'}]
+        validate_response(data,[{'id':'u1'}],allow_errors=True)
+        with self.assertRaises(ValueError):validate_response(data,[{'id':'u1'}])
+
     def test_codex_prompt_is_stdin_and_failed_run_stops(self):
         with tempfile.TemporaryDirectory() as tmp,patch('codex_translate_episode.subprocess.run') as run:
             run.return_value.returncode=1

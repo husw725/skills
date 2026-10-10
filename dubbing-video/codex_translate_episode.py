@@ -18,14 +18,19 @@ def response_schema():
     return {'type':'object','properties':{'matched_main_dialogue':{'type':'boolean'},'match_note':{'type':'string'},'story_notes':{'type':'array','items':{'type':'string'}},'cues':{'type':'array','items':cue}},'required':['matched_main_dialogue','match_note','story_notes','cues'],'additionalProperties':False}
 
 
-def validate_response(data,rows):
+class EditorialReviewRequired(ValueError):
+    pass
+
+
+def validate_response(data,rows,allow_errors=False):
     ids=[r['id'] for r in rows]
     if not data.get('matched_main_dialogue'):raise ValueError('Screenplay cut mismatch requires review')
     if [c['id'] for c in data['cues']]!=ids:raise ValueError('Codex changed, omitted, or reordered cue IDs')
     for cue in data['cues']:
         for key in ('translation','speaker','script_evidence'):
             if not isinstance(cue.get(key),str) or not cue[key].strip():raise ValueError('Missing editorial evidence or translation')
-        if any(i['severity']=='error' for i in cue['review_issues']):raise ValueError('Unresolved editorial error; inspect worker output')
+        if not allow_errors and any(i['severity']=='error' for i in cue['review_issues']):
+            raise EditorialReviewRequired('Unresolved editorial error; inspect worker output')
 
 
 def call_codex(exe,prompt,schema,output,log):
@@ -72,7 +77,9 @@ def process_episode(args,episode):
     prompt='''You are translating the Carmilla drama into natural Brazilian Portuguese. Read the supplied matched screenplay and timed subtitles; consult the full series screenplay when necessary for continuity. The timed source and cue order are authoritative. Verify major dialogue matches the screenplay; reordered scenes/paraphrases may be compatible, but explain differences. Do not invent absent dialogue or a new character to explain an ASR error. Preserve meaning, negation, relationships, deadlines and locked names/terms. Shorten idiomatically to approach each original time window without dropping meaning. Use script-supported speaker IDs matching prior episodes (Laura, Carmilla, Father, Mother, Irina, Elisabeth); unknown written-note readers stay unknown, never equate author and reader. Cite script evidence per cue, flag ASR/pronoun ambiguity; don't claim audio listening, Brazilian native approval or emotional audio verification. Source-audio verification is unavailable in this text task. Do not call any MCP/clone/TTS/upload API, change code or credentials, or write files yourself. Return only the required structured editorial response. Internally review every line for semantic fidelity and consistency before returning.\n'''+json.dumps(context,ensure_ascii=False)
     draft_path=root/'draft-response.json'
     draft=read_json(draft_path) if draft_path.exists() else call_codex(args.codex_exe,prompt,schema,draft_path,root/'codex.private.log')
-    validate_response(draft,rows)
+    # The second pass must be allowed to repair issues found in the first pass.
+    # Only the reviewed result is eligible for publication to the renderer.
+    validate_response(draft,rows,allow_errors=True)
     review_path=root/'reviewed-response.json'
     reviewed=read_json(review_path) if review_path.exists() else call_codex(args.codex_exe,
         prompt+'\nReview and correct this candidate carefully. Resolve textual errors; retain uncertainty requiring audio as warnings. Return the complete corrected structured response.\n'+json.dumps(draft,ensure_ascii=False),
@@ -110,10 +117,23 @@ def main():
     if sys.platform!='win32':p.error('Business translation runs on Windows')
     if not args.codex_exe.is_file() or not 1<=args.start<=args.end<=32:p.error('Invalid Codex executable or episode range')
     with process_lock(Path('output/drama-01/translation-worker.lock'),timeout=0):
+        progress=Path('output/drama-01/translation-progress.json')
+        pending=read_json(progress).get('pending_episodes',[]) if progress.exists() else []
         for episode in range(args.start,args.end+1):
-            save_json(Path('output/drama-01/translation-progress.json'),{'episode':episode,'stage':'translating','updated_at':time.time()})
-            process_episode(args,episode)
-        save_json(Path('output/drama-01/translation-progress.json'),{'stage':'complete','updated_at':time.time()})
+            save_json(progress,{'episode':episode,'stage':'translating','pending_episodes':pending,'updated_at':time.time()})
+            try:process_episode(args,episode)
+            except EditorialReviewRequired:
+                if episode not in pending:pending.append(episode)
+                print('EDITORIAL_REVIEW_REQUIRED',episode,'not exposed to production',flush=True)
+                continue
+            if episode in pending:pending.remove(episode)
+        save_json(progress,{'stage':'complete_with_review' if pending else 'complete','pending_episodes':pending,'updated_at':time.time()})
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    try:main()
+    except Exception as exc:
+        if isinstance(exc,RuntimeError) and 'translation-worker.lock' in str(exc):raise
+        save_json(Path('output/drama-01/translation-progress.json'),{'stage':'stopped','detail':type(exc).__name__,
+                  'updated_at':time.time()})
+        raise
