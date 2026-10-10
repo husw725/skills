@@ -2,12 +2,40 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock
 
-from publish_dashboard import build_html,collect
+from publish_dashboard import build_html,collect,publish_subtitle
+from dub_episode import digest
 from translate import save_json
 
 
 class DashboardTests(unittest.TestCase):
+    def test_subtitles_match_rendered_dialogue_and_reuse_verified_upload(self):
+        with tempfile.TemporaryDirectory() as root:
+            folder=Path(root);state={};client=Mock()
+            report={'episode':32,'output_sha256':'video-hash','duration_seconds':20,
+                'utterances':[{'id':'a','start':13.1,'end':15.7,'translation':'Você vai virar vampira.'},
+                    {'id':'b','start':15.7,'end':16.633,'translation':'E daí?'}]}
+            def head(**kwargs):
+                p=folder/'subtitles/Carmilla_EP32_pt-BR.srt'
+                return {'ContentLength':p.stat().st_size,'Metadata':{'sha256':digest(p),'video-sha256':'video-hash'}}
+            client.head_object.side_effect=head
+            self.assertFalse(publish_subtitle(report,folder,{},state,client,'bucket','prefix/'))
+            videos={'32':{'sha256':'video-hash'}}
+            self.assertTrue(publish_subtitle(report,folder,videos,state,client,'bucket','prefix/'))
+            text=(folder/'subtitles/Carmilla_EP32_pt-BR.srt').read_text(encoding='utf-8')
+            self.assertIn('00:00:13,100 --> 00:00:15,700',text)
+            self.assertIn('E daí?',text)
+            self.assertIn('attachment',client.upload_file.call_args.kwargs['ExtraArgs']['ContentDisposition'])
+            self.assertFalse(publish_subtitle(report,folder,videos,state,client,'bucket','prefix/'))
+            self.assertEqual(client.upload_file.call_count,1)
+            project=folder/'project'
+            save_json(project/'output/drama-01/episode-32/dub-v1/render-report.json',report)
+            data=collect(project,{'32':{'key':'video.mp4','sha256':'video-hash'}},'https://example.invalid/',state['subtitles'])
+            self.assertIn('subtitle_url',data['episodes'][31])
+            state['subtitles']['32']['video_sha256']='old-version'
+            self.assertNotIn('subtitle_url',collect(project,{'32':{'key':'video.mp4','sha256':'video-hash'}},'https://example.invalid/',state['subtitles'])['episodes'][31])
+
     def test_page_bootstrap_does_not_allow_script_injection(self):
         text=build_html('<script type="application/json">__BOOTSTRAP__</script>',{'history':['</script><script>bad</script>']})
         self.assertNotIn('</script><script>bad',text)

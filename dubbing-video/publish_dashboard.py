@@ -1,13 +1,14 @@
 """Windows publisher: upload completed videos, publish status every ten minutes."""
 import argparse
 import json
+import math
 from pathlib import Path
 import time
 import sys
 from urllib.parse import quote
 
 from dub_episode import digest
-from translate import read_json,save_json
+from translate import read_json,save_json,write_srt
 
 
 def safe_read(path,default):
@@ -15,7 +16,7 @@ def safe_read(path,default):
     except (OSError,ValueError):return default
 
 
-def collect(project,published,base):
+def collect(project,published,base,published_subtitles=None):
     episodes=[];assets_ready=0;playable=0;editorial_ready=0;current=None;current_detail='等待下一集素材与译稿'
     downloads=safe_read(project/'output/downloads/download-progress.json',{})
     downloaded={int(e['episode']):e for e in downloads.get('episodes',[])}
@@ -46,6 +47,9 @@ def collect(project,published,base):
         if key and report and published[str(number)].get('sha256')==report.get('output_sha256'):
             status='completed';label='播放成片';playable+=1
             item.update(video_url=base+quote(key),duration_seconds=report.get('duration_seconds'),timing_review_count=report.get('timing_quality_review_count',0))
+            subtitle=(published_subtitles or {}).get(str(number),{})
+            if subtitle.get('video_sha256')==report.get('output_sha256') and subtitle.get('key'):
+                item['subtitle_url']=base+quote(subtitle['key'])
         item.update(status=status,status_label=label);episodes.append(item)
     if current is None:
         current=next((e['episode'] for e in episodes if e['status']!='completed'),None)
@@ -79,6 +83,37 @@ def collect(project,published,base):
 def build_html(template,status):
     bootstrap=json.dumps(status,ensure_ascii=False).replace('<','\\u003c')
     return template.replace('__BOOTSTRAP__',bootstrap)
+
+
+def publish_subtitle(report,root,published,state,s3,bucket,prefix):
+    """Export the dialogue actually rendered, bound to the published video version."""
+    number=str(int(report['episode']));video_sha=report['output_sha256']
+    if published.get(number,{}).get('sha256')!=video_sha:return False
+    rows=report.get('utterances',[])
+    if not rows:raise ValueError('Rendered dialogue missing; cannot export final subtitles')
+    duration=float(report['duration_seconds']);previous=0;ids=set()
+    if not math.isfinite(duration):raise ValueError('Invalid rendered duration')
+    for row in rows:
+        if row['id'] in ids or not 0<=row['start']<row['end']<=duration+.1 or row['start']<previous:
+            raise ValueError('Invalid rendered subtitle windows')
+        if not isinstance(row.get('translation'),str) or not row['translation'].strip():
+            raise ValueError('Rendered subtitle text missing')
+        ids.add(row['id']);previous=row['end']
+    folder=root/'subtitles';folder.mkdir(exist_ok=True)
+    name=f'Carmilla_EP{int(number):02d}_pt-BR.srt';path=folder/name
+    write_srt(path,[{**row,'episode':number} for row in rows]);sha=digest(path)
+    subtitles=state.setdefault('subtitles',{})
+    if subtitles.get(number,{}).get('sha256')==sha and subtitles[number].get('video_sha256')==video_sha:
+        return False
+    key=prefix+f'subtitles/episode-{int(number):02d}/{sha[:12]}/{name}'
+    s3.upload_file(str(path),bucket,key,ExtraArgs={'ContentType':'application/x-subrip; charset=utf-8',
+        'ContentDisposition':f'attachment; filename="{name}"','CacheControl':'public,max-age=86400',
+        'Metadata':{'sha256':sha,'video-sha256':video_sha}})
+    head=s3.head_object(Bucket=bucket,Key=key)
+    if head['ContentLength']!=path.stat().st_size or head.get('Metadata',{}).get('sha256')!=sha or head.get('Metadata',{}).get('video-sha256')!=video_sha:
+        raise ValueError('S3 subtitle verification failed')
+    subtitles[number]={'key':key,'sha256':sha,'video_sha256':video_sha,'bytes':path.stat().st_size,'uploaded_at':time.time()}
+    return True
 
 
 def main():
@@ -126,8 +161,14 @@ def main():
                 state['videos'][number]={'key':key,'sha256':expected,'bytes':path.stat().st_size,'uploaded_at':time.time()}
                 changed=True;save_json(state_path,state)
                 print('VIDEO_PUBLISHED',number,flush=True)
+            for report_path in sorted(latest_reports.values()):
+                report=safe_read(report_path,{})
+                if report.get('status')!='rendered_draft' or not report.get('video_payload_identical'):continue
+                if publish_subtitle(report,root,state['videos'],state,s3,bucket,prefix):
+                    changed=True;save_json(state_path,state)
+                    print('SUBTITLE_PUBLISHED',report['episode'],flush=True)
             if changed or time.time()-state['last_publish']>=30 or args.once:
-                status=collect(project,state['videos'],base)
+                status=collect(project,state['videos'],base,state.get('subtitles',{}))
                 summary=status['summary'];message=f"成片 {summary['playable']}/32；素材齐备 {summary['assets_ready']}/32；可复用声音 {summary['voices']} 个。"
                 if summary['current_episode']:message+=f"当前第 {summary['current_episode']} 集：{summary['current_detail']}。"
                 if changed or time.time()-state.get('last_history',0)>=args.interval or args.once:
