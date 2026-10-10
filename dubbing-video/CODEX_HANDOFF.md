@@ -2,6 +2,14 @@
 
 ## 当前接力记录
 
+### 2026-10-10 Windows Codex CLI安装与登录等待
+
+- 用户明确授权在Windows安装Codex CLI，用户自己登录。Windows原有Node v24.13.0，npm前缀C:/Users/melot/AppData/Roaming/npm，系统Windows11 LTSC。
+- 已安装并验证codex-cli 0.162.1；入口C:/Users/melot/AppData/Roaming/npm/codex.cmd，login --help通过。使用官方@openai/codex包；Windows直下157MB原生包停滞，Mac从官方npm源下载，SHA512与官方dist.integrity一致，SCP后Windows SHA256一致；本机npm cache add后离线完成同版本安装。仅停止本次已核验的停滞npm安装进程，未动业务生产进程。
+- 已通过Interactive计划任务Codex-Carmilla-Login在用户桌面Session1启动codex login；原生codex.exe PID25872核验Session1，localhost1455登录回调监听存在。用户待完成登录，不能称已认证或翻译已自动接入。计划任务无触发器，可在登录完后清理。
+- 安装包临时副本Mac /tmp/codex-windows-0.162.1.tgz，Windows项目output/codex-windows-0.162.1.tgz（165053495bytes，忽略目录）；无认证值入交接/Git/S3。
+- 后续用户登录后用codex login status核验，再接入Windows剧本翻译worker；保留现有Python生产队列独占付费克隆、回执与声音复用，避免Codex另开付费请求。
+
 ### 2026-10-10 审查问题修复完成（覆盖下方未修复记录）
 
 - 用户授权修复3项审查问题。abfa948已push并Windows pull，55项unittest全通过。新增8项覆盖计划重启不变/原译稿变化拒绝、音色与速度变更拒绝缓存、合法旧缓存免付费复用、部分旧任务绑定、渲染时新译稿到达立即准备、准备与渲染互斥。
