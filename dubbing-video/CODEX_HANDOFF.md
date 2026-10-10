@@ -2,6 +2,23 @@
 
 ## 当前接力记录
 
+### 2026-10-10 审查问题修复完成（覆盖下方未修复记录）
+
+- 用户授权修复3项审查问题。abfa948已push并Windows pull，55项unittest全通过。新增8项覆盖计划重启不变/原译稿变化拒绝、音色与速度变更拒绝缓存、合法旧缓存免付费复用、部分旧任务绑定、渲染时新译稿到达立即准备、准备与渲染互斥。
+- build_episode_plan首次计划不可变；按当前译稿与参数核对，复用原参考片段，不随voice-bank新增角色改写。真实EP04重新准备后计划SHA完全不变。若真实输入变更，保留原计划并拒绝续跑，不提示以新目录绕过缓存。
+- synthesize新增synthesis-input.json和结果input_fingerprint，绑定unit/project/voice_id及参数；旧缓存核对身份字段与attempt-0请求指纹后复用。不一致或缺身份依据停止，不自动重新付费。Windows真实EP01–04共86个已生成配音单元全部读回/哈希核验/复用成功，无新增付费API调用。
+- production_queue用Popen监督渲染，期间每30秒扫描下一集新译稿；PreparationScheduler保留最多两路准备，成片仍逐集。准备阶段和渲染共用production.lock互斥，避免队列准备覆盖在用素材。
+- 已核验队列stage waiting后重启Codex-Carmilla-queue，部署生效；当前EP04已完成，页面4/32，EP05等待已审稿。生产/发布私密配置不变，无密钥/素材入Git。
+- 本次修复费用审查：不新增付费重试；改变音色/参数均拒绝混用；已完成音频可兼容读取。后续可用/review或codex review复审。
+
+### 2026-10-10 代码审查结果（尚未修复）
+
+- 主代理审查当前并发提交ea73df5..7eff531，未委派独立审核。结论：暂不放行无人值守断点恢复。业务代码未修改，Windows模拟复现无付费调用。
+- P1：队列重启重跑build_episode_plan会按已更新voice-bank移除新角色segments_seconds，改变计划fingerprint；render_episode拒绝已有断点。Windows复现Father参考[[0,12]]变成{}后报Episode input changed。新建输出目录会放弃原TTS缓存，不建议以此绕过错误。需持久化不可变计划，并核验实际源稿变化。
+- P2：synthesize复用result只校验音频文件hash，不校验当前voice_id；更正声音库后旧句仍返回旧音色，未完成句可能使用新音色。Windows复现请求new-voice返回old-voice。需绑定音色/文本/时码/合成参数指纹，变化应提示而非静默重合成。
+- P2：production_queue在subprocess.run渲染期间不扫描新译稿，仅进入渲染前提交当前/下一集准备；配音期间到达的下一集译稿不会立即并发准备。需独立持续扫描或非阻塞监督。
+- 既有47项测试通过不覆盖上述续跑计划变化、voice_id变更和运行中译稿到达；临时复现脚本Windows output/code-review-repro.py。建议优先修P1再修缓存身份与动态准备。
+
 ### 2026-10-10 并发、防重复克隆与持续队列
 
 - 用户要求Windows并发，同时千万不能重复clone浪费。代码7802bcf已GitHub push / Windows pull；Windows47项测试全部通过，包含真实独立进程争抢同角色仅一次模拟付费调用、超时跨集禁重提、旧回执恢复和准备阶段不调用配音。测试不调用付费接口。
