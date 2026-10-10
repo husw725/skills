@@ -2,6 +2,16 @@
 
 ## 当前接力记录
 
+### 2026-10-10 停止通知接入钉钉并恢复20（最新）
+
+- 用户明确要求以后停止时向自己的钉钉通知。已读/应用dingtalk-sender技能，用户提供机器人Webhook；秘密只在Windows output/dingtalk-notify.private.json，不写Git/交接/网页。没有加签secret；如果机器人设置变化要在私密配置补secret/keyword。
+- 此次实际19集成片，第20四句新增原对白的unknown source reader被计划准备拦截，并非6并发接口故障。翻译除31版本不匹配隔离外已完成（complete_with_review/pending31）。停止通知实际发出1条，钉钉API errcode0；watch-status sent1/failed0核验成功。不是仅模拟测试，也未向别的群发消息。
+- 6611100/fcf5a53已push/Windows pull；69项unittest通过。notification_watch.py独立Windows监控每30秒扫描生产/翻译stopped、生产心跳超120秒、当前集等待pending译稿。按worker/episode/kind/occurrence持久化去重（原因细化不重发，兼容旧回执），网络调用前保存sending，超时不自动刷屏重发；未知/失败计数保留。通知仅集数/简明原因/页面URL，不含字幕、日志或任务请求。
+- Windows计划任务Codex-Carmilla-Notify独立Running；AtLogOn用户trigger，失败最多3次间隔1分钟重启，ExecutionTimeLimit零，wrapper在忽略output/run-notification-watch.py。不依赖publisher/生产进程存活；主OS/Mac会话停止不会使它自动离线，Windows关机/无网络期间不能承诺可送达。
+- queue异常保存原episode等进度，build-plan失败明确关联实际失败集及安全public_detail，不再只有CalledProcessError丢集数。
+- EP20四句按Camila解释诅咒/Irina威胁的上下文选择已有Carmilla音色，原未知身份/台词/期限不变；EP21三句script明确WOODSMAN选择已有Woodsman；EP23倒计时选择原Narrator_EP01。production-casting各自完整speechunits fp绑定，没有改已存在plan、重克隆或绕过31匹配检查。此前已有19集缓存保留，已启动原6路顺序queue继续20。
+- 选角制作仍是工作草稿，未知源声音不是已听审。后续26/27/29/30还有源台词/说话人疑点，如停止应由此监控告警；31继续查匹配版本，不准仅字幕放行。下一步核验20的实际付费任务进展和notify进程；用codex review复审新增监控。发送授权限本项目任务停止告警，不把Webhook用于其他群/消息。
+
 ### 2026-10-10 提升并发至6，减少顺序队列空等（最新）
 
 - 用户要求更多并发加快。开工核验已有EP01–16真实成片，译稿已审至30；生产17因Two days left未知倒计时reader停止，翻译31主对白版本不匹配停止。没有活跃renderer需中断。
