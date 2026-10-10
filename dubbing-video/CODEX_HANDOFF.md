@@ -2,6 +2,15 @@
 
 ## 当前接力记录
 
+### 2026-10-10 第5集暂停诊断与翻译恢复（最新）
+
+- 用户反馈网页第5集停止。实际production queue已退出：build_episode_plan对3条日记unknown reader拒绝自动新克隆，既有防浪费约束正常生效。第5集36条已完成第二轮文本审核并原子暴露editorial，第6–8集也已完成editorial。
+- 后续Windows翻译在第9集因ChatGPT连接超时、workspace routing discovery failed退出，非已知认证失败。已重启唯一Codex-Carmilla-Translate-Remaining，复用5–8集，实际从9集生成；最后核验进程10852存在，9集初稿已有完整JSON输出，第二轮仍在处理，不能宣称第9集审核完成。
+- 已用异步问题询问用户第5集是否复用第3集已有旁白音色；尚无回复。属于配音选角，原声reader继续unknown，不可擅改为Mother或当作已听审。第5集配音队列保持停止，没有新增MiniMax调用；待用户选择后需实现显式复用映射并恢复队列，禁止随集新克隆。
+- 业务提交582c158已push/Windows pull：dashboard分别显示译稿审核数/当前翻译集与生产状态；editorial未export也显示已审，暂停时标任务暂停或翻译进行中·配音暂停。翻译fatal保留当前episode/pending而非丢弃进度。Windows60项unittest全通过；真实既有publication-state沿用，成片不重传。
+- 给queue-progress加入安全public_detail，说明unknown旁白选择原因，不更改停止stage。清理已核验的2个重复publisher Python子进程（停止计划任务不足以终止子进程），重启唯一发布worker PID30528；没动其他Python服务/付费渲染。
+- 页面仅上传既有成片和index，30秒刷新和10分钟历史保留；下一步收到选角回复后继续第5集配音。可用codex review复审本次代码。
+
 ### 2026-10-10 Windows已登录，译稿worker已接入（最新）
 
 - 用户已登录，SSH调用codex login status退出0核验。登录任务Codex-Carmilla-Login条目已清理，不复制/打印认证文件。
