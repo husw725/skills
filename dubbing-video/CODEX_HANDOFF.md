@@ -2,6 +2,22 @@
 
 ## 当前接力记录
 
+### 2026-10-11 按用户授权绕过Windows直接登记Review成果
+
+- 用户明确本轮不通过Windows做Review上传，覆盖此前本项目Mac代码/Windows业务规则在该登记任务上的限制。Windows留公司，Mac家中VPNppp0已连接且网关172.16.11.1可Ping，10.20.1.30 Ping/SSH均超时；不因旧Windowspending自行再起producer。新剧仍暂停。
+- 目标项目实际名PT Transalte、ID148（用户称Pt-translate），原项目59不修改。直接Review查询确认初始FINAL_CUT0/DOCUMENT0。用户说明200字符限制已优化；当前继续采用简明备注，实际创建接口assetId/parentAssetId要null，不把schema只返回字段设0。之前Windowscreate均失败，未声称上传成功。
+- 本轮Mac用忽略output一次性register_direct.py读取公开成果页32集永久S3链接；并行HEAD核验视频SHA256元数据及文件名hash/长度，再按publish_review.register统一读前/读后/持久化回执/global process lock顺序登记。已完整32/32 FINAL_CUT读回成功，assetIds2353–2384；每个视频tags均含Carmilla及pt-BR，所有URL仍现有S3，无重新传视频/渲染/克隆/付费TTS。
+- Mac真实回执output/review-publication/148/Carmilla/receipts.private.json、progress.json、final-readback.private.json；私有源数据/链接/回执不进公开Git。Windows此前失败回执另存未覆盖，不能将Mac已完成任务按旧Windows数据盲重试；任何后续续跑先查远端已登记素材。
+- 按原已授权交付方案继续DOCUMENT32最终SRT、巴葡实际配音台词合订DOCX1、交付说明DOCX1。SRT用公开URL并GET核验SHA/UTF8，DOCX只用交付SRT合订，不冒称完整分镜剧本，交付说明记录旧剧本版本问题/final.html来源及听审疑点。通过Review createFilePresignedUrl+PUT仅上传两份DOCX，接口code200/data=null/msg=预签名URL，私有helper适配msg，不把签名URL放用户页面/回执公开输出。最终DOCUMENT34项读回成功（32 SRT assetIds2385–2416、台词DOCX2417、交付说明DOCX2418）；连同32视频共66/66，progress.complete及final-all-readback.private.json落盘核验。两份公开DOCX GET下载SHA256/ZIP CRC核验通过。安全复核只向148创建授权交付素材，未向59写入、未调用audit/comment、未引入付费生成。所有新素材待审核，不继承英文审批或发评论。
+
+### 2026-10-10 Review巴葡独立项目迁移方案分析（尚未创建/上传）
+
+- 用户要求先分析MCP并规划将本次Carmilla英文转巴葡成果建独立review项目。只读initialize/tools-list/getProjects/getProjectReviewMaterials，未执行create/update/comment/audit/upload或建项目。新剧仍暂停。
+- 英文源项目59登记quantity36，但实际Review FINAL_CUT32，另DOCUMENT2、ART_DIRECTION57（character11/scene14/legacy final-video32）、子素材147。现交付32视频+32最终SRT，视频3093508762bytes。不能按登记36补假集；旧英文Review cut与网盘来源可能为不同剪辑时长，原剧本也有版本问题。
+- Review10tools可createReviewMaterial/createFilePresignedUrl/updateReviewMaterialVersion/query/comment/audit，生产11tools也没有createProject。建议独立项目Carmilla – Português (Brasil)，网页建项目需核查入口/权限，或补MCP创建项目；现有MCP本身不能完成建项目。
+- 计划新项目FINAL_CUT32使用现有S3永久成片URL，DOCUMENT32最终SRT及巴葡配音台词合订稿/交付说明，素材notes关联来源59及语言/集号/SHA、未母语听审。角色场景参考25卡可按源URL复用/引用，旧英文final-video卡不重当巴葡输出。API create文档category未列legacy final-video；SRT预览/格式支持及required含只返回字段需先小样实测，不能假称已验证。
+- 首集小样后查询readback，再批量32顺序注册、SHA+目标project+集号+类型持久化去重，歧义请求先查询不盲重试；返回新assetId不继承英文审批/评论，默认待审。原项目不写。本轮分析schema、素材快照、plan.json仅忽略output/review-upload-analysis，不进公开Git。
+
 ### 2026-10-10 成果页面增加逐集最终巴葡字幕下载
 
 - 新剧分享用户明确先停，未下载/翻译/配音；本轮仅上一部Carmilla收尾。已核验上一部32集成片render完成、publication-state videos32，用户授权将每集字幕增加到现有S3成果页面，覆盖旧“只成片”上传限制的这部分。
