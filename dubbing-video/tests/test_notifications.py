@@ -14,6 +14,8 @@ class NotificationTests(unittest.TestCase):
             save_json(root/'output/drama-01/queue-progress.json',{'stage':'stopped','episode':20,'updated_at':1})
             with patch('notification_watch.send') as sender:
                 tick(root,cfg);tick(root,cfg)
+                save_json(root/'output/drama-01/queue-progress.json',{'stage':'stopped','episode':20,'updated_at':1,'public_detail':'More precise explanation'})
+                tick(root,cfg)
                 self.assertEqual(sender.call_count,1)
             self.assertEqual(read_json(root/'output/notifications/watch-status.json')['sent'],1)
 

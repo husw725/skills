@@ -165,3 +165,5 @@ MCP认证 JSON 只放忽略目录；不要放入 plan 或 Git。API 返回的任
 严格校验时码/源文/剧本指纹与锁定名称后，原子提交editorial目录给生产队列。
 待核查error保留在output/translation-worker，不交给配音，后续集文本可继续准备。
 此worker只负责译稿，现有renderer独占声音克隆/语音生成及全剧共享回执。
+
+任务异常通知由 Windows `notification_watch.py` 独立监控，计划任务名 `Codex-Carmilla-Notify`。Webhook/可选加签 secret/机器人 keyword 只放 `output/dingtalk-notify.private.json`；不要提交或上传配置。监控每30秒检查生产、翻译停止，以及生产心跳超过2分钟未更新、当前集等待已标待审译稿的状态。每个停止事件发送一次 Markdown 通知；发送前持久化回执，网络超时时不会盲目重发。发送结果在 `output/notifications/watch-status.json`，含失败/未知计数，详细回执仅本机私密文件保存。Webhook由用户提供并授权本项目任务通知，通知只包含集数、简明原因及页面链接。模型输入和付费任务回执不出现在通知中。

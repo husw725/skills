@@ -64,8 +64,9 @@ def tick(root,config):
     with process_lock(folder/'delivery.lock',timeout=0):
         path=folder/'delivery-state.private.json';state=read_json(path) if path.exists() else {'events':{}}
         for event in events(root,time.time()):
-            key=fingerprint(event)
-            if key in state['events']:continue
+            def identity(value):return {k:value.get(k) for k in ('worker','episode','kind','occurrence')}
+            key=fingerprint(identity(event))
+            if key in state['events'] or any(fingerprint(identity(v['event']))==key for v in state['events'].values()):continue
             # Persist before the network call: a timeout must not spam retries.
             state['events'][key]={'event':event,'status':'sending','attempted_at':time.time()};save_json(path,state)
             number=event['episode'];episode=f'第 {number} 集' if number else '当前任务'
