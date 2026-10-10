@@ -156,3 +156,12 @@ MCP认证 JSON 只放忽略目录；不要放入 plan 或 Git。API 返回的任
 `aigc/drama/dubbing-video/carmilla-20261009/`。只上传已验证成片及单个index.html，
 原片、音轨、字幕、剧本、任务日志和密钥不上传。页面内嵌纯进度数据，每30秒刷新，
 每10分钟追加进度记录；新成片立即加入。全部32集发布后发布器自动停止。
+
+
+## Windows Codex 译稿
+
+`codex_translate_episode.py --codex-exe NATIVE_CODEX_EXE --start 5 --end 32`
+使用已登录Windows Codex CLI，读取匹配剧本与原字幕，输出初稿后再单独做语义审阅。
+严格校验时码/源文/剧本指纹与锁定名称后，原子提交editorial目录给生产队列。
+待核查error保留在output/translation-worker，不交给配音，后续集文本可继续准备。
+此worker只负责译稿，现有renderer独占声音克隆/语音生成及全剧共享回执。

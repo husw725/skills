@@ -2,6 +2,17 @@
 
 ## 当前接力记录
 
+### 2026-10-10 Windows已登录，译稿worker已接入（最新）
+
+- 用户已登录，SSH调用codex login status退出0核验。登录任务Codex-Carmilla-Login条目已清理，不复制/打印认证文件。
+- 新增codex_translate_episode.py，在Windows调用已安装原生codex.exe（路径npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe）；实际默认模型gpt-6.1-sol/provider openai，read-only、approval never，无MiniMax/MCP调用，提示词仅经stdin传入。
+- 每集读取匹配剧本及其DOCX真实SHA、原字幕、全剧锁定bible、邻集剧本及最近2集译文；CLI结构化初稿+第二次语义审阅，构造源文/剧本指纹并调用现有export_translation校验。完整校验通过后原子rename editorial目录供生产读取；未解决error隔离在translation-worker，禁止交给TTS。
+- Git业务提交1d32299已push/Windows pull；Windows59项测试全部通过。
+- 第5集初稿已真实生成：36条，major script match=true；Connor/Carmilla源字幕疑点标error，3条日记旁白reader unknown。第一次运行在初稿阶段过早拒绝error，未到审阅；已修复允许初稿疑点进入第二轮、审阅仍有error就标pending不生产，后续文本独立继续。未新增MiniMax克隆/配音调用。
+- 第5集复核现正Running：计划任务Codex-Carmilla-Translate，保存第一稿已复用，没有重做首轮。第6–32集后续任务Codex-Carmilla-Translate-Remaining已Running等待第5集审阅结束；若第5集文本有pending但复核正常结束，后续继续翻译，生产队列仍等已通过的第5集。CLI/校验异常则停，不重试盲重提。
+- Windows产物output/translation-worker/episode-05/{draft-response.json,codex.private.log,codex-review.private.log}，后续reviewed-response.json；日志不得整段打印（包含项目原文），不要上传S3。output/drama-01/translation-progress.json记录当前集和pending_episodes；producer仍使用原voice-bank/锁/回执。
+- 登录CLI到全流程转Windows已接入译稿生成，但不能称32集翻译完成或第5集生产已启动。下一步核验第5复核及后续任务；Connor等字幕疑点需实际原声核对，未知reader优先确定已有角色/声音，禁止随集新clone。当前4集成片可播放。
+
 ### 2026-10-10 Windows Codex CLI安装与登录等待
 
 - 用户明确授权在Windows安装Codex CLI，用户自己登录。Windows原有Node v24.13.0，npm前缀C:/Users/melot/AppData/Roaming/npm，系统Windows11 LTSC。
