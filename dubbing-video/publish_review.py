@@ -62,7 +62,12 @@ def register(client, spec, ledger, path):
     ledger['items'][identity]={'fingerprint':signature,'status':'submitting','material':spec,'started_at':time.time()}
     save_json(path,ledger)
     # Never retry a create after a timeout. Reconcile through a read on the next run.
-    result=client.call('createReviewMaterial',{'material':spec})
+    # The advertised schema requires even response-only DTO fields. Empty
+    # placeholders satisfy that schema; status 8 requests no approval.
+    material={'artDirectionSubMaterials':[],'assetId':0,'category':'','createdAt':'1970-01-01T00:00:00Z',
+        'documentKind':'DOCUMENT','durationSeconds':0,'note':'','parentAssetId':0,'status':8,
+        'tags':[],'updatedAt':'1970-01-01T00:00:00Z','version':1,**spec}
+    result=client.call('createReviewMaterial',{'material':material})
     ledger['items'][identity].update(status='awaiting_readback',response=result)
     save_json(path,ledger)
     row=None
@@ -126,6 +131,7 @@ def main():
     p.add_argument('--config',required=True,type=Path);p.add_argument('--project-id',required=True,type=int)
     p.add_argument('--project-name',required=True);p.add_argument('--film',required=True,choices=['Carmilla'])
     p.add_argument('--source-project-id',required=True,type=int);p.add_argument('--limit',type=int)
+    p.add_argument('--videos-only',action='store_true')
     args=p.parse_args()
     if sys.platform!='win32':p.error('Business registration runs on Windows')
     project=Path(__file__).resolve().parent;folder=project/f'output/review-publication/{args.project_id}/{args.film}'
@@ -138,6 +144,7 @@ def main():
         target=[r for r in projects if r['id']==args.project_id and r['name']==args.project_name]
         if len(target)!=1:raise ValueError('Explicit target project identity not found')
         specs=inventory(project,args.film,args.source_project_id,args.project_id,folder)
+        if args.videos_only:specs=[s for s in specs if s['gateType']=='FINAL_CUT']
         save_json(folder/'inventory.private.json',specs)
         for index,spec in enumerate(specs[:args.limit] if args.limit else specs,1):
             spec=dict(spec)
@@ -162,4 +169,5 @@ if __name__=='__main__':
     try:main()
     except Exception as e:
         print('REVIEW_REGISTRATION_STOPPED',type(e).__name__,flush=True)
+        if isinstance(e,(RuntimeError,ValueError)) and 'https://' not in str(e):print(str(e),flush=True)
         raise SystemExit(1)
