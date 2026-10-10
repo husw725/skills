@@ -24,7 +24,7 @@ class EditorialReviewRequired(ValueError):
 
 def validate_response(data,rows,allow_errors=False):
     ids=[r['id'] for r in rows]
-    if not data.get('matched_main_dialogue'):raise ValueError('Screenplay cut mismatch requires review')
+    if not data.get('matched_main_dialogue'):raise EditorialReviewRequired('Screenplay cut mismatch requires review')
     if [c['id'] for c in data['cues']]!=ids:raise ValueError('Codex changed, omitted, or reordered cue IDs')
     for cue in data['cues']:
         for key in ('translation','speaker','script_evidence'):

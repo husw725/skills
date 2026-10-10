@@ -67,6 +67,13 @@ class ImmutablePlanTests(unittest.TestCase):
 
 
 class SynthesisBindingTests(unittest.TestCase):
+    def test_runtime_concurrency_does_not_change_plan_or_synthesis_identity(self):
+        plan={'tts_workers':3};before=fingerprint(plan)
+        self.assertEqual(dub.runtime_workers(argparse.Namespace(tts_workers=6),plan),6)
+        self.assertEqual(fingerprint(plan),before)
+        self.assertEqual(dub.runtime_workers(argparse.Namespace(),plan),3)
+        with self.assertRaises(ValueError):dub.runtime_workers(argparse.Namespace(tts_workers=7),plan)
+
     def unit(self):
         return {'id':'u1','cue_ids':['c1'],'production_voice':'Laura','translation':'Oi.',
                 'start':0.,'end':2.,'emotion':'calm','speed':1.05}

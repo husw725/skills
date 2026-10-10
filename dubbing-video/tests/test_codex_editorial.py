@@ -3,7 +3,7 @@ from unittest.mock import patch
 from pathlib import Path
 import tempfile
 
-from codex_translate_episode import call_codex,validate_response
+from codex_translate_episode import EditorialReviewRequired,call_codex,validate_response
 
 
 class CodexEditorialTests(unittest.TestCase):
@@ -19,6 +19,10 @@ class CodexEditorialTests(unittest.TestCase):
     def test_unresolved_error_is_not_published(self):
         data=self.response();data['cues'][0]['review_issues']=[{'severity':'error','reason':'wrong cut'}]
         with self.assertRaises(ValueError):validate_response(data,[{'id':'u1'}])
+
+    def test_cut_mismatch_is_quarantined_without_approving_it(self):
+        data=self.response();data['matched_main_dialogue']=False
+        with self.assertRaises(EditorialReviewRequired):validate_response(data,[{'id':'u1'}],allow_errors=True)
 
     def test_first_pass_error_can_reach_review_but_not_production(self):
         data=self.response();data['cues'][0]['review_issues']=[{'severity':'error','reason':'uncertain vocative'}]

@@ -50,14 +50,14 @@ class PreparationScheduler:
                 self.futures[candidate]=self.pool.submit(prepare,candidate,self.ffmpeg,self.bible)
 
 
-def supervise_renderer(command,log,scheduler,episode,state):
+def supervise_renderer(command,log,scheduler,episode,state,tts_workers=3):
     # A blocking run() missed translations delivered during TTS. Continue
     # discovering work while the subprocess owns its production/paid-call locks.
     process=subprocess.Popen(command,stdout=log,stderr=log)
     while process.poll() is None:
         scheduler.scan(episode)
-        save_json(state,{'episode':episode,'stage':'rendering','detail':'逐句配音（三路并发）与合成','updated_at':time.time()})
-        time.sleep(30)
+        save_json(state,{'episode':episode,'stage':'rendering','detail':f'逐句配音（{tts_workers}路并发）与合成','tts_workers':tts_workers,'updated_at':time.time()})
+        time.sleep(5)
     if process.returncode:
         raise subprocess.CalledProcessError(process.returncode,command)
 
@@ -66,6 +66,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--ffmpeg',required=True,type=Path);p.add_argument('--mcp-config',required=True,type=Path)
     p.add_argument('--start-episode',type=int,default=1)
+    p.add_argument('--tts-workers',type=int,choices=range(1,7),default=3)
     p.add_argument('--bible',type=Path,default=Path('output/drama-01/episode-01/translation-v2/series-bible.json'))
     args=p.parse_args()
     if sys.platform!='win32':p.error('Production runs on Windows')
@@ -85,11 +86,12 @@ def main():
                     future.result();break
                 reason='等待已审译稿' if not future else ('等待前集完成' if not prior_ready else '准备素材与译稿')
                 save_json(state,{'episode':episode,'stage':'waiting','detail':reason,'updated_at':time.time()})
-                time.sleep(30)
-            save_json(state,{'episode':episode,'stage':'rendering','detail':'逐句配音（三路并发）与合成','updated_at':time.time()})
+                time.sleep(5)
+            save_json(state,{'episode':episode,'stage':'rendering','detail':f'逐句配音（{args.tts_workers}路并发）与合成','tts_workers':args.tts_workers,'updated_at':time.time()})
             with (folder/'queue-render.log').open('a',encoding='utf-8') as log:
                 supervise_renderer([sys.executable,'-u','dub_episode.py',str(folder/'dub-plan-v1.json'),
-                                    '--mcp-config',str(args.mcp_config),'--ffmpeg',str(args.ffmpeg)],log,scheduler,episode,state)
+                                    '--mcp-config',str(args.mcp_config),'--ffmpeg',str(args.ffmpeg),
+                                    '--tts-workers',str(args.tts_workers)],log,scheduler,episode,state,args.tts_workers)
             if not rendered(folder):raise RuntimeError('Renderer did not produce a verified report')
         save_json(state,{'stage':'complete','updated_at':time.time()})
 

@@ -288,6 +288,8 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('plan',type=Path);parser.add_argument('--mcp-config',required=True,type=Path)
     parser.add_argument('--ffmpeg',required=True,type=Path)
+    parser.add_argument('--tts-workers',type=int,choices=range(1,7),default=None,
+                        help='Runtime concurrency override; preserves persisted plan/cache identity')
     args=parser.parse_args()
     if sys.platform!='win32':parser.error('Business execution is Windows-only')
     plan=read_json(args.plan)
@@ -297,7 +299,15 @@ def main():
         render_episode(args,plan)
 
 
+def runtime_workers(args,plan):
+    workers=getattr(args,'tts_workers',None)
+    if workers is None:workers=int(plan.get('tts_workers',3))
+    if not 1<=workers<=6:raise ValueError('Use 1–6 TTS workers per episode')
+    return workers
+
+
 def render_episode(args,plan):
+    workers=runtime_workers(args,plan)
     assets={k:Path(v) for k,v in plan['assets'].items()}
     for k in ('video','bgm','sfx','source_audio'):
         if not assets[k].is_file():raise ValueError('Missing '+k)
@@ -314,11 +324,11 @@ def render_episode(args,plan):
     bank=ensure_voices(plan,assets,root,client,args.ffmpeg)
     from concurrent.futures import ThreadPoolExecutor
     import threading
-    workers=int(plan.get('tts_workers',3))
-    if not 1<=workers<=3:raise ValueError('Use 1–3 TTS workers per episode')
+    worker_context=threading.local()
     progress_lock=threading.Lock();completed=[u["id"] for u in units if (root/"utterances"/u["id"]/"result.json").exists()]
     def produce(unit):
-        local_client=Mflix(args.mcp_config)
+        if not hasattr(worker_context,'client'):worker_context.client=Mflix(args.mcp_config)
+        local_client=worker_context.client
         result=synthesize(local_client,unit,bank['voices'][unit['production_voice']]['voice_id'],root/'utterances',plan['project_id'],args.ffmpeg)
         with progress_lock:
             if unit['id'] not in completed:completed.append(unit['id'])
