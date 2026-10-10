@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from dub_episode import ensure_voices
 from translate import read_json, save_json
@@ -72,3 +72,16 @@ dub.ensure_voices(plan,{'source_audio':Path('unused')},folder,Client(),None)
                 with self.assertRaisesRegex(RuntimeError,'Another worker'):
                     with process_lock(path,timeout=0):pass
             with process_lock(path,timeout=0):pass
+
+    def test_clone_timeout_blocks_retry_in_different_episode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'episode-01';folder.mkdir()
+            client=Mock();client.upload.return_value='https://example.invalid/ref.wav'
+            client.call.side_effect=TimeoutError('fixture: accepted then disconnected')
+            with patch('dub_episode.make_reference',return_value=12):
+                with self.assertRaises(TimeoutError):
+                    ensure_voices(self.plan(root),{'source_audio':Path('unused')},folder,client,None)
+            with self.assertRaisesRegex(RuntimeError,'Ambiguous earlier clone'):
+                ensure_voices(self.plan(root,2),{},root/'episode-02',client,None)
+            self.assertEqual(client.call.call_count,1)
+            self.assertEqual(client.upload.call_count,1)

@@ -77,6 +77,9 @@ def main():
 if __name__=='__main__':
     try:main()
     except Exception as exc:
+        if isinstance(exc,RuntimeError) and 'production-queue.lock' in str(exc):
+            # A duplicate scheduler must not overwrite the active owner's state.
+            raise
         save_json(Path('output/drama-01/queue-progress.json'),{'stage':'stopped','detail':type(exc).__name__,
                    'message':str(exc) if isinstance(exc,(ValueError,RuntimeError)) else 'See private runner log',
                    'updated_at':time.time()})
