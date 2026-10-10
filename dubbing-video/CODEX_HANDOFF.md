@@ -2,6 +2,19 @@
 
 ## 当前接力记录
 
+### 2026-10-10 成果页面增加逐集最终巴葡字幕下载
+
+- 新剧分享用户明确先停，未下载/翻译/配音；本轮仅上一部Carmilla收尾。已核验上一部32集成片render完成、publication-state videos32，用户授权将每集字幕增加到现有S3成果页面，覆盖旧“只成片”上传限制的这部分。
+- 提交bd3e023已Mac push/Windows pull；publish_dashboard从render-report.utterances实际配音文本/制作窗口导出UTF-8 SRT，绑定output_sha256，保留旧videos/history状态并增加subtitles。字幕不同视频版本不展示；已验证上传按SRT内容SHA去重，S3 HEAD核验长度、内容SHA及video-sha256，Content-Disposition attachment确保下载。未重传成片/重渲染/新增MiniMax费用。
+- dashboard选择集数后出现下载巴葡字幕（SRT），切换和刷新更新链接，不把内部文件路径/认证数据放网页。SRT按最终配音单元导出，可能合并原字幕连续分句，32含拆分后的两人对白；属于制作时间窗口，未声称词级精准或母语听审完成。
+- Windows针对dashboard6项测试通过，真实--once已发布全部32字幕和新版index。Windows Chrome实际选择32：按钮inline-block、下载文件名Carmilla_EP32_pt-BR.srt、S3链接正确、32按钮齐全。公开GET全部32文件的SHA/UTF-8/attachment/对应成片版本核验进行中，结果随后补记。通用代码仅发布字幕，不包含新剧任务。安全复核仅新增最终字幕公开对象，密钥不入Git，已有视频缓存不变。可用codex review复审。
+
+### 2026-10-10 最后一集双说话人字幕已拆分并恢复
+
+- 用户问最后一集状态。核验31集已发布，32准备失败：两条原字幕e32-5/6各含Carmilla和Laura对白，复合speaker被builder当新角色，参考不足10sec而停止。32尚无plan/paid submission，没有新增复合角色克隆。notify累计sent4/failed0。
+- 仅本剧项目数据修正，通用代码不变。final.html EP32 shots21-23明确两人交替；源声ffmpeg静音检测给出15.381396–16.028125、18.359042–19.003417停顿，制作分句边界取15.7和18.65。未冒称原声听审/精确词级对齐。原28条字幕文件不变，editorial-before-dialogue-split备份完整；派生制作source把两cue拆为5a/5b、6a/6b，逐条保留original_subtitle_cue，原其余26条不变，译文内容不增减，现30句。
+- screenplay-context添加本次分句依据与finalSHA，分别Carmilla/Laura，audio_verified仍false；重新审核/绑定源文及context fingerprint。Windows导出30句成功、22条需时长或来源复核。dialogue-split-review.json保留原cue、边界、静音证据；私有一次性处理脚本仅忽略output，不提交Git。恢复原唯一Codex-Carmilla-queue六并发，复用8个bank声音；下一步核验32真实合成、上传和完成状态，不能把启动称全剧完成。
+
 ### 2026-10-10 第25集音频下载失败已安全续跑（最新）
 
 - 用户问配音为什么停止。核验已有24集render-report，queue停25；真实错误episode25/queue-render.log：e25-utterance-001 audio download failed; saved task can resume。其余19/20单元已完成，没有任何submission-pending文件，缺失句已有attempt0任务37317回执。不是选角/剧本匹配，也没有已证实的6并发服务限流。
