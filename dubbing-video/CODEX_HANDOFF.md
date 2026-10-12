@@ -2,6 +2,16 @@
 
 ## 当前接力记录
 
+### 2026-10-12 专业Review反馈已完整读取并形成改进规范
+
+- 用户问巴葡差异并要求读取专业翻译评论、分析如何优化。只读Review148当前Carmilla FINAL_CUT32和对照文档2419的评论，按pageSize100分页并保存一级/回复原数据，原记录40条唯一commentId，涉及24集，对照文档无评论。原评论均来自同一API署名，专业身份依据用户说明，不把API署名本身当资质验证。无评论集不代表通过。
+- 反馈快照output/review-feedback/2026-10-12；comments-all.private.json及逐asset文件原文保存。独立audit_review_feedback只读复核40/24/分类与代码证据：发音22、节奏/语速7、情绪7、音色2、背景/混音4，为可重复多标签共42，暂无评论明确指出词义误译。API未提供音画时间戳，“第N轴”不得硬映射第N字幕；同文不同ID的13/31评论分别保留。
+- repair-plan.json+repair-checklist.csv保存40条专业原文、引用短语定位候选、类别、处理方案、未听审标记。匹配候选依据最终SRT（非原编号），缺短语保持定位待确认。仅分析，未改最终译稿/SRT/成片、未调用付费克隆/TTS、未发评论/审核/上传新素材。
+- 明确EP2 Quinze anos文字本身没问题，评审指出anos欧葡发音，应口音小样而非错拼改译文。EP11 Tentei transferi-la的-la指maldição，评论发音模糊；与há quinze anos连续，可先核完整意群，不能凭此说原译义错。EP29引用威胁句原窗78.2–80.566共2.366sec，候选Que tocante. Mato todos vocês esta noite.尚未采用/测时，需剧本讽刺威胁语域及母语审阅；不承诺精简天然适配。EP29 Quantos anos既有ASR疑点是额外检查，不归因本轮评审。
+- EP13英语残留与31背景杂音优先分对白/BGM/SFX核听；代码仅混dub+b+s、未混source_audio，故不能断言是原音轨直接漏出，可能背景轨或生成音，成因未听审。短喊Camila/Pai/Não需明确表演强度与音画依据，auto并非验收。
+- 官方MiniMax同步TTS文档核验language_boost列Portuguese无独立pt-BR枚举，支持text内IPA覆盖及停顿标签；当前网关cachedschema描述也可IPA，但未实测巴葡音素/新参数。dub_episode确实languageBoost=Portuguese/prompt=None、speed可到1.6且atempo再拟合；editorial把proposed_speech_groups=[]。这些是机制风险而非已证明所有音频错误成因。不得把音乐prompt当巴葡口音指令或凭空设置BrazilianPortuguese枚举。
+- AGENTS.md新增后续巴葡译稿/评审规范：自然口语与角色语域、完整意群、等义精简、文本与声音分层、正确拼写、真实情绪依据、comment定位/去重边界、现有声音复用小样验收。无业务代码改动、不改变已付费计划指纹；本次数据分析独立审核放行，不代表成片母语验收通过。
+
 ### 2026-10-11 英文原字幕/最终巴葡译文左右对照文档已上传
 
 - 用户要求整理左原字幕、右译文的一个文档并直接上传Review Document。本轮继续用户授权Mac直连Review，未等待/使用Windows；不调用付费生成或改成片。
