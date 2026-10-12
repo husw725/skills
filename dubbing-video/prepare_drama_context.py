@@ -90,4 +90,13 @@ def main():
         print('SOURCE_CONTEXT_READY',30,len(result['characters']),len(result['unresolved_issues']),flush=True)
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    try:main()
+    except Exception as e:
+        if not (isinstance(e,RuntimeError) and 'context.lock' in str(e)):
+            out=Path(__file__).resolve().parent/'output/drama-02/context-preparation'
+            tail=(out/'codex.private.log').read_text(encoding='utf-8',errors='replace')[-1000:] if (out/'codex.private.log').exists() else ''
+            save_json(out/'progress.json',{'stage':'source_context_retrying' if 'Selected model is at capacity' in tail else 'source_context_stopped',
+                'reason':'model_at_capacity' if 'Selected model is at capacity' in tail else type(e).__name__,
+                'translation_enabled':False,'updated_at':time.time()})
+        raise
