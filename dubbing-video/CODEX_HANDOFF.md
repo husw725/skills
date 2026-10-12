@@ -2,6 +2,20 @@
 
 ## 当前接力记录
 
+### 2026-10-12 第二部仅前置准备已完成（等待ElevenLabs MCP）
+
+- 最新授权覆盖第二部旧暂停状态，仅恢复素材下载、字幕整理及原文翻译前准备；正式巴葡台词翻译、克隆、TTS保持关闭，等待生产MCP支持ElevenLabs。第一部成果与生产状态不改动。
+- 第二部确认为《Lady Chatterley’s Lover》，30集，四类素材共120文件（无字幕有BGM视频、纯BGM、纯音效、原SRT）。Windows下载完成，逐文件大小/SHA256读回通过；30集视频/BGM/SFX完整解码及分析音频提取完成，无时长差/相同轨道告警。这不等于原声听审或起点同步批准，视频原声含BGM，不是已验证纯净对白。
+- Windows input/drama-02/保存原素材；output/drama-02/保存准备输出。30集602条源字幕，1/3/7/14/20/21/22/23集按原时码排序规范化，原编号/正文/时码保留。normalized SRT、dialogue.en.json、series-source.txt和subtitle-manifest.json已保存。
+- 两份Review剧本已下载并解析：项目94/asset322、版本2、平台status10（不解释为批准），48页47841字符，SHA256 d8500a4a9d587fa9ab69771b6ee05ef8a386d4a46ba2590f77df2814a721a045；项目124/asset1223、版本1/status8，14页18536字符，SHA256 d865a01f061881d0cb0ca951ac58970cf40e818d7c872a68d535be99eda31080。来源清单仅保存ID/版本/hash，不写签名链接/认证。
+- 全30集字面证据均更接近asset322：27集主要对白匹配，16/28/30集部分匹配。EP01不少于4词的候选对白23/23匹配322、8/23匹配1223；此为启发式文字证据，不代表602条全部逐句核验。不得从剧本补写成片字幕缺失内容。
+- context-preparation/pretranslation-context.json为源语言准备草案：6个已识别角色加unknown占位、13条术语、13条连续性说明、10条全局待核项；包括16/28/30截句、13顺序差异、24重复句、river/lake与Sir/Lord差异及未知呼救/感叹。formal_translation_enabled/clone_enabled/tts_enabled、per_cue_reviewed、speaker_audio_verified均false，不能作为render已审核上下文。
+- 原文分析由Windows本机Codex读取内联实际字幕/剧本文本完成，保持-a never和read-only沙箱。此前读取工具遭策略拒绝的无证据草案已隔离至context-preparation-before-inline-source，不用于生产；新流程绑定输入/版本/正文/策略指纹并拒绝整体空证据，未降级审批或沙箱。
+- Windows轻量准备包 output/drama-02/Lady_Chatterleys_Lover_pretranslation_inputs.zip：619075字节、71文件，SHA256 77289692b691b3bfc4a70a887341e2b3a8cda85972071635466ca2c5ee3ad01e，ZIP CRC通过。含规范字幕、原文语料、上下文草案、两版剧本及来源、媒体manifest；不含大体积媒体、private签名链接或认证。仅本地保存，未上传S3/Review。
+- 代码已push/Windows pull至da20410；prepare_drama_assets.py项目锁/清单指纹/4MiB精确Range断点续传/SHA复用核验，prepare_drama_context.py源语言分析/指纹/证据校验。新增5项下载边界测试Mac和Windows通过，不调用付费生成。有限计划任务Codex-LadyChatterley-Preparation、Codex-LadyChatterley-SourceContext产物状态均complete；未启用持续翻译或生产队列。
+- 依共享工作区规则由audit_review_feedback独立只读审计，计数、待核项与代码安全通过，放行准备工作、不放行翻译/配音/逐句审核完成的说法。独立审计范围是上下文JSON和代码；媒体120SHA/30全解码由主代理Windows读回核验。Mac只读核验副本output/drama-02-preparation/verification/，preparation-summary.json保存最终状态。
+- 下一步待ElevenLabs MCP支持后再适配并验证接口；先核对字幕疑点、原声身份/情绪与逐句剧本证据，重新审核上下文，才做巴葡译稿与代表性配音小样，不能复用本准备草案作为已审核断点。代码审查入口codex review或/review。
+
 ### 2026-10-12 ElevenLabs巴葡能力已核验（未实测）
 
 - 用户要求查ElevenLabs有无巴葡。官方当前Dubbing overview明确v2 Alpha支持target_language pt-BR/pt-PT，v1不支持地区标签；原始TTS convert的language_code是ISO639-1且multilingual_v2不支持此参数，不能把v2方言标签直接用于普通TTS。
