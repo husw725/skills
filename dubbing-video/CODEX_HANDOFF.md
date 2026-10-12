@@ -2,6 +2,13 @@
 
 ## 当前接力记录
 
+### 2026-10-12 ElevenLabs巴葡能力已核验（未实测）
+
+- 用户要求查ElevenLabs有无巴葡。官方当前Dubbing overview明确v2 Alpha支持target_language pt-BR/pt-PT，v1不支持地区标签；原始TTS convert的language_code是ISO639-1且multilingual_v2不支持此参数，不能把v2方言标签直接用于普通TTS。
+- 官方accent FAQ说非目标语言原生声音可保留原口音或漂移；Dubbing v2克隆强度越高也可能带入原口音。支持巴葡选项不代表克隆英语原音就必然通过专业听审。
+- v2 API译稿编辑/重生成目前仅Enterprise，v2网页无编辑器；保留本项目现有定稿的导入方式还须单独核验，不把所有导入一概说Enterprise。v2视频是预览，若测试生产仍下载音频回混原片。仅查官方文档，无付费调用/clone/账号操作/后端迁移。
+- 官方链接：elevenlabs.io/docs/overview/capabilities/dubbing、/docs/api-reference/text-to-speech/convert、/docs/help-center/troubleshooting/why-does-my-voice-change-accent-or-language。独立audit_review_feedback复核放行，收窄导入权限和口音保证措辞。建议对既有评审发音/赶语速/强情绪三类小样盲听，尚未实测，不宣称优于MiniMax。
+
 ### 2026-10-12 专业Review反馈已完整读取并形成改进规范
 
 - 用户问巴葡差异并要求读取专业翻译评论、分析如何优化。只读Review148当前Carmilla FINAL_CUT32和对照文档2419的评论，按pageSize100分页并保存一级/回复原数据，原记录40条唯一commentId，涉及24集，对照文档无评论。原评论均来自同一API署名，专业身份依据用户说明，不把API署名本身当资质验证。无评论集不代表通过。
