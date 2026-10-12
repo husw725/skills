@@ -41,26 +41,35 @@ def download(item,url,dest,receipt=None):
         return {'path':str(dest),'bytes':expected,'sha256':digest,'download_verified':True}
     if not isinstance(url,str) or not url.startswith('https://'):raise ValueError('HTTPS source download required')
     part=dest.with_name(dest.name+'.download.part')
-    for attempt in range(3):
+    session=requests.Session();failures=0
+    while not part.exists() or part.stat().st_size<expected:
         offset=part.stat().st_size if part.exists() else 0
-        if offset==expected:break
         if offset>expected:raise ValueError('Partial download exceeds source size')
-        headers={'User-Agent':'netdisk;P2SP;3.0.0.1','Referer':'https://pan.baidu.com/'}
-        if offset:headers['Range']=f'bytes={offset}-'
+        last=min(expected-1,offset+4*1024*1024-1)
+        headers={'User-Agent':'netdisk;P2SP;3.0.0.1','Referer':'https://pan.baidu.com/',
+                 'Range':f'bytes={offset}-{last}'}
         try:
-            with requests.get(url,headers=headers,stream=True,timeout=(15,90)) as r:
+            with session.get(url,headers=headers,stream=True,timeout=(15,90)) as r:
                 r.raise_for_status()
-                if offset and r.status_code==206:
-                    if not r.headers.get('Content-Range','').startswith(f'bytes {offset}-'):raise ValueError('Invalid resumed range')
-                    mode='ab'
-                else:mode='wb'
+                if r.status_code==206:
+                    content_range=r.headers.get('Content-Range','')
+                    m=re.fullmatch(r'bytes (\d+)-(\d+)/(\d+)',content_range)
+                    if not m or int(m[1])!=offset or int(m[2])>last or int(m[3])!=expected:
+                        raise ValueError('Invalid resumed range')
+                    mode='ab' if offset else 'wb';range_end=int(m[2])+1
+                elif r.status_code==200 and not offset:
+                    mode='wb';range_end=expected
+                else:raise ValueError('Source ignored resumed range; partial preserved')
                 with part.open(mode) as f:
                     for chunk in r.iter_content(1024*1024):
                         if chunk:f.write(chunk)
-            if part.stat().st_size!=expected:raise ValueError('Downloaded file size mismatch')
-            break
+            if part.stat().st_size!=range_end:raise ValueError('Downloaded range size mismatch')
+            failures=0
         except requests.RequestException:
-            if attempt==2:raise RuntimeError('Source download failed; partial retained, refresh source links if expired') from None
+            failures+=1
+            if failures>=3:raise RuntimeError('Source download failed; partial retained, refresh source links if expired') from None
+            time.sleep(2**failures)
+    session.close()
     if not part.exists() or part.stat().st_size!=expected:raise ValueError('Incomplete source download')
     digest=sha(part);part.replace(dest)
     return {'path':str(dest),'bytes':expected,'sha256':digest,'download_verified':True}
@@ -90,7 +99,7 @@ def main():
         persist()
         jobs={}
         order=sorted(items,key=lambda i:(0 if asset_scope(i)[1]=='subtitle' else asset_scope(i)[0],{'subtitle':0,'video':1,'bgm':2,'sfx':3}[asset_scope(i)[1]]))
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        with ThreadPoolExecutor(max_workers=2) as pool:
             for item in order:
                 episode,kind=asset_scope(item);identity=f'{episode:02d}:{kind}'
                 dest=(source/'subtitles/original' if kind=='subtitle' else source/f'episode-{episode:02d}')/item['name']
@@ -125,4 +134,8 @@ if __name__=='__main__':
     try:main()
     except Exception as e:
         print('SOURCE_PREPARATION_STOPPED',type(e).__name__,flush=True)
+        if not (isinstance(e,RuntimeError) and 'preparation.lock' in str(e)):
+            state_path=Path(__file__).resolve().parent/'output/drama-02/preparation-progress.json'
+            old=read_json(state_path) if state_path.exists() else {}
+            save_json(state_path,{**old,'stage':'stopped','error_type':type(e).__name__,'updated_at':time.time()})
         raise
