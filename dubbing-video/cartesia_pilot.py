@@ -155,8 +155,29 @@ def voices(client, cfg, ffmpeg):
         return bank
 
 
+def validate_config(cfg):
+    expected = {
+        'original_plan': 'output/drama-01/episode-02/dub-plan-v1.json',
+        'source_subtitles': 'output/drama-01/episode-02/editorial/source.json',
+        'screenplay_context': 'output/drama-01/episode-02/editorial/screenplay-context.json',
+        'subtitles': 'output/drama-01/episode-02/translation/translated.pt-BR.srt',
+        'output_dir': 'output/drama-01/episode-02/cartesia-v2-pilot',
+        'voice_bank_dir': 'output/drama-01/cartesia-pilot-voices',
+    }
+    for key, value in expected.items():
+        if Path(cfg[key]).resolve() != Path(value).resolve():
+            raise ValueError('Pilot path outside fixed isolated scope: '+key)
+    if (cfg['episode'], cfg['project_id'], cfg['review_project_id'], cfg['review_asset_id']) != (2, 59, 148, 2354):
+        raise ValueError('Pilot scope differs')
+    if set(cfg['references']) != {'Laura', 'Carmilla'} or cfg['smoke_role'] != 'Carmilla' or cfg['smoke_text'] != 'Quinze anos.':
+        raise ValueError('Unexpected pilot voice or smoke scope')
+    if len(cfg['groups']) != 17:
+        raise ValueError('Pilot must have 17 reviewed groups')
+
+
 def execute(args):
     cfg = read_json(args.config)
+    validate_config(cfg)
     if cfg['episode'] != 2 or cfg['project_id'] != 59 or cfg['review_project_id'] != 148:
         raise ValueError('This pilot is scoped to Carmilla EP02 and its existing Review project')
     root = Path(cfg['output_dir'])
@@ -172,10 +193,18 @@ def execute(args):
         rows = read_json(cfg['source_subtitles'])['segments']
         context = load_screenplay_context(cfg['screenplay_context'], rows)
         rows_by_id = {r['id']: r for r in rows}
+        planned_ids = [i for u in plan['units'] for i in u['cue_ids']]
+        if len(rows) != 25 or len(planned_ids) != 25 or set(planned_ids) != set(rows_by_id):
+            raise ValueError('Pilot must cover all 25 original cues exactly')
+        if set(plan['voices']) != {'Laura', 'Carmilla'}:
+            raise ValueError('Unexpected plan voice set')
         for u in plan['units']:
             if len(u['cue_ids']) != 1 or rows_by_id[u['cue_ids'][0]]['text'] != u['text']:
                 raise ValueError('Pilot original dialogue differs from reviewed source')
             row = rows_by_id[u['cue_ids'][0]]
+            note = context['episodes'][row['episode']]['cue_annotations'][row['id']]
+            if u['production_voice'] != note['speaker'] or u['screenplay_annotations'] != [note]:
+                raise ValueError('Plan speaker or screenplay evidence differs from reviewed context')
             if row['start'] != u['start'] or row['end'] != u['end']:
                 raise ValueError('Pilot original timecode changed')
         units = grouped_units(plan, cfg['groups'])
@@ -269,7 +298,9 @@ def main():
     try:
         execute(args)
     except Exception as exc:
-        root = Path(read_json(args.config)['output_dir'])
+        cfg = read_json(args.config)
+        validate_config(cfg)
+        root = Path(cfg['output_dir'])
         root.mkdir(parents=True, exist_ok=True)
         if not str(exc).startswith('Another worker holds '):
             save_json(root/'progress.json', {'status': 'stopped', 'reason': type(exc).__name__, 'updated_at': time.time()})
