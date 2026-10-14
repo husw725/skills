@@ -2,6 +2,54 @@
 
 ## 当前接力记录
 
+### 2026-10-14 Cartesia代表集试制完成，Review EP02 v2已上传
+
+- 最新明确授权：测试MCP新克隆平台，做代表性一集并上传Review v2供专业复审。选第一部Carmilla EP02（评审7326指出Quinze anos欧葡发音），不恢复第二部或全季生成。原25条剧本优化译文、原字幕文本/时码保持；同角色连续分句审核为17个合成意群。
+- 实时MCP核验新增uploadVoice(platform minimax/cartesia)，generateAudio新增sonic-3.6和language地区字段。使用Cartesia sonic-3.6、language pt-BR；两个角色Laura/Carmilla复用既有源参考音频，各新增一次Cartesia克隆，独立全剧bank保存。旧MiniMax声音/回执/成片不改。新clone返回voiceId但language/description为空、没有accents信息，不能认定已添加巴西口音。当前MCP未暴露AddAccents；英语原声clone可能地区回退，需要母语听审。
+- Windows输入config output/cartesia-pilot-config.json；新声音及不可重复提交回执 output/drama-01/cartesia-pilot-voices；单集 output/drama-01/episode-02/cartesia-v2-pilot。clone/reference/request/input指纹、全局bank锁、单集锁、每次receipt锁/pending保证不自动重复付费。克隆与生成均一次提交，歧义停止核查。
+- 成功2次新平台clone、18个生成任务（1个Quinze anos小样+17个意群，task37816–37833），全部状态2。费用金额服务未返回，不声称免费。Cartesia巴葡情绪参数不受已验证支持，本次不传MiniMax emotion；报告emotion_control_applied=false，剧本表演意图仅作听审依据。
+- 首次后处理发现4组过度压缩；只复用已有18个任务重新拟合/混音，没有新增付费调用。e02-2、e02-3、e02-6/7、e02-16分别借后方对白空隙0.277/0.307/1.190/1.410秒，不跨下一组起点，原字幕不改。空隙未经听审不能称静音；4组音画节奏仍待审。最终高压缩>1.25告警0，最大atempo1.238；原首次报告另存render-report-before-gap-adjustment.json，不作为上传版本。
+- Windows最终Carmilla_EP02_pt-BR_Cartesia_v2.mp4：89871340字节，82.175秒，SHA256 86ee551ee2458acceaa2abe8cd72a404dce47b5fcb6e2f01bf007cd07d4f4591。完整解码通过，复制原video payload SHA一致；仅新对白+BGM/SFX，未混入source_audio。native_ptBR_listening_reviewed/speaker_audio_verified均false，不能宣布解决专业反馈。
+- Windows review_cartesia_pilot.py通过Review预签名上传该单一成片、GET SHA读回，然后updateReviewMaterialVersion至项目148 PT Transalte/Carmilla EP02 FINAL_CUT；旧2354/version1保留，新2478/version2、待审核status8。名称Carmilla | EP.02 | pt-BR，tags含Carmilla/pt-BR/Cartesia；note记录候选口音、无情绪参数、4组gap及复审重点。没有audit/comment，也没改其他31集或源项目59素材。
+- 公开成片链接：https://starlitshorts.s3.amazonaws.com/aigc/uploads/mcp/review/2026-10-14_8e757a83-60cf-44dc-9410-2c006fe96497.mp4 。发布回执/读前读后历史 output/review-publication/148/Carmilla/cartesia-ep02-v2，Mac只读核验副本output/provider-v2-test；两端API回读确认新v2与原v1链一致。
+- 代码分支codex/cartesia-episode-v2，业务代码0c1f360已Mac push/Windows pull，6项付费防重/指纹/跨角色/路径边界测试两端通过；共享规则要求的audit_provider_recommendations能力边界与audit_review_feedback代码/上传/最终JSON独立复核放行，母语验收待完成。后续代码审查codex review或/review。
+- Windows有限任务Codex-Carmilla-Cartesia-EP02-Pilot已完成；未启动全季队列。GitHub家中直连波动时仅临时通过SSH win的本机SOCKS网络转发完成Mac git push，不搬认证或绕审批；结束关闭转发。真实素材/译文/回执/认证仍仅忽略input/output，不入Git。
+- 下一步等待本v2专业Review反馈；先明确评论对应的新asset2478或历史2354，不能把旧反馈混为v2。需要原生巴葡accent元数据/控制时完善MCP，不擅自重复克隆或全剧重生成。
+
+### 2026-10-13 MiniMax预置音色来源澄清
+
+- 用户问直接选的音色来源及MiniMax默认可选音色。本轮重新打开官方SystemVoiceIDList与GetVoice文档，确认官方system预置葡语音色存在，例如Portuguese_SentimentalLady、Portuguese_ConfidentWoman、Portuguese_Deep-VoicedGentleman、Portuguese_AngryMan。官方TTS按voice_id使用，无需另clone；我们的网关接受voiceId，但上述系统声音通过本网关尚未实测，不声称已成功。
+- 预置来源是厂商提供声音库，不从本剧演员提取，也不能推断训练来源。官方Language字段只Portuguese，不是已验证巴西母语认证；先试听确认口音。无付费调用/新增克隆/生成。
+- 官方链接platform.minimax.io/docs/faq/system-voice-id、/api-reference/voice-management-get。保留第二部生产等待状态。
+
+### 2026-10-13 当前直接生成能力核验（未生成）
+
+- 用户问现在有无直接生成巴葡办法。Mac用已有私密认证只读initialize/tools-list核验生产MCP可连接；generateAudio目前仅Sonilo和MiniMax speech-2.8-hd，支持指定保存voiceId/text/Portuguese，uploadMiniMaxVoice仍可用，未见ElevenLabs生成接口。不因官网支持推定现有MCP已接通。
+- 可通过当前MiniMax接口生成巴葡译文的候选音频；需要先找到并母语听审验证巴西音色，不能承诺现已掌握巴葡验收通过voice。ElevenLabs路径目前需接入接口/可用认证和voice，不能称已可直接调用。未调用生成/克隆或上传，未恢复第二部正式翻译/生产。
+
+### 2026-10-13 巴葡母语音色替代原演员克隆（仅咨询核验）
+
+- 独立audit_provider_recommendations重新打开官方原文核验放行；放行母语音色路径可行，拒绝100%口音/全句质量承诺与Portuguese标签即巴葡认定。
+
+- 用户询问MiniMax/ElevenLabs改为找对应音色生成是否可完全巴葡。本次只读官方文档；无声音添加/克隆/合成/付费或生产恢复。
+- ElevenLabs官方accent troubleshooting推荐目标语言训练的母语音色，VoiceLibrary可按language/accent筛选；voices文档列葡语Brazil/Portugal。普通TTS没有独立pt-BR参数不等于不能通过巴葡voice生成巴葡。不能保证所有台词100%无错读/地区漂移/情绪问题；不同模型行为不同，不笼统声称所有跨语模型保留英语口音。
+- MiniMax同步TTS language_boost仍仅Portuguese；官方MiniMax-AI技能仓库voicecatalog只按Portuguese分类，不能将Portuguese_前缀视为已认证巴西母语音色。必须候选试听/巴西母语评审核验后选用，未实测不得与Eleven库声排成质量名次。
+- 判断：自然巴葡译文+已验证巴西母语声线+支持葡语模型是可行路径；放弃克隆原英文演员可降低原口音来源风险（机制推断，不是对本剧效果实测），同时不再保留原演员音色。先每个主要角色同稿测试普通/短喊/耳语/情绪/名字及原时窗，再经母语听审决定；字幕正确与音频口音验收分开。
+- 来源：elevenlabs.io/docs/help-center/troubleshooting/why-does-my-voice-change-accent-or-language、/overview/capabilities/voices；platform.minimax.io/docs/api-reference/speech-t2a-http；github.com/MiniMax-AI/skills/blob/main/skills/frontend-dev/references/minimax-voice-catalog.md。第二部翻译/clone/TTS仍关闭。
+
+### 2026-10-12 再核验ElevenLabs正式接口与巴葡配音备选（仅文档调研）
+
+- 用户指出正式接口无法指定巴西，要求重新核验并推荐MiniMax/ElevenLabs之外方案。本轮仅官方文档只读，无付费调用、账号开通、素材上传、后端迁移或恢复翻译/TTS。
+- 更正口径：ElevenLabs普通TTS convert的language_code为ISO639-1，不能用pt-BR单独指定地区，且multilingual_v2不支持该参数；无地区参数不等于模型不能讲巴葡。legacy /v1/dubbing target_lang仅ISO639-1/3，target_accent明确Experimental且用于库声音选择/译文方言，不能当克隆声稳定口音锁定。另一路/v1/dubbing/project支持Dubbing v2 Alpha的pt-BR；自带transcript/translation为Enterprise字段。此前支持巴葡说法不得套用普通TTS/MCP或承诺已实测。
+- 官方承重来源：elevenlabs.io/docs/api-reference/text-to-speech/convert、/api-reference/legacy/dubbing/create、/api-reference/dubbing/create-project、/overview/capabilities/dubbing。
+- Cartesia正式AddVoiceAccents枚举brazilian-portuguese/european-portuguese，locale pt-BR/pt-PT；自有InstantVoiceClone可先原语克隆再加巴葡accent，保持voice_id。locale模型要求sonic-3.6或更高；必须读voice已支持accent否则可回退原口音。公开声音/PVC不支持原地AddAccents，需另Localize新ID。Emotion tags只支持英语，不宣称巴葡可逐句情绪参数控制或原演技迁移。
+- Cartesia来源 docs.cartesia.ai/api-reference/voices/add-accents、/build-with-cartesia/capability-guides/multilingual-voices、/clone-voices、/volume-speed-emotion；仅接口候选，未实测其巴葡听感/授权套餐/费用。
+- Resemble云API SSML明确pt-br/pt-pt、语速/强弱/耳语/情绪强度控制；lang切换必须声音本身支持。VoiceCloningAPI须Business或更高，不能将所有英音clone一概视为巴葡兼容。来源docs.resemble.ai/getting-started/ssml、/voice-creation/voices/clone-overview。Speech-to-speech换声不等于跨语翻译，不作为英文直转巴葡既定路径。
+- Azure Speech明确pt-BR库存声线，多角色可选；CustomVoice准入受限，不等同可直接克隆原演员。来源learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts、/custom-neural-voice。库存声线可做巴葡发音对照，表演控制依声线/模型，未保证戏剧质量。
+- 本地研究备选ResembleAI/Chatterbox-Multilingual-pt-br官方HF模型卡明确巴葡专用微调/克隆和MIT，V3资产需配套loader/decoder，不能套网页通用英文加载示例宣称可用。未下载安装/4090测速/质量验证；不宣称即插即用或无算力成本。
+- 推荐为判断而非实测排名：优先Cartesia验证地区口音链路、Resemble验证表演与克隆能力，两者用同一小样母语盲听后决策；Azure作原生巴葡发音基线，本地方案后续研究。第二部正式翻译/clone/TTS仍关闭。
+- 独立audit_provider_recommendations官方文档复核放行；保留普通TTS参数/Alpha与套餐/voice语言能力/Cartesia英语情绪/本地loader边界，未形成实测质量排名。
+
 ### 2026-10-12 第二部仅前置准备已完成（等待ElevenLabs MCP）
 
 - 最新授权覆盖第二部旧暂停状态，仅恢复素材下载、字幕整理及原文翻译前准备；正式巴葡台词翻译、克隆、TTS保持关闭，等待生产MCP支持ElevenLabs。第一部成果与生产状态不改动。
