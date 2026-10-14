@@ -217,13 +217,18 @@ def execute(args):
         bank = voices(client, cfg, args.ffmpeg)
         print('SMOKE_COMPLETE', flush=True)
         results = []
-        for u in units:
+        for index, u in enumerate(units):
             folder = root/'utterances'/u['id']
             original, receipt = generate(client, u['translation'], bank[u['production_voice']]['voice_id'],
                                          cfg['project_id'], folder)
             samples, leading, trailing = trim_edges(read_audio(original, args.ffmpeg))
             measured = len(samples)/RATE
             target = u['end']-u['start']
+            audio_end = u['end']
+            if measured/target > 1.25:
+                next_start = units[index+1]['start'] if index+1 < len(units) else duration
+                audio_end = max(u['end'], min(next_start-0.1, u['start']+measured))
+                target = audio_end-u['start']
             factor = max(1.0, measured/target)
             trimmed = folder/'trimmed.wav'
             fitted = folder/'fitted.wav'
@@ -243,6 +248,8 @@ def execute(args):
                 raise ValueError('Audio still exceeds group window; do not truncate words')
             record = {**u, **receipt, 'atempo_factor': factor, 'natural_duration_seconds': measured,
                       'fitted_path': str(fitted), 'fitted_sha256': digest(fitted),
+                      'audio_end_limit': audio_end, 'post_subtitle_gap_used_seconds': audio_end-u['end'],
+                      'fitted_duration_seconds': len(fitted_samples)/RATE,
                       'trimmed_leading_seconds': leading, 'trimmed_trailing_seconds': trailing,
                       'timing_quality_review_required': factor > 1.25,
                       'emotion_control_applied': False}
@@ -281,6 +288,8 @@ def execute(args):
                   'native_ptBR_listening_reviewed': False, 'speaker_audio_verified': False,
                   'emotion_control_applied': False, 'voices': bank, 'utterances': results,
                   'timing_quality_review_count': sum(r['timing_quality_review_required'] for r in results),
+                  'subtitle_gap_review_count': sum(r['post_subtitle_gap_used_seconds'] > 0 for r in results),
+                  'timing_policy': 'Use unoccupied post-cue gaps for high compression; source subtitle times retained; no next-speaker overlap',
                   'input_fingerprint': source_signature, 'completed_at': time.time()}
         save_json(root/'render-report.json', report)
         save_json(root/'progress.json', {'status': 'complete', 'completed': len(results), 'total': len(units)})

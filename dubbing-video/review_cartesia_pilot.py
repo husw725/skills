@@ -13,7 +13,7 @@ def history(client):
     if not isinstance(data, list):
         raise ValueError('Expected Review version list')
     for row in data:
-        if row['projectId'] != 148 or row['gateType'] != 'FINAL_CUT' or 'Carmilla' not in row['name']:
+        if row['projectId'] != 148 or row['gateType'] != 'FINAL_CUT' or row['name'] != 'Carmilla | EP.02 | pt-BR':
             raise ValueError('Unexpected Review material scope')
     return data
 
@@ -61,7 +61,7 @@ def publish(config):
                      'Native accent support/listening and performance pending professional review; '
                      'no Portuguese emotion parameter applied. '
                      'Compare Quinze anos (v1 comment 7326), whisper, fear, NO and pacing. '
-                     f'Timing flags: {report["timing_quality_review_count"]}. '
+                     f'Timing flags: {report["timing_quality_review_count"]}; {report.get("subtitle_gap_review_count", 0)} short groups use following silent gaps, subtitle times unchanged. '
                      f'SHA256: {report["output_sha256"]}')
             material = {k: None for k in ('artDirectionSubMaterials', 'category', 'createdAt', 'documentKind',
                         'parentAssetId', 'status', 'updatedAt', 'version')}
