@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from cartesia_pilot import bind, grouped_units, speech_request
+from cartesia_pilot import bind, grouped_units, speech_request, validate_config
 from dub_episode import safe_submit
 
 
@@ -50,6 +50,22 @@ class CartesiaPilotTests(unittest.TestCase):
         for groups in [[['a', 'b']], [['a']], [['a'], ['a'], ['b']]]:
             with self.assertRaises(ValueError):
                 grouped_units({'units': rows}, groups)
+
+    def test_wrong_output_and_bank_are_rejected_before_production(self):
+        cfg = {'original_plan': 'output/drama-01/episode-02/dub-plan-v1.json',
+               'source_subtitles': 'output/drama-01/episode-02/editorial/source.json',
+               'screenplay_context': 'output/drama-01/episode-02/editorial/screenplay-context.json',
+               'subtitles': 'output/drama-01/episode-02/translation/translated.pt-BR.srt',
+               'output_dir': 'output/drama-01/episode-02/cartesia-v2-pilot',
+               'voice_bank_dir': 'output/drama-01/cartesia-pilot-voices',
+               'episode': 2, 'project_id': 59, 'review_project_id': 148, 'review_asset_id': 2354,
+               'references': {'Laura': {}, 'Carmilla': {}}, 'smoke_role': 'Carmilla',
+               'smoke_text': 'Quinze anos.', 'groups': [[]]*17}
+        validate_config(cfg)
+        for key, value in [('output_dir', 'output/drama-01/episode-02/dub-v1'),
+                           ('voice_bank_dir', 'output/new-bank')]:
+            with self.assertRaises(ValueError):
+                validate_config({**cfg, key: value})
 
     def test_request_uses_cartesia_locale_without_minimax_emotion(self):
         d = speech_request('Quinze anos.', 'cartesia:existing', 59)
