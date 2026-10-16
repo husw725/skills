@@ -46,8 +46,16 @@ def perform(cfg, n, mcp_config, ffmpeg):
         context = load_screenplay_context(ep['screenplay_context'], rows)
         if plan['episode'] != n or plan['project_id'] != 59:
             raise ValueError('Original plan scope differs')
-        if {i for u in plan['units'] for i in u['cue_ids']} != {r['id'] for r in rows}:
+        covered = [i for u in plan['units'] for i in u['cue_ids']]
+        if len(covered) != len(rows) or len(set(covered)) != len(covered) or set(covered) != {r['id'] for r in rows}:
             raise ValueError('Source coverage differs')
+        by_id = {r['id']: r for r in rows}
+        for u in plan['units']:
+            if len(u['cue_ids']) != 1:
+                raise ValueError('Expected original single-cue units')
+            row = by_id[u['cue_ids'][0]]
+            if (u['text'], u['start'], u['end']) != (row['text'], row['start'], row['end']):
+                raise ValueError('Source dialogue or original timecode changed')
         notes = context['episodes'][str(n)]['cue_annotations']
         for u in plan['units']:
             if u['screenplay_annotations'] != [notes[i] for i in u['cue_ids']]:
