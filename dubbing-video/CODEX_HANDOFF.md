@@ -2,6 +2,37 @@
 
 ## 当前接力记录
 
+### 2026-10-16 最新交付要求：全剧尽力巴葡发音，全部重做后Review+钉钉
+
+- 用户明确要求尽可能实现巴葡发音，所有集重做好后上传Review并发送一条钉钉通知。当前全32集重跑授权继续有效；不得把API language/Portuguese参数当母语听审通过。依据EP02旧专业反馈优化音色/发音/短呼喊/语速，正确巴葡拼写与合成发音控制分层。
+- 已读并告知使用dingtalk-sender和aws-s3-ops技能。Windows output/dingtalk-notify.private.json存在（仅webhook_url键，未打印敏感值）；通知条件为全部32集新成片及字幕完成、Review实际版本读回核验后再发一次，不能以4集或部分完成发送“全完成”。Review148、片名tag Carmilla、原版本链保留。尚未发送本轮完成消息。
+- 最新重试：EP01文本已通过；EP02因EP01前文新增触发旧editorial-input指纹，旧EP02无draft/reviewed/plan/render/utterances，已先核无付费结果并将旧EP02完整目录归档到continuation-01-02/episode-02-prior-network-attempt。依新EP01上下文重新prepare2，未删除日志/回执。
+- 有限Interactive任务Codex-Carmilla-Continue-01-02已Running，忽略output下薄启动器continuation-01-02.py，持season.lock，先prepare2，再仅render通过的1/2；失败保留requires_review，无新增clone。完成读continuation-01-02/result.json。启动日志EP02仍有models刷新timeout，尚无新draft，不宣称重试已成功。
+- 本轮只读查production tools/list无ASR工具；Windows未安装whisper/faster_whisper（torch存在），不能伪称已听核真实源冲突。其余19集需区分合理保留原文的warning与真实词义/说话人/上下文错位；7集时长问题保留已有付费缓存后逐句等义压缩，不能整季盲重付费。当前仍仅4集新候选已完成，未发布。
+
+### 2026-10-16 仅重试EP01/02网络超时译稿，任务实际Running
+
+- 用户明确要求“超时的重试”，本轮范围只EP01/02原先无draft/reviewed的网络失败，复用既有prepare，未重跑其他30集、未调用render/TTS/clone。
+- Windows忽略目录新增一次性薄启动器timeout-retry-runner.py，有限Interactive任务Codex-Carmilla-Timeout-Retry-01-02；复用season.lock防并跑、保留旧日志及输入指纹，按1→2顺序两遍文字审核，逐集更新原season-progress且备份原状态到timeout-retry-01-02/season-progress-before.json。不会自动付费合成。
+- 已实际回读任务Running、retry progress stage running/current_episode1、EP01 draft.private.log修改4秒前。尚无新draft/reviewed，不能声称重试成功。EP02尚等待EP01。完成状态读timeout-retry-01-02/progress.json；若再网络失败或文本error保留requires_review。
+- 启动初次因脚本位于output导致import路径缺失、未进入业务，已加cwd到sys.path后启动成功；未额外调用模型或TTS。此为一次性Windows编排，无业务模块变更。
+
+### 2026-10-16 全季首轮实际执行结束，4集新候选，28集待处理
+
+- 本次用户问进度后SSH实时读取Windows回执：有限任务已结束（Ready），runner-exit=2，season-progress.stage=requires_review。不能再说仍在运行。
+- 已实际rendered_candidate：EP07/14/16/19，共4集；尚未上传本轮Review/S3。其余：EP01/02 Codex workspace routing discovery timeout；EP10/11/15/24/26/30/32共7集实测TTS过长，atempo1.2上限拦截；其余19集有文本/来源error，未进入合成。
+- 30集已产出draft/reviewed，11集通过文字校验，其中4渲染成功7时长待修。原音色复用，未新增clone。已付费utterances/receipt必须保留，不能删目录或整季盲重跑。
+- 文本错误中有真实源ASR/代词冲突（EP04/05/06/12/18/25/27/29）、也有过度阻断候选（EP03剧本额外句缺失但字幕优先；EP13剧情门开关矛盾应保留剧情；EP31 Iet's/let's字形），以及EP21/22 script_excerpt错位需更新匹配上下文与重新审核，不能直接清全部error。具体逐cue问题保留Windows各集reviewed.json。
+- 后续需要复核error分级与来源证据、补跑EP01/02文本、逐句等义压缩7集过长语音且保留已付费缓存，完成4集候选发布；EP29等真实听核问题仍不能猜测消除。此次状态读取未启动新付费或重试。
+
+### 2026-10-16 VPN恢复，Windows全季任务已启动
+
+- 用户说VPN好了后重试，ssh win已实际echo connected；Windows从1f23fc6快进至9fd8660，32项相关unittest通过。
+- Windows只读预检32集plan/source/context物理剧本来源SHA全部通过，final.html固定SHA一致，既有两套voice-bank和production配置存在；未发现既有全季worker/断点。
+- 已创建独立忽略output/carmilla-season-revision-20261016/runner.py，用已有原生Codex和FFmpeg运行rerun_carmilla_season.py --stage all。有限任务Codex-Carmilla-Season-Revision-20261016已实际Running，先32集译稿两遍复核后逐集渲染；0新增clone路径。任务Interactive principal用WindowsIdentity SID（SSH环境USERDOMAIN/USERNAME拼接无法映射，首次注册未成功，已改SID成功，仅一个任务）。
+- 已读到runner-start、EP01 editorial-input/schema/draft.private.log，任务Running；EP01尚无draft.json/reviewed.json。Codex启动日志有models刷新timeout及ChatGPT MCP transport关闭，尚不能确认模型首稿响应，后续应检查认证/出网与实际JSON，不能把进程存在当翻译已产出。
+- 初启不等于译稿或配音已完成，需读实际season-progress/逐集日志；EP29源文冲突仍按原规则阻断，其他可审通过集继续。当前尚未发布任何本轮新成片。runner-start/runner-exit及private日志保留Windows忽略output。
+
 ### 2026-10-16 用户明确授权全32集重跑，执行器已备，Windows网络暂不可达
 
 - 最新用户明确说领导允许全部重新跑，并澄清“不等三集审，只按之前第二集反馈掌握的信息重新生成”。覆盖上一轮等三集反馈后才决定是否重配的限制；授权Carmilla全32集，不扩到第二部，不重复clone。不能因旧记录中的暂停或仅小样限制再次索取全季许可。
