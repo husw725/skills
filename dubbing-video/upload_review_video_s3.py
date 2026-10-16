@@ -9,6 +9,30 @@ from process_lock import process_lock
 from translate import read_json, save_json
 
 
+def remote_digest(s3, bucket, key, size):
+    """Read every byte in bounded ranges; a broken stream retries only that range."""
+    h = hashlib.sha256()
+    for start in range(0, size, 5*1024**2):
+        end = min(size-1, start+5*1024**2-1)
+        for attempt in range(3):
+            body = None
+            try:
+                response = s3.get_object(Bucket=bucket, Key=key, Range=f'bytes={start}-{end}')
+                body = response['Body']; block = body.read(end-start+2)
+                if (response.get('ContentRange') != f'bytes {start}-{end}/{size}'
+                        or len(block) != end-start+1):
+                    raise ValueError('Incomplete remote range')
+                break
+            except Exception:
+                if attempt == 2: raise RuntimeError('Remote range verification failed') from None
+                time.sleep(2**attempt)
+            finally:
+                if body is not None: body.close()
+        h.update(block)
+        print('VERIFIED_MIB', round((end+1)/1024**2, 1), flush=True)
+    return h.hexdigest()
+
+
 def upload(episode, version, config):
     permitted = {(2, 3): ('feedback-v3', 'Carmilla_EP02_pt-BR_feedback_v3.mp4', 'feedback-ep02-v3'),
                  (7, 2): ('diagnostic-v2', 'Carmilla_EP07_pt-BR_diagnostic_v2.mp4', 'diagnostic-ep07-v2'),
@@ -79,14 +103,7 @@ def upload(episode, version, config):
         head = s3.head_object(Bucket=bucket, Key=key)
         if head['ContentLength'] != video.stat().st_size or head.get('Metadata', {}).get('sha256') != sha:
             raise ValueError('S3 upload metadata mismatch')
-        body = s3.get_object(Bucket=bucket, Key=key)['Body']
-        h = hashlib.sha256()
-        try:
-            for block in iter(lambda: body.read(1024**2), b''):
-                h.update(block)
-        finally:
-            body.close()
-        if h.hexdigest() != sha:
+        if remote_digest(s3, bucket, key, head['ContentLength']) != sha:
             raise ValueError('S3 remote content SHA mismatch')
         url = f'https://{bucket}.s3.amazonaws.com/{key}'
         import requests
