@@ -2,6 +2,19 @@
 
 ## 当前接力记录
 
+### 2026-10-16 用户明确授权全32集重跑，执行器已备，Windows网络暂不可达
+
+- 最新用户明确说领导允许全部重新跑，并澄清“不等三集审，只按之前第二集反馈掌握的信息重新生成”。覆盖上一轮等三集反馈后才决定是否重配的限制；授权Carmilla全32集，不扩到第二部，不重复clone。不能因旧记录中的暂停或仅小样限制再次索取全季许可。
+- 已只读查Review148新2557/v3、2558/v2、2559/v2，目前评论均空。三新候选不是已验收方法。依据仍为EP02旧7326（anos欧葡）与7488/7489（não英语读法、缺恐惧尖叫）。不等这些新候选反馈，但保持母语/表演/跨模型音色待验收，不承诺API成功即质量保证。
+- Mac新增rerun_carmilla_season.py/test_season_rerun.py，业务入口只允Windows，独立output/carmilla-season-revision-20261016，不覆盖原v1或三集审样。先全32集Codex CLI初稿+第二遍剧本/语义/分组审核，再逐集生成通过集；锁定全剧bible、人名/角色、原字幕id/时码、source/context实际来源文件SHA及用户final.html版本。
+- 最新final.html映射SHA固定6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38；宿主解析const E JSON（不执行HTML）并内联对应script/storyboard。既有645编辑行/642意群源句对照：1–19同号，20–30通常+1；24包含EP24/25、25包含EP24/26的重叠参考，31→EP32，32→EP32/33。映射是台词参考，不改变成片/源字幕边界，也不把缺失剧本台词写入原文。文件改版须重核映射。
+- 固定已有Cartesia Laura/Carmilla作主对白；其他角色已有MiniMax；fearful且独立单词Não短呼喊用同角色已有MiniMax，(gasps)/IPA仅合成层，原葡语拼写/SRT不改。跨集frozen-voice-policy禁止中途换bank；source speaker unknown与旧production casting分开保留，缺voice拒绝，0clone代码路径。两平台仍无已验证全句巴葡口音/恐惧表演保证。
+- 全部TTS speed1.0，一次付费请求+receipt/pending/request fingerprint，最大atempo1.2，至下一说话人前最多用0.8秒句后窗口，超过则待修、绝不自动付费提速/截断或盲重提。同组不同speaker/voice/情绪方向、未知不同reader、长停顿禁止合并。逐集完整解码/原视频payload SHA一致校验；新版本仅新对白+BGM/SFX，不含source_audio。最终均为候选，未完成母语听审。
+- 安全审查audit_review_feedback先指出issues未阻断、首次plan可篡改、final只传路径三项；已修为severity error阻断/独立reviewed-plan-fingerprint/宿主正文内联，并补反例测试。审查修正后放行代码准备；Mac9新+23相关旧=32测试通过，尚无Windows新版本实际执行验证。
+- EP29原e29-8源台词How many years./Quantos anos?与剧本minions矛盾，需要原声验证，该集仍有独立blocking_issues，不能靠再生成掩盖。EP13英语残留/31杂音来源也尚未听核，新报告要求分轨听审。其他可审通过的集不因单集pending全部停工；不将部分候选完成标成全32集完成。
+- 当前真实阻碍：ssh win(10.20.1.30:22)多次ConnectTimeout，TCP/Ping也不通；Mac Melot VPN显示Connected，10.20.1.30路由走ppp0/gateway172.16.11.1。已异步请用户确认Windows在线/网络恢复；还没回复。未启动新Windows任务、未新TTS/clone/上传/付费。不要误说“全剧正在跑”。
+- 代码本地提交5a63757在codex/cartesia-episode-v2，GitHub直连push已成功（Windows离线，未用旧SOCKS relay）；后续Windows pull/运行同版本测试、核已安装原生codex.exe和实际source文件路径，启动有限全季任务并核真实日志/进度。入口rerun_carmilla_season.py --stage all --codex-exe <existing-native-exe> --mcp-config output/mflix-production.private.json --ffmpeg <existing-ffmpeg.exe>。render完成后还需上传新成片、更新Review版本/SRT与页面；此轮网络阻碍前没有假装完成这些步骤。所有原素材/译稿/回执仍只忽略input/output；后续代码审查codex review或/review。
+
 ### 2026-10-16 等三集反馈期间，全剧返修前只读初筛已完成
 
 - 用户认可先做全剧检查，等待EP02 v3/EP07 v2/EP29 v2反馈后再决定修复。此次只排查Carmilla原v1，未改字幕/译稿/音频/视频/Review或队列，0TTS/clone/付费调用；第二部继续暂停正式生产。
