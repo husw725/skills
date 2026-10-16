@@ -86,6 +86,10 @@ def execute(cfg, config_path, mcp_config, ffmpeg):
             raise ValueError('Unexpected base episode')
         plan_path = Path('output/drama-01/episode-02/dub-plan-v1.json')
         plan = read_json(plan_path)
+        assets = {k: Path(v) for k, v in plan['assets'].items()}
+        base_dialogue = base_path.parent/'dialogue-ptBR.wav'
+        asset_hashes = {k: digest(v) for k, v in assets.items()}
+        base_dialogue_sha256 = digest(base_dialogue)
         bank = read_json(cfg['voice_bank'])
         voice_id = bank['voices']['Laura']['voice_id']
         context = read_json(cfg['screenplay_context'])
@@ -105,6 +109,7 @@ def execute(cfg, config_path, mcp_config, ffmpeg):
         signature = bind(root/'input-fingerprint.json', {'config': cfg, 'base_sha256': digest(base_path),
                          'plan_sha256': digest(plan_path), 'context_sha256': digest(Path(cfg['screenplay_context'])),
                          'voice_id': voice_id, 'source_sha256': digest(source_path),
+                         'asset_sha256': asset_hashes, 'base_dialogue_sha256': base_dialogue_sha256,
                          'base_audio_hashes': [r['fitted_sha256'] for r in base['utterances']]})
         client = Mflix(mcp_config)
         results = []
@@ -164,7 +169,11 @@ def execute(cfg, config_path, mcp_config, ffmpeg):
         dialogue_file = root/'dialogue-ptBR.wav'
         write_audio(dialogue_file, dialogue)
         # Readback must be identical to v2 outside both old and new patch extents.
-        before = read_audio(base_path.parent/'dialogue-ptBR.wav', ffmpeg)
+        if digest(base_dialogue) != base_dialogue_sha256:
+            raise ValueError('Base dialogue changed during repair')
+        if {k: digest(v) for k, v in assets.items()} != asset_hashes:
+            raise ValueError('Source assets changed during repair')
+        before = read_audio(base_dialogue, ffmpeg)
         after = read_audio(dialogue_file, ffmpeg)
         if len(before) != len(after):
             raise ValueError('Dialogue timeline length changed')
