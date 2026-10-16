@@ -1,5 +1,5 @@
 import unittest
-from audit_series_readiness import contains, screen_unit
+from audit_series_readiness import contains, screen_unit, source_binding_matches, split_provenance_issues
 
 
 class SeriesReadinessTests(unittest.TestCase):
@@ -26,6 +26,23 @@ class SeriesReadinessTests(unittest.TestCase):
         flags=screen_unit(u,rendered,None,{})
         self.assertTrue(any(f['category']=='render_plan_translation_mismatch' and f['priority']=='P1' for f in flags))
         self.assertTrue(any(f['category']=='post_speedup_above_1_25' for f in flags))
+
+    def test_legitimate_multi_cue_group_is_not_stale(self):
+        rows={'a':{'id':'a','start':0,'end':1,'text':'Each time'},'b':{'id':'b','start':1.1,'end':2,'text':'she returns'}}
+        annotations={'a':{'source_text':'Each time'},'b':{'source_text':'she returns'}}
+        u=self.unit(text='Each time she returns',cue_ids=['a','b'],end=2,
+                    source_cue_windows=[{k:r[k] for k in ('id','start','end')} for r in rows.values()],
+                    screenplay_annotations=list(annotations.values()))
+        self.assertTrue(source_binding_matches(u,rows,annotations))
+        self.assertFalse(source_binding_matches({**u,'text':'Each time she leaves'},rows,annotations))
+
+    def test_two_readers_split_preserves_original_subtitle(self):
+        original={'id':'x','start':0,'end':2,'text':'You will regret this never.'}
+        rows=[{'id':'xa','start':0,'end':1.3,'text':'You will regret this.','original_subtitle_cue':original},
+              {'id':'xb','start':1.3,'end':2,'text':'Never.','original_subtitle_cue':original}]
+        self.assertEqual(split_provenance_issues(rows),set())
+        rows[1]['text']='Always.'
+        self.assertEqual(split_provenance_issues(rows),{'xa','xb'})
 
 
 if __name__=='__main__':unittest.main()

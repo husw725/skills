@@ -15,6 +15,33 @@ def contains(text, term):
     return bool(re.search(r'(?<!\w)'+re.escape(term)+r'(?!\w)', text, re.I))
 
 
+def source_binding_matches(unit, by_id, annotations):
+    rows = [by_id[c] for c in unit['cue_ids']]
+    normalize = lambda text: ' '.join(text.split())
+    return (normalize(unit['text']) == normalize(' '.join(r['text'] for r in rows))
+            and (unit['start'], unit['end']) == (rows[0]['start'], rows[-1]['end'])
+            and unit.get('source_cue_windows') == [{k:r[k] for k in ('id','start','end')} for r in rows]
+            and unit.get('screenplay_annotations') == [annotations[c] for c in unit['cue_ids']])
+
+
+def split_provenance_issues(rows):
+    """Editorial rows may split a subtitle containing multiple characters."""
+    groups = {}
+    for row in rows:
+        if row.get('original_subtitle_cue'):
+            groups.setdefault(row['original_subtitle_cue']['id'], []).append(row)
+    issues = set()
+    tokens = lambda text: re.findall(r'\w+', text.casefold())
+    for group in groups.values():
+        group.sort(key=lambda r:r['start']); original = group[0]['original_subtitle_cue']
+        if (any(r['original_subtitle_cue'] != original for r in group)
+                or tokens(' '.join(r['text'] for r in group)) != tokens(original['text'])
+                or group[0]['start'] != original['start'] or group[-1]['end'] != original['end']
+                or any(a['end'] != b['start'] for a,b in zip(group,group[1:]))):
+            issues.update(r['id'] for r in group)
+    return issues
+
+
 def screen_unit(unit, rendered, following, glossary):
     """Candidates require editorial/listening review; these rules do not prove mistranslation."""
     flags = []
@@ -62,22 +89,25 @@ def screen_unit(unit, rendered, following, glossary):
 
 def audit(output, feedback):
     root = Path('output/drama-01')
+    if not output.resolve().is_relative_to(Path('output').resolve()): raise ValueError('Output must remain under ignored output/')
     if output.exists(): raise ValueError('Use a new output directory; preserve prior screening')
     bible_path = root/'episode-01/translation-v2/series-bible.json'
-    glossary = validate_bible(read_json(bible_path))
     manifest = {str(bible_path): digest(bible_path)}
+    glossary = validate_bible(read_json(bible_path))
     episodes, findings, corpus = [], [], []
     for n in range(1, 33):
         ep = root/f'episode-{n:02}'
         plan_path, report_path = ep/'dub-plan-v1.json', ep/'dub-v1/render-report.json'
+        for p in (plan_path, report_path): manifest[str(p)] = digest(p)
         plan, report = read_json(plan_path), read_json(report_path)
         if plan['episode'] != n or plan['project_id'] != 59 or report['episode'] != n:
             raise ValueError('Episode/project scope differs')
         context_path = ep/('translation-v2/screenplay-context.json' if n == 1 else 'editorial/screenplay-context.json')
         source_path = ep/('script-revision-input/episode-01.source.json' if n == 1 else 'editorial/source.json')
+        for p in (context_path, source_path): manifest[str(p)] = digest(p)
         source = read_json(source_path)['segments']; context = load_screenplay_context(context_path, source)
-        for p in (plan_path, report_path, context_path, source_path): manifest[str(p)] = digest(p)
         by_id = {r['id']: r for r in source}; annotations = context['episodes'][str(n)]['cue_annotations']
+        split_issues = split_provenance_issues(source)
         covered = [c for u in plan['units'] for c in u['cue_ids']]
         if len(covered) != len(source) or len(set(covered)) != len(covered) or set(covered) != set(by_id):
             raise ValueError(f'EP{n:02} source coverage differs')
@@ -91,13 +121,15 @@ def audit(output, feedback):
                      'production_voice': u.get('production_voice')}
             corpus.append({**entry, 'screenplay_annotations': u.get('screenplay_annotations', [])})
             fs = screen_unit(u, rendered[u['id']], units[index+1] if index+1 < len(units) else None, glossary)
-            if (len(u['cue_ids']) != 1 or
-                (u['text'], u['start'], u['end']) != tuple(by_id[u['cue_ids'][0]][k] for k in ('text','start','end')) or
-                u.get('screenplay_annotations') != [annotations[c] for c in u['cue_ids']]):
+            if not source_binding_matches(u, by_id, annotations):
                 fs.append({'category': 'source_or_context_binding_mismatch', 'evidence': 'Plan no longer matches source text/time or reviewed annotations',
                            'priority': 'P1', 'status': 'requires_provenance_review'})
+            if set(u['cue_ids']) & split_issues:
+                fs.append({'category':'split_provenance_requires_review','evidence':'Derived source dialogue/window cannot be reconstructed against saved original subtitle',
+                           'priority':'P1','status':'requires_provenance_review'})
             findings.extend({**entry, **f} for f in fs)
-        episodes.append({'episode': n, 'cue_count': len(source), 'unit_count': len(units),
+        original_count = len({r.get('original_subtitle_cue', r)['id'] for r in source})
+        episodes.append({'episode': n, 'cue_count': original_count, 'source_rows':len(source), 'unit_count': len(units),
                          'screenplay_context': str(context_path), 'screenplay_sources': context['sources'],
                          'render_report_sha256': digest(report_path), 'video_hash_rechecked': False,
                          'saved_video_payload_identical': report.get('video_payload_identical'),
@@ -118,6 +150,7 @@ def audit(output, feedback):
     if any(digest(Path(p)) != sha for p, sha in manifest.items()): raise ValueError('Inputs changed during screening')
     output.mkdir(parents=True)
     summary = {'episodes': len(episodes), 'source_cues': sum(e['cue_count'] for e in episodes),
+               'editorial_source_rows':sum(e['source_rows'] for e in episodes),
                'units': len(corpus), 'finding_rows': len(findings), 'historical_comments': historical_count,
                'unique_units_with_automated_candidates': len({(f['episode'], f['unit_id']) for f in findings if f['unit_id']}),
                'by_category': dict(Counter(f['category'] for f in findings)), 'new_paid_calls': 0,
