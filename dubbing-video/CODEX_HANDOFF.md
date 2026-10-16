@@ -2,6 +2,40 @@
 
 ## 当前接力记录
 
+### 2026-10-16 扩展代表集专业复审（EP07/29混合v2，三集与评审文档已发布）
+
+- 用户追加授权选两集，按当前经验重新处理、让专业人员尽量暴露问题并用于优化。选Carmilla EP07（短惊呼/长问句/tola/冷声旁白）与EP29（四角色/男性警报/冷讽威胁/节奏）。可选路线问题合理等待未答后已说明按推荐混合方案执行；不是纯Cartesia、不是全季重跑。第二部仍仅前置准备、不启动生产。
+- 原reviewed screenplay-context与字幕逐条核对，原计划的source text/start/end与source.json精确一致；当前剧本上下文与原plan annotations一致。使用用户final.html同SHA作为表演与版本参考；EP29实际对应33集分镜表EP-30。原译文字词与字幕时码未改，仅同角色意群合并和合成标点/大小写调整。保留否定、所有人、今夜/明日等信息。
+- EP07 17cue→13group：12Cartesia+1MiniMax（Laura CAMILA短惊呼fearful），13新TTS；EP29 19cue→15group：11Cartesia+3MiniMax（Father两组fearful、Irina冷威胁calm）+1原音频，14新TTS。27新任务37884–37910成功，0新增clone，复用现有两套voice-bank。Cartesia pt-BR/accent支持元数据及葡语情绪无已验证保证，fearful/calm不等于表演合格。
+- EP29 e29-8原字幕How many years./Quantos anos?与剧本Her minions不一致；source reader证据保持unknown，生产暂配Carmilla单独保留。该旧fitted SHA相同，不重复付费或补写剧本；评审明确要求听核原字幕/说话人，不能宣称已修复。
+- Windows output/diagnostic-review-config.json，输出output/drama-01/episode-07/diagnostic-v2和episode-29/diagnostic-v2；diagnostic_review_episodes.py固定范围/路径、完整source覆盖与text/time校验、上下文版本/资产/SRT/voice-bank/请求指纹、paid receipt/pending与独立锁；max2并发两集。合成文本只允许原译文字词一致的标点/大小写调整，不跨角色，atempo>1.25停止而非截断/盲重生成。
+- 成片：EP07 75.839秒、SHA07ecb43ccdf4cca23a8657da479ff7ddcb996051a918dfae19fa64628a4decc1，maxatempo1.109；EP29 91.753秒、SHA75676c9734788c31bd08072e298c115e22664f3b0cea33d64d8f8882154a49a7，maxatempo1.219。完整解码/视频流一致通过，原BGM/SFX保留、不混source_audio。利用部分句后空隙，需音画节奏听审。两集native/speaker/performance均false。
+- 代码8239f0b/efc05f0/7dbb0a4/3df7c73已Mac push、Windows pull，18测试Mac/Windows通过（含发布重复执行只一次mutation、旧链保留和拒绝另一版本/变更SHA）。共享规则独立audit_review_feedback源计划/报告/代码安全审查放行诊断候选，母语验收待完成。
+- Review发布：限定148 FINAL_CUT原2359(EP07)/2381(EP29)追加v2；S3仅成片、SHA文件名/远端完整GET SHA读回；发布锁+request fingerprint+safe_submit防重，回读旧v1/新v2链。EP07新2558/v2、EP29新2559/v2均完成，旧2359/v1、2381/v1保留，EP02链2354/v1→2478/v2→2557/v3保持。Review148当前三视频均待审status8。有限Windows任务Codex-Carmilla-Diagnostic-EP07-29和Codex-Carmilla-Diagnostic-Publish均完成；无全季队列或定时重试。第29集初次完整GET网络ResponseStreamingError，仅停止本轮存储读worker32360，改5MiB Range逐段3次有界重试、成功整段才更新SHA，全部字节顺序校验通过；未重合成/克隆，未重复Review mutation。
+- diagnostic_review_brief.py已生成并上传Review148 DOCUMENT2560（待审8）评审说明：三集具体版本/ID、双语意群表、定位时间/已知疑点、译文/发音/口音/表演/音色/同步/混音分别反馈；请求整集听审、明确通过项，没评论不等于验收。公开DOCX不含voice_id/生成请求；忽略的feedback-learning-matrix.private.json记录模型/音色/参数/时间/任务与输入指纹用于后续定位。版本/时间/引用短语定位，已证实问题与假设分开，小样复验，不自动反复clone或全季重生成。
+- 回执Windows output/review-publication/148/Carmilla/{diagnostic-ep07-v2,diagnostic-ep29-v2,diagnostic-brief-20261016}；Mac只读副本output/cartesia-v3-repair。独立Review API读回上述3视频当前版本与DOCUMENT2560、旧链均一致。实际DOCX42246B、本地/远端SHA一致，3表18/14/16行对应45组61cue，未公开voice_id/合成请求；输入指纹绑定原plan/report/publication避免旧DOCX复用。后续按新asset/版本读取专业反馈，不能把老评论混成新验收。无新增评审意见时不声称学会或解决口音问题。audit_review_feedback最终复核三条版本链、实际DOCX/矩阵与回执后技术交付放行；Windows生成/发布runner-exit均0。真实素材/译稿/回执/认证仅忽略input/output，不入Git；代码审查codex review或/review。
+
+### 2026-10-16 基于v2反馈定点重生成（v3混合模型候选，已发布）
+
+- 用户授权依据反馈优化并重新生成；继承代表集Review工作流，处理Carmilla EP02两短呼喊，不全季重跑。当前MCP仍只有Cartesia language/speed，无AddAccents或巴葡emotion控制；官方emotion文档只支持英语。因此未盲重跑同Cartesia请求，定点使用已有MiniMax Laura音色，其他15个Cartesia v2意群保留。用户追问是否混合，已明确说明方案与音色衔接风险；未收到取消/纯Cartesia要求。
+- 原reviewed screenplay上下文及用户final.html EP02一致支持Laura：e02-16绝望地不要、e02-18被咬尖叫不；两评论无时间戳，仍只作为定位候选，不宣称一一对应。原25字幕、译文/时码与剧本上下文均未改。
+- 合成层实验：016使用官方(gasps)+半角括号IPA nɐ̃w̃，018仅IPA，MiniMax speech-2.8-hd/Portuguese/fearful/speed1.0；正确原字幕Não.../NÃO!保留，IPA不写回译文。原英语Laura MiniMax clone直接复用，0新clone；2个新任务37882/37883均成功，不自动重试。官方支持IPA/2.8 gasps但未验证鼻化解析及尖叫效果，不能声明发音或恐惧表演已解决。
+- Windows inputconfig output/feedback-v3-config.json；输出 output/drama-01/episode-02/feedback-v3。新增repair_episode_feedback.py固定EP02/59/Review148-old2478、两unit/Laura、独立输出路径；bind base报告SHA、原计划/上下文/字幕、旧音色、资产SHA、原对白轨SHA、15段fittedSHA和逐请求指纹，pending锁防重复付费。
+- 实际016自然0.61秒，018自然1.66秒，两段atempo约1.0；018实际音频延至约56.655秒，字幕仍55–55.933秒，利用到下一说话人前的候选空隙，需音画节奏听审。其余15组fitted SHA逐一相同；重建对白patch外PCM逐样本一致，原视频流SHA一致且完整解码通过。
+- 最终候选Carmilla_EP02_pt-BR_feedback_v3.mp4，SHA256 0b1892f4ccb3aede2ee4f11d862ccb6f22dac514b4e6d7ce69d4424ef8f81e3e。native_ptBR_listening_reviewed/scream_verified/phonetic_control_verified仍false，报告明确Cartesia v2+两MiniMax反馈补丁，不把混合版本叫纯Cartesia。
+- 新业务代码330b066已Mac push/Windows pull；10项边界/防重测试Mac和Windows通过，原v2数据读取核验通过。audit_provider_recommendations官方文档审核放行小样实验，audit_review_feedback独立代码/混合报告技术放行，母语验收待完成。新增review_feedback_v3.py安全审查放行，仅Review148 EP02旧2478追加v3，保留2354/v1与2478/v2，读回新ID和SHA后才报告完成。不发comment/audit，不改其他集。
+- 已发布完成：Review148 EP02新asset2557/version3，保留2354/v1与2478/v2。S3 multipart上传单一成片并GET SHA读回；publication-result.json及history-after.private.json在output/review-publication/148/Carmilla/feedback-ep02-v3。公开链接 https://starlitshorts.s3.amazonaws.com/aigc/drama/dubbing-video/carmilla-20261009/review-revisions/Carmilla_EP02_pt-BR_feedback_v3-0b1892f4ccb3.mp4 。真实音频/译稿/回执只放忽略input/output，密钥不入Git。代码审查codex review或/review。
+
+### 2026-10-16 已读取Cartesia EP02 v2专业反馈（仅分析）
+
+- 独立audit_review_feedback核对3份原始快照放行：版本/2条评论计数、无时间戳、发音表演与词义分离、旧anos未获验收结论均准确。
+
+- 用户让查看新一集反馈。只读Review148/EP02版本链：2354/v1与2478/v2，均status8；逐版本评论pageSize100，v1有1条7326（anos欧葡），v2有2条不同ID7488、7489，均无replies/音画时间戳，分别保留，不混版本。原始快照及feedback-analysis.json在output/review-feedback/2026-10-16。
+- 7488：这里的não语气很怪，应该是恐惧的尖叫。7489：这里的não是用英语读的，不对，而且语气应该是恐惧的尖叫。多标签2条情绪、1条发音，共3分类，不是3评论；未明确指出词义翻译错误。
+- 优先定位候选是Laura e02-16 Não... 49.433–50.233、e02-18 NÃO! 55.000–55.933秒。评论无音画时间戳，其他句也有não，不能将两个commentId直接一一绑定两个cue。未听审，不宣称已确定具体成因。
+- 当时render-report证明两音色accent_support unknown、emotion_control_applied false，是已知验证缺口而非错误根因的听审结论。Quinze anos本次未被评论不等于已通过。建议先定位两条，再核对Laura巴葡口音支持和可用恐惧表演控制，定点小样验收，不重复clone或全剧重生成。
+- 本轮未生成/克隆/修改译文/上传/发评论/审核，第二部仍不启动；等待后续实施指示或更具体定位证据。
+
 ### 2026-10-14 Cartesia代表集试制完成，Review EP02 v2已上传
 
 - 最新明确授权：测试MCP新克隆平台，做代表性一集并上传Review v2供专业复审。选第一部Carmilla EP02（评审7326指出Quinze anos欧葡发音），不恢复第二部或全季生成。原25条剧本优化译文、原字幕文本/时码保持；同角色连续分句审核为17个合成意群。
