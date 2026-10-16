@@ -42,7 +42,16 @@ def upload(episode, version, config):
                                     retries={'max_attempts': 3, 'mode': 'standard'}), **kwargs)
     folder = Path('output/review-publication/148/Carmilla')/receipt_name
     folder.mkdir(parents=True, exist_ok=True)
-    with process_lock(folder/'multipart-upload.lock', timeout=0):
+    with process_lock(folder/'publish.lock', timeout=0):
+        receipt_path = folder/'upload.private.json'
+        if receipt_path.exists():
+            existing = read_json(receipt_path)
+            if existing.get('sha256') != sha:
+                raise ValueError('Existing upload receipt differs; no overwrite')
+            print('UPLOAD_RECEIPT_REUSED', episode, version, flush=True)
+            return
+        if list(folder.glob('version-submission*')) or (folder/'publication-result.json').exists():
+            raise ValueError('Version submission exists; do not change uploaded URL')
         key = prefix+'/review-revisions/'+video.stem+'-'+sha[:12]+'.mp4'
         try:
             head = s3.head_object(Bucket=bucket, Key=key)
