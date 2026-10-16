@@ -168,7 +168,7 @@ def audit(output, feedback):
     lines = ['# Carmilla 全剧返修前排查', '', '范围：32集原v1生产数据。三集新候选另等专业反馈。',
              '仅生成待核清单，未改译稿/音频/视频、未调用付费服务。候选条数不是已确认错误数。', '',
              f'覆盖{summary["source_cues"]}条源字幕；自动候选涉及{summary["unique_units_with_automated_candidates"]}个意群；保留{historical_count}条历史评审意见。', '',
-             '| 集数 | 字幕数 | P1来源/版本待核 | 时长候选 | 文字/分组/身份候选 | 历史评论 |', '|---|---:|---:|---:|---:|---:|']
+             '| 集数 | 字幕数 | P1来源/版本待核 | 时长规则记录（可重叠） | 文字/分组/身份候选 | 历史评论 |', '|---|---:|---:|---:|---:|---:|']
     for e in episodes:
         fs=[f for f in findings if f['episode']==e['episode']]
         counts=Counter(f['category'] for f in fs)
@@ -176,6 +176,7 @@ def audit(output, feedback):
         hist=counts['historical_professional_comment']; p1=sum(f['priority']=='P1' for f in fs)
         lines.append(f'| {e["episode"]:02} | {e["cue_count"]} | {p1} | {timing} | {len(fs)-timing-hist-p1} | {hist} |')
     lines += ['', '优先顺序：先确认来源/版本与未知说话人；再结合历史评论审核时长、连续意群；等三集听审确认有效改法后，定点试制。',
+              '时长列为规则命中记录数，同一意群可能命中两条规则；不能直接相加认定错误句数。',
               '详细证据见repair-candidates.csv和audit.json。无评论不等于验收；巴葡口音、尖叫/情绪、音色和混音需听审。']
     (output/'README.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
     print(json.dumps(summary,ensure_ascii=True),flush=True)

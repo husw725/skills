@@ -2,6 +2,17 @@
 
 ## 当前接力记录
 
+### 2026-10-16 等三集反馈期间，全剧返修前只读初筛已完成
+
+- 用户认可先做全剧检查，等待EP02 v3/EP07 v2/EP29 v2反馈后再决定修复。此次只排查Carmilla原v1，未改字幕/译稿/音频/视频/Review或队列，0TTS/clone/付费调用；第二部继续暂停正式生产。
+- audit_series_readiness.py已Mac push/Windows pull，业务在Windows执行；固定32集project59，读原plan/render-report/source/context/锁定bible，输入SHA先采后读、结束复核；输出限定忽略output/新目录。032d58c已同步，5测试两端通过，实际旧32集数据完整读取通过。
+- 输入涵盖643条原字幕、645条编辑source行、642个生产意群。EP01有合法多cue合并，EP32两条双人原cue派生四行，原28cue/编辑30行；按source_cue_windows/拼合源文/剧本annotations及原cue拆分来源和窗口连续性核对，不能把合并/拆分误报。独立审查指出初版单cue假设后已修正再运行；当前计划/报告与源文本/时码/注释无P1绑定差异命中，不等于原转写或旧剧本版本无误。
+- 初筛276候选行包括40条历史评论，自动规则涉及200个意群（未经人工处置的原始口径，排除下述单条假阳性后199个待核意群，不是200个确认缺陷）。163组最后合成请求speed>1.25，其中22组另有atempo>1.25，后者为前者子集不能相加为185句错。27处同角色连续碎句分组候选，23组证据speaker unknown，锁定术语缺失规则无命中，未发现报告拟合音频跨下一组起点。以上参数及规则不能替代听审。
+- 唯一negation候选：EP07 e07-8 You knew my mother, didn't you? → Você conhecia minha mãe, né?，人工确认是自然反问，不是漏掉主句否定；已在manual-triage.private.json记录false_positive_text_screen，原audit快照不覆写。不是修译稿或新音频验收。
+- 只读结果两端output/series-readiness-20261016：audit.json、逐集README.md、repair-candidates.csv、bilingual-corpus.private.json；人工说明analyst-notes.md和manual-triage.private.json另存并已同步Windows，明确规则局限及下一步。详细对白、script evidence、历史comments不进Git。历史40条不同commentId/assetId分别保留，未把旧评论当新版本通过。
+- 优先队列：EP13英语残留/EP31杂音先定位分轨，不能猜因删正确巴葡；EP29 e29-8原字幕How many years./Quantos anos?与剧本minions差异、证据读者unknown，原音频暂留；EP11 Tentei transferi-la / há quinze anos连续意群及发音复核。没有自动修复/重新clone/全季重配。
+- 等待Review148当前2557/v3、2558/v2、2559/v2专业反馈，以版本+时间+引用短语定位，确认有效方法后按意群小样验证再扩展。未新增未来自动任务或监控，不把无评论当通过；母语/情绪/音色/混音待听审。audit_review_feedback独立实际报告复核修正计数表头后放行：README时长列是可重叠规则记录，163/22不能相加认定185句错误；原始200与人工处置后199分别标清。代码审查codex review或/review。
+
 ### 2026-10-16 扩展代表集专业复审（EP07/29混合v2，三集与评审文档已发布）
 
 - 用户追加授权选两集，按当前经验重新处理、让专业人员尽量暴露问题并用于优化。选Carmilla EP07（短惊呼/长问句/tola/冷声旁白）与EP29（四角色/男性警报/冷讽威胁/节奏）。可选路线问题合理等待未答后已说明按推荐混合方案执行；不是纯Cartesia、不是全季重跑。第二部仍仅前置准备、不启动生产。
