@@ -2,6 +2,33 @@
 
 ## 当前接力记录
 
+### 2026-10-17 用户明确续跑：5集测时返修已运行，06/12新证据过门后续排队
+
+- 本次用户“那让它继续跑起来”已实际恢复，不是只看状态。Windows有限Task Codex-Carmilla-Resume-20261017 Running/State4，ROOT6 output/carmilla-season-resume-20261017，coordinator.started_at1792248036.612609；新resume_carmilla_remaining.py只选精确timing-error的10/18/22/28/32，同BASE production锁。当前10已补齐19/19测时、两遍文本审核通过，正在真实TTS/render，日志任务38421–38424；还没有新增render-report不能算完成。旧19已发布版本和付费断点均保留。
+- 新TIMING2_ROOT/RESUME_ROOT及SOURCE_RESUME_ROOT进入明确paid-cache白名单；全部prior pending前检及完整request指纹、已接受taskId恢复、不明提交不重试、冻结音色0clone不变。revision_feedback新加入recommended85%及90%margin标记，靠近时长上限也要求审；EP28 Pai/Sua mão两个已知同Laura同surprised连续同意群，允许gap1.0（实际.967）但仍两遍审核和全部分组强门，原SRT/源时码不变。
+- 新root可atempo失败后使用rubberband tempo1.2作另一算法拟合，无atrim/无超1.2/不重新TTS；fitting_policy绑定新render-input。旧plan measure_only不开新policy，避免冲突旧断点。Windows FFmpeg确实支持rubberband，现有22 paid WAV独立诊断natural7.03s,target5.866,fitted5.858333333,factor1.2,newpaid0真实成功；32旧unit natural4.54,target3.766,factor1.2055仍失败，不能伪称恢复，要新两遍文本精简/合法分组。
+- 新verify_carmilla_source_tight.py保留旧raw/context不覆写，官方已验small.en+medium.en对原cue±.15s无prompt无VAD本机CPU识别。clip-input先绑定sourceSHA/start/end/解码参数，旧片无marker拒绝；9ea0826修后在全新ROOT output/carmilla-source-tight-20261017运行。Task Codex-Carmilla-Source-Tight-20261017已自然完成，16cue×2证据齐。06 Who is there与12两疑点现两模型全词/置信/±.35过原门，原validator未放宽。真实Windows ACTUAL_SOURCE_GATE_PASS6(e06-10)/12(e12-8,e12-21)，human_listenedfalse,newpaid0。
+- 新source_audio_evidence(mode=tight)先核旧raw/context全来源，再整对同模式替换segments（不逐词拼、不跨模型凑），source/modelFiles/cue/reviewSHA/clipSHA/clip-input fp/固定padding/解码方式全核并入plan SHA，raw关键否定/modal/数字保护保留。默认context输出不添method以兼容旧断点。新ROOT7 output/carmilla-season-source-resume-20261017，resume_carmilla_source.py只选06/12；同统一production锁等待5集之后，两遍文本审核再TTS，已有候选拒绝重生成，原RETRY争议cue集合与FINAL测时参考分离。
+- Windows Task Codex-Carmilla-Source-Resume-20261017也已实际Running/State4（coordinator.started_at1792248312.6472967），目前在等production锁；不是6/12已成片。其余6个source集04/05/08/20/27/29仍需确证，未因用户催进度降级source errors或盲付费。source-analysis.private.md独立审16cue：4context可过、2raw可过、4时间/相邻词归属未过、6真词义不确定；不得用旧报告宣称6全部已解。
+- 两个新有限coordinator均生产→publisher等待全局锁→只有pub全32exit0调用现有强核全32通知；requires_review即按用户授权补停顿消息。统一delivery.lock/先sending持久化/event身份指纹/未知不重发，异常只记类型不泄露。独立审修正外层异常落盘/通知真实阶段/真实换行后放行。各子任务结束会告知，不把没全32称完成。新协调器在忽略output/season-resume-20261017/{coordinator.py,source-coordinator.py}，已SCP到各Windows ROOT。
+- e58d69c/45aade0/9ea0826/938aff8均GitHub push后Windows明确pull。最新HEAD938aff8；Mac67相关tests通过，Windows先66全套过、再最新43针对tests过。audit_dubbing_estimate独立放行付费缓存/拟合/两个协调器和tight接入；非阻断建议TIMING2前两集参考可后续统一按最新候选优先序取（当前仍prior/BASE可能漏最新FINAL）。新代码审查codex review或/review。用户已获知5集已跑、06/12排队、其余6待核。别将TaskRunning或source_gate_pass计入已交付，最新仍19/32，下一步核真实新report与Review回执。
+
+
+### 2026-10-17 再次实时查进度：仍19/32，没有新增交付
+
+- 用户“现在呢，亲爱的”：重新通过VPN绑定SSH核Windows5root实际render-report+MP4、publication-result及全部相关ScheduledTask。仍19集候选/19集已上传视频及SRT，集号和asset不变；没有新root，全部任务State3=Ready，当前没有运行。source evidence已ready，仍13集待逐句修复（时长5、原声读法8）。
+- 本次是只读状态核验，没有启动重生成、没有重复钉钉通知，不能说“仍在后台处理”。上次补停顿通知已sent。本次如用户需状态，明确没有新增与当前停止。
+
+
+### 2026-10-17 用户询问进度：真实19/32已发布，所有有限任务已结束待复核
+
+- Windows实时核验：新版19集实际MP4存在，render-report video_payload_identical=true/new_clone_count=0；对应19份publication-result均视频+SRT已发布。完整集号01/02/03/07/09/11/13/14/15/16/17/19/21/23/24/25/26/30/31。新增09 Review2637/v2+SRT2638，25 Review2640/v2+SRT2641。
+- 剩余13：时长5集10/18/22/28/32；源读法8集04/05/06/08/12/20/27/29。timing2仅09成功，其余4未过拟合；source10仅25成片，18文本通过但实际TTS超时，8源读法未过双模型完整词/置信/时间证据门。没有删词或放宽门硬出成片。
+- medium已完整官方SHA核验，raw20+whole-context40均完成，evidence_ready；不是仍在下载。source finish publication结束于北京时间2026-10-17 14:59:23，stage requires_review；Windows全部相关ScheduledTask State3=Ready，无生产运行。不可沿用上一条“后台运行”现状。用户已在commentary获知19/32及已停止。
+- 用户此前明确要求停顿发钉钉。已有notification_watch只监控旧queue/translation文件，未覆盖本轮season有限任务。此次使用既有notification_watch.send（源自dingtalk-sender技能）在Windows补一次真实待复核通知；同delivery.lock与delivery-state.private.json按worker/kind/finished_at指纹，写sending再发、未知不重发；实际NOTICE_SENT，未发全剧完成通知。凭据未输出。后续如修watcher需独立安全审核+Mac代码GitHub push/Windows pull。
+- 本次仅只读核验、补已授权停顿消息、更新交接，未重启付费生成。下一步需逐句分析已生成的source context与时长WAV，针对性修复，不能直接重试全部13或重复克隆。
+
+
 ### 2026-10-17 继续交付：18集成片、17集已发布，剩余任务在Windows运行
 
 - 最新实际新候选18集：01/02/03/07/09/11/13/14/15/16/17/19/21/23/24/26/30/31。Review实际publication-result17集：除新09外上述各集，均附独立SRT且旧视频版本保留；不要把候选数当发布数。全32完成通知未发。
