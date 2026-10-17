@@ -277,6 +277,8 @@ def prepare(n,args,preceding):
             'the existing speaker/timing constraints. Preserve complete meaning and all deadlines/names. '
             'Aim for a margin below the provided maximum_seconds; do not assume synthesized duration is verified. '
             'Keep prior correct wording for unaffected cues to reuse paid audio. '
+            'For a measured group still overlong, aim comfortably below its maximum (about 80 percent where faithful), '
+            'using idiomatic equivalent phrasing rather than deleting meaning, names or negation. '
             'When original source_audio_evidence is supplied, quote the actual English source_audio_reading for each '
             'disputed cue, supported by BOTH timestamped ASR models. Do not import words from outside its cue window. '
             'Use subtitle_confirmed for the original wording, transcription_corrected for a corroborated different reading, '
@@ -333,7 +335,7 @@ def prepare(n,args,preceding):
 
 def revision_feedback(n,args,preceding=()):
     prior=Path(args.prior_root)
-    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve()}:raise ValueError('Only existing season attempts may seed this retry')
+    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve(),FINAL_ROOT.resolve()}:raise ValueError('Only existing season attempts may seed this retry')
     folder=prior/f'episode-{n:02}'
     continuity={int(row['episode']):row for row in preceding[-2:]}
     data={'source_root':str(prior),'source_sha256':{},'prior_editorial':None,'measured_groups':[]}
@@ -360,11 +362,13 @@ def revision_feedback(n,args,preceding=()):
     duration=float(probe(Path(plan['assets']['video']),args.ffmpeg)['format']['duration'])
     for i,u in enumerate(plan['units']):
         wav=folder/'utterances'/u['id']/'original.wav'
-        if not wav.exists() and prior.resolve()==RETRY_ROOT.resolve():
+        if not wav.exists() and prior.resolve() in {RETRY_ROOT.resolve(),FINAL_ROOT.resolve()}:
             cartesia=read_json('output/drama-01/cartesia-pilot-voices/voice-bank.json')
             minimax=read_json('output/drama-01/voice-bank.json')['voices']
             req,_=request(u,cartesia,minimax)
-            wav=paid_audio_folder(n,req,wav.parent,BASE_ROOT)/'original.wav'
+            for cache in ([RETRY_ROOT,BASE_ROOT] if prior.resolve()==FINAL_ROOT.resolve() else [BASE_ROOT]):
+                candidate=paid_audio_folder(n,req,wav.parent,cache)/'original.wav'
+                if candidate.exists():wav=candidate;break
         receipt=wav.parent/'audio-receipt.json'
         if not wav.exists():continue
         if not receipt.exists() or digest(wav)!=read_json(receipt)['sha256']:
@@ -387,7 +391,7 @@ def paid_audio_folder(n,req,target,prior_root=None):
     """Reuse the exact prior request, including ambiguous receipts; never route around them."""
     if prior_root is None:return target
     prior=Path(prior_root)
-    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve()}:raise ValueError('Unexpected paid cache root')
+    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve(),FINAL_ROOT.resolve()}:raise ValueError('Unexpected paid cache root')
     # A changed text must not bypass an ambiguous earlier payment. Check the
     # entire original episode, even when its request marker is missing.
     for pending in (prior/f'episode-{n:02}'/'utterances').rglob('*.submission-pending.json'):
