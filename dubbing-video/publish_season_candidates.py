@@ -169,7 +169,7 @@ def publish(n,folder,args):
               'url':uploaded['url'],'tags':['Carmilla','pt-BR'],'note':f'SRT for video asset {row["assetId"]}, version {row["version"]}; video SHA256 {sha}; subtitle SHA256 {digest(subtitle)}.'}
         subtitle_asset=register(client,spec,read_json(ledger) if ledger.exists() else {'items':{}},ledger)
         result={'episode':n,'video_sha256':sha,'asset_id':row['assetId'],'version':row['version'],
-                'url':url,'subtitle_asset_id':subtitle_asset,'subtitle_sha256':digest(subtitle),
+                'url':url,'subtitle_asset_id':subtitle_asset,'subtitle_url':uploaded['url'],'subtitle_sha256':digest(subtitle),
                 'native_listening_passed':False,'prior_versions_retained':True,'verified_at':time.time()}
         save_json(out/'publication-result.json',result)
         print('SEASON_PUBLISHED',n,row['assetId'],row['version'],flush=True)

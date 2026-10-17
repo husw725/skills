@@ -1,7 +1,10 @@
 """Send the requested one-time completion notice only after all 32 Review deliveries exist."""
 import argparse
+import contextlib
 import importlib.util
+import io
 from pathlib import Path
+import socket
 import sys
 import time
 
@@ -27,8 +30,25 @@ def verify_delivery(progress,rows):
                 or video.get('version')!=result['version'] or not {'Carmilla','pt-BR'}.issubset(set(video.get('tags') or []))
                 or subtitle.get('projectId')!=148 or subtitle.get('gateType')!='DOCUMENT'
                 or subtitle.get('name')!=f'Carmilla | EP.{n:02} | pt-BR subtitles | {result["video_sha256"][:12]}'
+                or not result.get('subtitle_url') or subtitle.get('url')!=result['subtitle_url']
+                or subtitle.get('documentKind')!='DOCUMENT'
+                or not {'Carmilla','pt-BR'}.issubset(set(subtitle.get('tags') or []))
+                or result['subtitle_sha256'] not in subtitle.get('note','')
                 or not result.get('prior_versions_retained')):raise ValueError('Live Review delivery does not match this season')
     return published
+
+
+def send_private(sender,url,message):
+    # The bundled skill prints raw transport errors. Keep those in memory only,
+    # and bound its urllib calls without changing any host/network settings.
+    old_timeout=socket.getdefaulttimeout()
+    try:
+        socket.setdefaulttimeout(30)
+        with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
+            sender.send_message(url,message)
+    except (Exception,SystemExit):
+        raise RuntimeError('DingTalk send failed; outcome uncertain, pending retained') from None
+    finally:socket.setdefaulttimeout(old_timeout)
 
 
 def main():
@@ -52,7 +72,7 @@ def main():
         spec=importlib.util.spec_from_file_location('dingtalk_skill_sender',a.sender_script)
         sender=importlib.util.module_from_spec(spec);spec.loader.exec_module(sender)
         save_json(pending,{'fingerprint':signature,'started_at':time.time(),'project_id':148,'episodes':32})
-        sender.send_message(url,message)
+        send_private(sender,url,message)
         save_json(receipt,{'fingerprint':signature,'sent_at':time.time(),'project_id':148,'episodes':32})
         pending.unlink()
 

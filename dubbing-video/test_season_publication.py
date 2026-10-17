@@ -5,7 +5,9 @@ import unittest
 
 from publish_season_candidates import append_version
 from translate import read_json
-from notify_season_complete import verify_delivery
+from notify_season_complete import verify_delivery,send_private
+from types import SimpleNamespace
+import contextlib,io,socket
 
 
 class FakeReview:
@@ -69,11 +71,14 @@ class SeasonPublicationTests(unittest.TestCase):
         for n in range(1,33):
             sha=f'{n:064x}';asset=n;sub=100+n;url=f'https://example.test/{n}.mp4'
             progress['published'][str(n)]={'episode':n,'asset_id':asset,'subtitle_asset_id':sub,'video_sha256':sha,
-                                          'url':url,'version':2,'prior_versions_retained':True}
+                                          'url':url,'version':2,'prior_versions_retained':True,
+                                          'subtitle_url':f'https://example.test/{n}.srt','subtitle_sha256':sha}
             rows.extend([{'projectId':148,'gateType':'FINAL_CUT','name':f'Carmilla | EP.{n:02} | pt-BR',
                           'assetId':asset,'url':url,'version':2,'tags':['Carmilla','pt-BR']},
                          {'projectId':148,'gateType':'DOCUMENT','assetId':sub,
-                          'name':f'Carmilla | EP.{n:02} | pt-BR subtitles | {sha[:12]}'}])
+                          'name':f'Carmilla | EP.{n:02} | pt-BR subtitles | {sha[:12]}',
+                          'url':f'https://example.test/{n}.srt','documentKind':'DOCUMENT',
+                          'tags':['Carmilla','pt-BR'],'note':'SRT SHA256 '+sha}])
         return progress,rows
 
     def test_completion_requires_all_32_videos_and_subtitles_in_live_review(self):
@@ -87,6 +92,20 @@ class SeasonPublicationTests(unittest.TestCase):
         with self.assertRaises(ValueError):verify_delivery(p,rows)
         p,rows=self.delivery();rows[0]['name']='Carmilla | EP.02 | pt-BR'
         with self.assertRaises(ValueError):verify_delivery(p,rows)
+
+    def test_completion_rejects_subtitle_url_replacement(self):
+        p,rows=self.delivery();rows[1]['url']='https://example.test/wrong.srt'
+        with self.assertRaises(ValueError):verify_delivery(p,rows)
+
+    def test_sender_error_is_redacted_and_network_timeout_is_bounded(self):
+        old=socket.getdefaulttimeout();capture=io.StringIO()
+        def fail(url,message):
+            self.assertEqual(socket.getdefaulttimeout(),30)
+            print('raw private webhook secret');raise SystemExit(1)
+        with contextlib.redirect_stdout(capture):
+            with self.assertRaisesRegex(RuntimeError,'outcome uncertain'):
+                send_private(SimpleNamespace(send_message=fail),'private','message')
+        self.assertNotIn('secret',capture.getvalue());self.assertEqual(socket.getdefaulttimeout(),old)
 
 
 if __name__=='__main__':unittest.main()
