@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess,sys,wave,time
 
 from dub_episode import digest
+from cartesia_pilot import bind
 from process_lock import process_lock
 from translate import fingerprint,read_json,save_json
 from verify_carmilla_source import disputed
@@ -36,6 +37,10 @@ def main():
                 cue=item['cue'];source=Path(item['source_audio']);source_sha=digest(source)
                 folder=ROOT/f'episode-{item["episode"]:02}'/cue['id'];folder.mkdir(parents=True,exist_ok=True)
                 clip=folder/'original-tight.wav';start=max(0,cue['start']-.15);end=cue['end']+.15
+                clip_marker=folder/'clip-input.json'
+                if clip.exists() and not clip_marker.exists():raise ValueError('Unbound existing tight clip')
+                bind(clip_marker,{'source_audio_sha256':source_sha,'start':start,'end':end,
+                     'decoding':{'channels':1,'sample_rate':16000,'codec':'pcm_s16le'}})
                 if not clip.exists():
                     subprocess.run([str(a.ffmpeg),'-v','error','-n','-ss',str(start),'-to',str(end),'-i',str(source),
                         '-vn','-ac','1','-ar','16000','-c:a','pcm_s16le',str(clip)],check=True)
