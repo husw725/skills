@@ -34,7 +34,8 @@ def download(name):
             def fetch(start):
                 end=min(start+chunk,size)-1;piece=parts/f'{start:012}.bin'
                 if piece.exists() and piece.stat().st_size==end-start+1:return piece
-                for attempt in range(3):
+                for attempt in range(5):
+                    http_status=None;substart=start
                     try:
                         step=1024**2;blocks=[]
                         for substart in range(start,end+1,step):
@@ -45,6 +46,7 @@ def download(name):
                             else:
                                 with requests.get(url,params={'download':'true','range_part':f'{substart}-{subend}'},
                                      headers={'Range':f'bytes={substart}-{subend}'},stream=True,timeout=(15,30)) as r:
+                                    http_status=r.status_code
                                     if r.status_code!=206 or r.headers.get('Content-Range')!=f'bytes {substart}-{subend}/{size}':
                                         raise ValueError('Unexpected model range response')
                                     block=r.raw.read(subend-substart+1)
@@ -55,8 +57,9 @@ def download(name):
                         data=b''.join(blocks)
                         temporary=piece.with_suffix('.part');temporary.write_bytes(data);temporary.replace(piece)
                         print('MODEL_PART',name,start,len(data),flush=True);return piece
-                    except Exception:
-                        if attempt==2:raise RuntimeError('Public model range download failed') from None
+                    except Exception as exc:
+                        print('MODEL_RANGE_RETRY',name,start,substart,attempt+1,type(exc).__name__,http_status,flush=True)
+                        if attempt==4:raise RuntimeError('Public model range download failed') from None
                         time.sleep(2**attempt)
             if not target.exists():
                 with ThreadPoolExecutor(max_workers=8) as pool:pieces=list(pool.map(fetch,range(0,size,chunk)))

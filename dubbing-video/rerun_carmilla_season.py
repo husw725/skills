@@ -23,6 +23,7 @@ ROOT = Path('output/carmilla-season-revision-20261016')
 BASE_ROOT = ROOT
 RETRY_ROOT = Path('output/carmilla-season-revision-20261017-retry1')
 FINAL_ROOT = Path('output/carmilla-season-final-20261017')
+TIMING_ROOT = Path('output/carmilla-season-timing-repair-20261017')
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -129,11 +130,22 @@ def source_audio_evidence(n,rows,source_audio,prior_root):
         folder=Path('output/carmilla-source-verification-20261017')/f'episode-{n:02}'/row['id']
         clip=folder/'original-context.wav';records={}
         for model in ('small.en','medium.en'):
-            path=folder/f'{model}.json';record=read_json(path);data=record['input']
+            path=folder/f'{model}.context.json';record=read_json(path);data=record['input']
+            baseline_path=folder/f'{model}.json';baseline=read_json(baseline_path)
+            whole=Path(data['whole_episode_evidence']);full=read_json(whole)
+            if any(full['input'].get(key)!=data.get(key) for key in ('method','model','model_files','source_audio_sha256','decoding')):
+                raise ValueError('Whole-episode evidence source/model mismatch')
+            expected=[s for s in full['segments'] if s['end']>=row['start']-1 and s['start']<=row['end']+1]
+            if record['segments']!=expected:raise ValueError('Context evidence differs from its full transcript')
+            if (data.get('method')!='unprompted-full-episode-vad-v1' or data.get('decoding',{}).get('vad_filter') is not True
+                    or digest(whole)!=data['whole_episode_sha256']
+                    or any(baseline['input'][key]!=data[key] for key in ('cue','model','source_audio_sha256','clip_sha256','model_files'))):
+                raise ValueError('Whole-episode evidence provenance mismatch')
+            inputs[str(baseline_path)]=digest(baseline_path);inputs[str(whole)]=digest(whole)
             if (data['cue']!=row or data['model']!=model or data['source_audio_sha256']!=source_sha
                     or digest(clip)!=data['clip_sha256']):raise ValueError('Original-audio evidence does not match this cue')
             inputs[str(path)]=digest(path);inputs[str(clip)]=digest(clip)
-            records[model]={'segments':record['segments'],'model_files_sha256':data['model_files'],
+            records[model]={'segments':record['segments'],'baseline_segments':baseline['segments'],'model_files_sha256':data['model_files'],
                             'evidence_sha256':inputs[str(path)],'human_listened':False}
         result[row['id']]={'cue':row,'models':records,'source_speaker_verified':False}
     if required!=set(result):raise ValueError('Missing disputed-cue audio evidence')
@@ -156,6 +168,16 @@ def validate_source_readings(review,rows,evidence):
         models=evidence[cue['id']]['models']
         if set(models)!={'small.en','medium.en'}:raise ValueError('Two designated ASR models required')
         for model in models.values():
+            # VAD/context must never silently lose a confidently heard negation,
+            # modality or number from the independently preserved raw clip.
+            critical={'not','no','never','cannot','can','could','would','should','must','will','shall',
+                      'zero','one','two','three','four','five','six','seven','eight','nine','ten',
+                      'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'}
+            from collections import Counter
+            protected=Counter(t for segment in model.get('baseline_segments',[]) for w in segment.get('words',[])
+                if w['probability']>=.5 and row['start']-.1<=(w['start']+w['end'])/2<=row['end']+.1
+                for t in reading_tokens(w['word']) if t in critical or t.isdigit())
+            if protected-Counter(tokens):raise ValueError('Context ASR omitted a protected raw-cue word')
             words=[w for segment in model['segments'] for w in segment.get('words',[])]
             previous=-math.inf
             for w in words:
@@ -277,6 +299,8 @@ def prepare(n,args,preceding):
             'the existing speaker/timing constraints. Preserve complete meaning and all deadlines/names. '
             'Aim for a margin below the provided maximum_seconds; do not assume synthesized duration is verified. '
             'Keep prior correct wording for unaffected cues to reuse paid audio. '
+            'Inspect revision_feedback.regroup_candidates for overlong short fragments: adjacent same-speaker '
+            'clauses may be delivered together when semantically natural; validate every original grouping constraint. '
             'For a measured group still overlong, aim comfortably below its maximum (about 80 percent where faithful), '
             'using idiomatic equivalent phrasing rather than deleting meaning, names or negation. '
             'When original source_audio_evidence is supplied, quote the actual English source_audio_reading for each '
@@ -335,13 +359,13 @@ def prepare(n,args,preceding):
 
 def revision_feedback(n,args,preceding=()):
     prior=Path(args.prior_root)
-    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve(),FINAL_ROOT.resolve()}:raise ValueError('Only existing season attempts may seed this retry')
+    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve(),FINAL_ROOT.resolve(),TIMING_ROOT.resolve()}:raise ValueError('Only existing season attempts may seed this retry')
     folder=prior/f'episode-{n:02}'
     continuity={int(row['episode']):row for row in preceding[-2:]}
     data={'source_root':str(prior),'source_sha256':{},'prior_editorial':None,'measured_groups':[]}
     for previous in range(max(1,n-2),n):
         if previous in continuity:continue
-        ep=next((root/f'episode-{previous:02}' for root in (prior,BASE_ROOT)
+        ep=next((root/f'episode-{previous:02}' for root in ((prior,FINAL_ROOT,RETRY_ROOT,BASE_ROOT) if prior.resolve()==TIMING_ROOT.resolve() else (prior,BASE_ROOT))
                  if (root/f'episode-{previous:02}'/'render-report.json').exists()),None)
         if ep is None:continue
         p=read_json(ep/'plan.json');validate_reviewed_plan(ep,p)
@@ -353,7 +377,7 @@ def revision_feedback(n,args,preceding=()):
         for name in ('plan.json','reviewed.json','render-report.json'):
             data['source_sha256'][str(ep/name)]=digest(ep/name)
     data['previous_episode_revisions']=[continuity[k] for k in sorted(continuity)[-2:]]
-    for name in ('reviewed.json','plan.json'):
+    for name in ('reviewed.json','plan.json','duration-measurements.json'):
         p=folder/name
         if p.exists():data['source_sha256'][str(p)]=digest(p)
     if (folder/'reviewed.json').exists():data['prior_editorial']=read_json(folder/'reviewed.json')
@@ -362,11 +386,12 @@ def revision_feedback(n,args,preceding=()):
     duration=float(probe(Path(plan['assets']['video']),args.ffmpeg)['format']['duration'])
     for i,u in enumerate(plan['units']):
         wav=folder/'utterances'/u['id']/'original.wav'
-        if not wav.exists() and prior.resolve() in {RETRY_ROOT.resolve(),FINAL_ROOT.resolve()}:
+        if not wav.exists() and prior.resolve() in {RETRY_ROOT.resolve(),FINAL_ROOT.resolve(),TIMING_ROOT.resolve()}:
             cartesia=read_json('output/drama-01/cartesia-pilot-voices/voice-bank.json')
             minimax=read_json('output/drama-01/voice-bank.json')['voices']
             req,_=request(u,cartesia,minimax)
-            for cache in ([RETRY_ROOT,BASE_ROOT] if prior.resolve()==FINAL_ROOT.resolve() else [BASE_ROOT]):
+            for cache in ([FINAL_ROOT,RETRY_ROOT,BASE_ROOT] if prior.resolve()==TIMING_ROOT.resolve() else
+                          [RETRY_ROOT,BASE_ROOT] if prior.resolve()==FINAL_ROOT.resolve() else [BASE_ROOT]):
                 candidate=paid_audio_folder(n,req,wav.parent,cache)/'original.wav'
                 if candidate.exists():wav=candidate;break
         receipt=wav.parent/'audio-receipt.json'
@@ -382,6 +407,17 @@ def revision_feedback(n,args,preceding=()):
         data['measured_groups'].append({'cue_ids':u['cue_ids'],'translation':u['translation'],
             'natural_seconds':natural,'maximum_seconds':maximum,'requires_shortening':natural>maximum,
             'audio_sha256':read_json(receipt)['sha256']})
+    max_gap={9:.85,15:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
+    data['regroup_candidates']=[]
+    for index,(a,b) in enumerate(zip(plan['units'],plan['units'][1:])):
+        if (a.get('source_speaker') in (None,'unknown') or a.get('source_speaker')!=b.get('source_speaker')
+            or a.get('production_voice')!=b.get('production_voice') or a.get('emotion')!=b.get('emotion')
+            or not 0<=b['start']-a['end']<=max_gap+1e-9):continue
+        following=plan['units'][index+2]['start'] if index+2<len(plan['units']) else duration
+        end=max(b['end'],min(duration,following-.1,b['end']+.8))
+        data['regroup_candidates'].append({'cue_ids':a['cue_ids']+b['cue_ids'],
+            'maximum_seconds':(end-a['start'])*1.2,'requires_semantic_review':True,
+            'reason':'Same evidence speaker, production voice and emotion; review as one complete thought if timing is tight.'})
     if any(digest(Path(p))!=sha for p,sha in data['source_sha256'].items()):
         raise ValueError('Prior revision changed while collecting feedback')
     return data
@@ -391,7 +427,7 @@ def paid_audio_folder(n,req,target,prior_root=None):
     """Reuse the exact prior request, including ambiguous receipts; never route around them."""
     if prior_root is None:return target
     prior=Path(prior_root)
-    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve(),FINAL_ROOT.resolve()}:raise ValueError('Unexpected paid cache root')
+    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve(),FINAL_ROOT.resolve(),TIMING_ROOT.resolve()}:raise ValueError('Unexpected paid cache root')
     # A changed text must not bypass an ambiguous earlier payment. Check the
     # entire original episode, even when its request marker is missing.
     for pending in (prior/f'episode-{n:02}'/'utterances').rglob('*.submission-pending.json'):
@@ -426,9 +462,23 @@ def speech_window(natural,target,start,previous_end,allow_preroll=False):
     audio_start=start
     if natural/target>1.2 and allow_preroll:
         available=min(.08,max(0,start-max(0,previous_end+.1)))
-        lead=min(available,max(0,natural/1.2-target)+.012)
+        lead=min(available,max(0,natural/1.2-target)+.05)
         audio_start-=lead;target+=lead
     return audio_start,target,max(1.,natural/target)
+
+
+def fit_speech(trimmed,fitted,target,factor,ffmpeg):
+    if not 1<=factor<=1.2:raise ValueError('Unapproved speech speed')
+    for attempt in range(4):
+        run([ffmpeg,'-v','error','-y','-i',trimmed,'-af',f'atempo={factor:.8f}',
+             '-ar',str(RATE),'-ac','1','-c:a','pcm_s16le',fitted])
+        audio=read_audio(fitted,ffmpeg)
+        if len(audio)<=math.floor(target*RATE):return audio,factor
+        if factor==1.2:break
+        # Codec frame padding must not make the heuristic jump beyond the
+        # approved cap without testing that cap. No truncation or new TTS.
+        factor=1.2 if attempt>=2 else min(1.2,factor*len(audio)/(target*RATE)*1.005)
+    raise ValueError('Cannot fit without truncating/over-speeding')
 
 
 def render(n,args):
@@ -466,7 +516,7 @@ def render(n,args):
     cache_roots=getattr(args,'cache_roots',None) or ([args.prior_root] if getattr(args,'prior_root',None) else [])
     # Preflight all prior attempts, including requests whose wording changed.
     for prior in cache_roots:paid_audio_folder(n,{},folder/'unused-cache-probe',prior)
-    client=Mflix(args.mcp_config);results=[]
+    client=Mflix(args.mcp_config);results=[];measurements=[]
     for index,(unit,(req,provider)) in enumerate(zip(plan['units'],requests)):
         target_dir=folder/'utterances'/unit['id']
         cached=target_dir
@@ -481,17 +531,20 @@ def render(n,args):
         limit=min(duration,next_start-.1,unit['end']+.8)
         if limit<unit['end']-.001: limit=unit['end']
         target=max(unit['end'],min(limit,unit['start']+natural))-unit['start']
+        if getattr(args,'measure_only',False):
+            maximum=(max(unit['end'],limit)-unit['start'])*1.2
+            measurements.append({'cue_ids':unit['cue_ids'],'natural_seconds':natural,
+                'maximum_seconds':maximum,'requires_shortening':natural>maximum,
+                'audio_sha256':digest(path),'receipt_sha256':digest(cached/'audio-receipt.json')})
+            save_json(folder/'duration-measurements.json',{'plan_sha256':digest(folder/'plan.json'),
+                'complete':len(measurements)==len(requests),'groups':measurements,'native_listening_passed':False})
+            print('DURATION_MEASURED',n,len(measurements),len(requests),flush=True)
+            continue
         previous_end=results[-1]['audio_start']+results[-1]['fitted_duration_seconds'] if results else -.1
         audio_start,target,factor=speech_window(natural,target,unit['start'],previous_end,getattr(args,'finalize_pending',False))
         if factor>1.2: raise ValueError('Measured speech too long: revise faithfully; no automatic paid speed retries')
         trimmed,fitted=target_dir/'trimmed.wav',target_dir/'fitted.wav';write_audio(trimmed,samples)
-        for _ in range(4):
-            run([args.ffmpeg,'-v','error','-y','-i',trimmed,'-af',f'atempo={factor:.8f}',
-                 '-ar',str(RATE),'-ac','1','-c:a','pcm_s16le',fitted])
-            audio=read_audio(fitted,args.ffmpeg)
-            if len(audio)<=math.floor(target*RATE): break
-            factor*=len(audio)/(target*RATE)*1.005
-        if factor>1.2 or len(audio)>math.floor(target*RATE): raise ValueError('Cannot fit without truncating/over-speeding')
+        audio,factor=fit_speech(trimmed,fitted,target,factor,args.ffmpeg)
         results.append({**unit,'provider':provider,'task_id':receipt['task_id'],'request':req,'atempo_factor':factor,
                         'paid_audio_reused_from_prior_attempt':cached!=target_dir,
                         'audio_start':audio_start,'pre_subtitle_gap_used_seconds':unit['start']-audio_start,
@@ -499,6 +552,7 @@ def render(n,args):
                         'post_subtitle_gap_used_seconds':max(0,audio_start+len(audio)/RATE-unit['end']),
                         'fitted_path':str(fitted),'fitted_sha256':digest(fitted),'native_listening_passed':False})
         save_json(folder/'progress.json',{'episode':n,'stage':'synthesizing','complete':len(results),'total':len(requests),'updated_at':time.time()})
+    if getattr(args,'measure_only',False):return
     import numpy as np
     dialogue=np.zeros(math.ceil(duration*RATE),dtype=np.float32)
     for r in results:

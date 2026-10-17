@@ -225,6 +225,12 @@ class SeasonRerunTests(unittest.TestCase):
                 for i,(w,p) in enumerate([("Can't",.9),('I',.4),('go',.4)])]
         with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
 
+    def test_context_reading_cannot_drop_protected_raw_negation(self):
+        data,rows,evidence=self.audio_evidence()
+        for m in evidence['x']['models'].values():
+            m['baseline_segments']=[{'words':[{'word':'not','start':1.2,'end':1.3,'probability':.9}]}]
+        with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
+
     def test_source_reading_can_exclude_neighbor_padding(self):
         data,rows,evidence=self.audio_evidence()
         for m in evidence['x']['models'].values():
