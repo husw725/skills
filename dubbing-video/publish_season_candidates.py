@@ -83,6 +83,11 @@ def s3_video(video,sha,config,folder):
         head=None
     if head is not None and (head['ContentLength']!=size or head.get('Metadata',{}).get('sha256')!=sha):
         raise ValueError('Existing object differs; no overwrite')
+    receipt=folder/'upload.private.json'
+    if head is not None and receipt.exists():
+        old=read_json(receipt)
+        if (old.get('url'),old.get('sha256'),old.get('bytes'),old.get('remote_sha256_verified'))==(url,sha,size,True):
+            return url
     if head is None:
         s3.upload_file(str(video),bucket,key,ExtraArgs={'ContentType':'video/mp4','Metadata':{'sha256':sha}},
                        Config=TransferConfig(multipart_threshold=5*1024**2,multipart_chunksize=5*1024**2,max_concurrency=3))
@@ -174,10 +179,12 @@ def publish(n,folder,args):
 def main():
     p=argparse.ArgumentParser();p.add_argument('--s3-config',required=True,type=Path)
     p.add_argument('--mcp-config',required=True,type=Path);p.add_argument('--ffmpeg',required=True,type=Path)
+    p.add_argument('--wait-for-lock',type=int,default=0,help='Bounded wait for another publisher; never resubmit uncertain mutations')
     args=p.parse_args()
     if sys.platform!='win32':p.error('Business publication runs on Windows')
+    if not 0<=args.wait_for_lock<=14400:p.error('Publication lock wait must be 0..14400 seconds')
     PUBLICATION.mkdir(parents=True,exist_ok=True)
-    with process_lock(PUBLICATION/'season-publication.lock',timeout=0):
+    with process_lock(PUBLICATION/'season-publication.lock',timeout=args.wait_for_lock):
         status={'published':{},'requires_review':{},'all_32_published':False}
         for n,folder in sorted(candidates().items()):
             try:status['published'][str(n)]=publish(n,folder,args)
