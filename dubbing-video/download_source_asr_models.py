@@ -36,7 +36,7 @@ def download(name):
                 if piece.exists() and piece.stat().st_size==end-start+1:return piece
                 for attempt in range(3):
                     try:
-                        step=1024**2 if size-start<=2*chunk else chunk;blocks=[]
+                        step=1024**2;blocks=[]
                         for substart in range(start,end+1,step):
                             subend=min(end,substart+step-1)
                             tail=folder/'tail-pieces'/f'{substart:012}.bin'
@@ -59,7 +59,7 @@ def download(name):
                         if attempt==2:raise RuntimeError('Public model range download failed') from None
                         time.sleep(2**attempt)
             if not target.exists():
-                with ThreadPoolExecutor(max_workers=4) as pool:pieces=list(pool.map(fetch,range(0,size,chunk)))
+                with ThreadPoolExecutor(max_workers=8) as pool:pieces=list(pool.map(fetch,range(0,size,chunk)))
                 temporary=target.with_suffix('.assembling');h=hashlib.sha256()
                 with temporary.open('wb') as out:
                     for piece in pieces:
