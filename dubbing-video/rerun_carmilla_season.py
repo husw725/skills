@@ -66,7 +66,7 @@ def validate_editorial(data, rows, old, annotations, glossary, max_gap=.6):
             raise ValueError('Cannot group across speakers/production voices')
         if 'unknown' in speakers and len({old[c]['id'] for c in group})>1:
             raise ValueError('Unknown readers cannot be inferred identical from voice casting')
-        if any(b['start']<a['end'] or b['start']-a['end']>max_gap for a,b in zip(members,members[1:])):
+        if any(b['start']<a['end'] or b['start']-a['end']>max_gap+1e-9 for a,b in zip(members,members[1:])):
             raise ValueError('Grouping crosses overlap/long pause')
         by_cue={c['id']:c for c in data['cues']}
         if len({by_cue[c]['emotion'] for c in group})!=1:
@@ -247,7 +247,7 @@ def prepare(n,args,preceding):
              'production_voice_per_cue':{c:u['production_voice'] for c,u in old.items()},
              'known_issue':'EP29 e29-8 source How many years. conflicts with screenplay minions; retain original text and flag for original-audio verification, never silently replace it.'}
     payload['grouping_max_gap_seconds']=max_gap
-    payload['source_audio_evidence']=audio_evidence
+    if audio_evidence:payload['source_audio_evidence']=audio_evidence
     if n==20 and 'e20-8' in audio_evidence:payload['provisional_casting_revision']='e20-8 uses Laura per user final storyboard voiceover; source evidence reader remains unknown, NOT audio-verified.'
     if getattr(args,'prior_root',None):
         payload['revision_feedback']=revision_feedback(n,args,preceding)

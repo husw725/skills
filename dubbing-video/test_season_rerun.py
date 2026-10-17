@@ -44,6 +44,12 @@ class SeasonRerunTests(unittest.TestCase):
         args=list(self.example());args[0]['cues'][1]['emotion']='fearful'
         with self.assertRaises(ValueError):validate_editorial(*args)
 
+    def test_gap_at_exact_policy_limit_tolerates_float_roundoff_only(self):
+        args=list(self.example());args[1][0]['end']=42.333;args[1][1]['start']=42.933;args[1][1]['end']=43.566
+        validate_editorial(*args)
+        args[1][1]['start']+=.001
+        with self.assertRaises(ValueError):validate_editorial(*args)
+
     def test_reviewed_gap_policy_still_prohibits_cross_speaker_groups(self):
         args=list(self.example());args[1][1]['start']=1.72
         with self.assertRaises(ValueError):validate_editorial(*args)
