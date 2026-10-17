@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from publish_season_candidates import append_version
+from publish_season_candidates import append_version,verify_s3_checksum
 from translate import read_json
 from notify_season_complete import verify_delivery,send_private
 from types import SimpleNamespace
@@ -65,6 +65,28 @@ class SeasonPublicationTests(unittest.TestCase):
                 c.fail=None
                 with self.assertRaises(ValueError):self.publish(c,root)
                 self.assertEqual(c.writes,1)
+
+    def test_aws_sha256_checksum_verifies_all_parts_and_detects_changes(self):
+        import base64,hashlib
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'video';chunks=[b'a'*(5*1024**2),b'b'*93];path.write_bytes(b''.join(chunks))
+            sha=hashlib.sha256(path.read_bytes()).hexdigest()
+            combined=base64.b64encode(hashlib.sha256(b''.join(hashlib.sha256(c).digest() for c in chunks)).digest()).decode()+'-2'
+            head={'ContentLength':path.stat().st_size,'ChecksumSHA256':combined,'ChecksumType':'COMPOSITE'}
+            self.assertTrue(verify_s3_checksum(path,sha,head))
+            self.assertFalse(verify_s3_checksum(path,sha,{**head,'ChecksumSHA256':combined[:-1]+'3'}))
+            self.assertFalse(verify_s3_checksum(path,sha,{}))
+            with self.assertRaises(ValueError):verify_s3_checksum(path,sha,{**head,'ContentLength':1})
+            path.write_bytes(b'z'*path.stat().st_size)
+            with self.assertRaises(ValueError):verify_s3_checksum(path,sha,head)
+
+    def test_aws_full_object_sha256_matches_actual_file(self):
+        import base64,hashlib
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'video';path.write_bytes(b'video bytes')
+            sha=hashlib.sha256(path.read_bytes())
+            self.assertTrue(verify_s3_checksum(path,sha.hexdigest(),{'ContentLength':path.stat().st_size,
+                'ChecksumSHA256':base64.b64encode(sha.digest()).decode(),'ChecksumType':'FULL_OBJECT'}))
 
     def delivery(self):
         progress={'all_32_published':True,'requires_review':{},'published':{}};rows=[]

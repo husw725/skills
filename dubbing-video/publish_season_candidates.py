@@ -1,5 +1,7 @@
 """Publish validated Carmilla revisions without replacing their Review histories."""
 import argparse
+import base64
+import hashlib
 from pathlib import Path
 import sys
 import time
@@ -60,6 +62,27 @@ def validate_candidate(n,folder,ffmpeg):
     return video,subtitle,report,float(probe(video,ffmpeg)['format']['duration'])
 
 
+def verify_s3_checksum(video,sha,head):
+    """Compare AWS's cryptographic object checksum, never user metadata.
+
+    SHA256 composite calculation follows the AWS multipart checksum tutorial.
+    Our upload uses fixed 5 MiB parts; other partition layouts fall back to GET.
+    """
+    value=head.get('ChecksumSHA256')
+    if not value:return False
+    size=video.stat().st_size
+    if head.get('ContentLength')!=size:raise ValueError('Remote length differs')
+    whole=hashlib.sha256();composite=hashlib.sha256();parts=0
+    with video.open('rb') as stream:
+        while chunk:=stream.read(5*1024**2):
+            whole.update(chunk);composite.update(hashlib.sha256(chunk).digest());parts+=1
+    if whole.hexdigest()!=sha:raise ValueError('Local video changed during upload')
+    full=base64.b64encode(whole.digest()).decode()
+    combined=base64.b64encode(composite.digest()).decode()+f'-{parts}'
+    return ((head.get('ChecksumType')=='FULL_OBJECT' and value==full) or
+            (head.get('ChecksumType')=='COMPOSITE' and value==combined))
+
+
 def s3_video(video,sha,config,folder):
     import boto3
     import requests
@@ -89,11 +112,15 @@ def s3_video(video,sha,config,folder):
         if (old.get('url'),old.get('sha256'),old.get('bytes'),old.get('remote_sha256_verified'))==(url,sha,size,True):
             return url
     if head is None:
-        s3.upload_file(str(video),bucket,key,ExtraArgs={'ContentType':'video/mp4','Metadata':{'sha256':sha}},
+        s3.upload_file(str(video),bucket,key,ExtraArgs={'ContentType':'video/mp4','Metadata':{'sha256':sha},'ChecksumAlgorithm':'SHA256'},
                        Config=TransferConfig(multipart_threshold=5*1024**2,multipart_chunksize=5*1024**2,max_concurrency=3))
-    if parallel_remote_digest(s3,bucket,key,size)!=sha:raise ValueError('Remote content differs')
+    checksum_head=s3.head_object(Bucket=bucket,Key=key,ChecksumMode='ENABLED')
+    method='s3_sha256_checksum' if verify_s3_checksum(video,sha,checksum_head) else 'full_range_get_sha256'
+    if method=='full_range_get_sha256' and parallel_remote_digest(s3,bucket,key,size)!=sha:
+        raise ValueError('Remote content differs')
     if requests.head(url,timeout=20).status_code!=200:raise ValueError('Video not publicly readable')
-    save_json(folder/'upload.private.json',{'url':url,'sha256':sha,'bytes':size,'remote_sha256_verified':True})
+    save_json(folder/'upload.private.json',{'url':url,'sha256':sha,'bytes':size,'remote_sha256_verified':True,'verification_method':method,
+        'aws_checksum_type':checksum_head.get('ChecksumType'),'aws_checksum_sha256':checksum_head.get('ChecksumSHA256')})
     return url
 
 
