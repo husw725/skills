@@ -2,6 +2,23 @@
 
 ## 当前接力记录
 
+### 2026-10-17 已实际启动剩余27集的定向重试（新目录、旧付费缓存复用）
+
+- 用户说“再试一下”。ssh -B ppp0 win已实测连通；默认流量仍可能被utun4代理接管。实际核原season锁空闲，未完成集合固定为1/3/4/5/6/8/9/10/11/12/13/15/17/18/20/21/22/23/24/25/26/27/28/29/30/31/32，保留完成5集2/7/14/16/19。
+- 新增rerun_carmilla_season.py --retry-pending，固定输出output/carmilla-season-revision-20261017-retry1，原season.lock内读取/冻结原32集状态，仅重试requires_review集合。先两遍译稿审核，再渲染通过集。不会把本轮27集完成误报全32集已完成。
+- 将旧reviewed/plan和已有音频receipt/WAV SHA绑定新输入，FFmpeg测自然时长，给模型逐组requires_shortening/最大秒数作为等义压缩依据；保持完整剧情、人名、否定和期限，最大atempo1.2、不截断、不自动付费提速重试。剧本额外句缺失、原文共同剧情矛盾、unknown读者本身可保留warning；真实ASR词义/代词/说话人/版本冲突仍error阻断。EP29仍独立源听核阻断。不能宣称本轮已修正确认巴葡口音。
+- 新renderer仅同集完整request fingerprint相同才复用旧已付费音频，新的trimmed/fitted和成片写新目录，原文件不覆写；report记录prior_attempt_audio_reused_count。旧集任何未结submission-pending（即使marker缺失/新text不同）都会在新付费前阻断，已有有效taskId回执可恢复；不克隆。跨集参考补入邻近已完成集reviewed，并绑定plan/reviewed/report SHA，仍非母语验收。
+- audit_review_feedback独立审核初次要求修复pending绕过和锁前状态筛选，两项已修，并补不同text/缺marker反例。最终“修正后放行代码及限定Windows重试”；Mac/Windows35项相关测试全通过，旧数据读取与实测feedback在Windows执行。
+- 代码cb48533已GitHub push/Windows pull。有限Interactive任务Codex-Carmilla-Pending-Retry-20261017实际Running，runner-start存在，EP01已进入draft.private.log，启动时日志无ERROR（仅几秒，尚无新draft输出，不等于模型已完成）。runner.py与日志/状态/回执均在新忽略目录；无自动循环重启。后续读该目录season-progress、runner-exit和各集reviewed/report，汇总需合并原5集。
+- 尚未上传本轮新成片到Review/S3或发送全完成钉钉；全32集候选+字幕核验后上传Review148、保留版本链/片名tag，全部读回后再通知。代码审查可用codex review或/review。
+
+### 2026-10-17 实时进度核验：5/32新版候选，27集待修，当前无全季任务在跑
+
+- 用户问“怎么样了”后实际SSH读取Windows：默认ssh被reset，VPN显示Connected但10.20.1.30默认路由走utun4/198.18.0.1。无需改系统路由，ssh -B ppp0 win成功（ppp0本机172.16.11.112，对端172.16.11.1）；后续SSH/SCP指定VPN网卡避免代理虚拟网卡。不能把最初reset误判为Windows离线。
+- continuation-01-02/result.json已结束，任务Ready。EP02新版已rendered_candidate；EP01文本通过、20组已完成14组后下一组实测过长拦截。两集网络失败已恢复文字生成，不再是当前网络超时导致未产出。
+- 当前共5集新候选：EP02/07/14/16/19，实际视频文件存在、报告video_payload_identical=true、new_clone_count=0。8集时长待修：EP01/10/11/15/24/26/30/32；19集文本/来源error待核，合计27集。不要报告持续后台运行；尚无本轮season发布回执，Review上传和全完成钉钉通知仍未执行。
+- 下一步实际需要逐句等义压缩过长语音，保留已付费缓存；复核19集error分级/上下文错位和真实听核冲突。未因本次状态查询自动重提付费任务或清除阻断。
+
 ### 2026-10-16 最新交付要求：全剧尽力巴葡发音，全部重做后Review+钉钉
 
 - 用户明确要求尽可能实现巴葡发音，所有集重做好后上传Review并发送一条钉钉通知。当前全32集重跑授权继续有效；不得把API language/Portuguese参数当母语听审通过。依据EP02旧专业反馈优化音色/发音/短呼喊/语速，正确巴葡拼写与合成发音控制分层。
