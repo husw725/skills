@@ -639,7 +639,11 @@ def main():
                 state['updated_at']=time.time();save_json(ROOT/'season-progress.json',state)
         expected='editorial_ready' if a.stage=='editorial' else 'rendered_candidate'
         complete='editorial_complete' if a.stage=='editorial' else ('selected_candidates_complete' if a.retry_pending or a.finalize_pending else 'complete_candidates')
-        state['stage']=complete if all(e['stage']==expected for e in state['episodes'].values()) else 'requires_review'
+        active=({str(n):state['episodes'][str(n)] for n in episodes}
+                if a.retry_pending or a.finalize_pending else state['episodes'])
+        state['unselected_previous_failures']=[int(n) for n,e in state['episodes'].items()
+            if n not in active and e['stage']=='requires_review']
+        state['stage']=complete if all(e['stage']==expected for e in active.values()) else 'requires_review'
         save_json(ROOT/'season-progress.json',state)
         if state['stage']=='requires_review':raise SystemExit(2)
 

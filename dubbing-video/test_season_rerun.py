@@ -175,6 +175,25 @@ class SeasonRerunTests(unittest.TestCase):
             self.assertEqual(state['episodes']['3']['stage'],'rendered_candidate')
             self.assertEqual(state['episodes']['22']['stage'],'rendered_candidate')
 
+    def test_selected_completion_does_not_clear_or_reexecute_an_unselected_failure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base=Path(temp)/'base';retry=Path(temp)/'retry';final=Path(temp)/'final'
+            for root in (base,retry,final):root.mkdir()
+            states={str(n):{'stage':'rendered_candidate'} for n in range(1,33)}
+            for n in (9,22):states[str(n)]={'stage':'requires_review'}
+            save_json(base/'season-progress.json',{'episodes':states});save_json(retry/'season-progress.json',{'episodes':{}})
+            save_json(final/'season-progress.json',{'episodes':{'9':states['9'],'22':{'stage':'editorial_ready'}}})
+            ff=Path(temp)/'ffmpeg';ff.touch()
+            argv=['worker','--stage','render','--finalize-pending','--episodes','22','--ffmpeg',str(ff),'--mcp-config',str(ff)]
+            with patch.multiple(season,BASE_ROOT=base,ROOT=base,RETRY_ROOT=retry,FINAL_ROOT=final), \
+                 patch('sys.argv',argv),patch('sys.platform','win32'),patch.object(season,'render') as renderer:
+                season.main()
+            self.assertEqual([c.args[0] for c in renderer.call_args_list],[22])
+            state=read_json(final/'season-progress.json')
+            self.assertEqual(state['stage'],'selected_candidates_complete')
+            self.assertEqual(state['unselected_previous_failures'],[9])
+            self.assertEqual(state['episodes']['9']['stage'],'requires_review')
+
     def audio_evidence(self):
         row={'id':'x','text':'How many years?','start':1.,'end':2.}
         words=[{'word':'Her','start':1.1,'end':1.3,'probability':.9},
