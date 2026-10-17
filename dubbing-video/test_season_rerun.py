@@ -3,10 +3,12 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from rerun_carmilla_season import request, validate_editorial, validate_reviewed_plan, storyboard_reference, paid_audio_folder, revision_feedback
+from rerun_carmilla_season import request, validate_editorial, validate_reviewed_plan, storyboard_reference, paid_audio_folder, revision_feedback, speech_window
 from unittest.mock import patch
 from types import SimpleNamespace
 from dub_episode import digest, RATE
+from translate import save_json,read_json
+import rerun_carmilla_season as season
 from cartesia_pilot import bind
 
 
@@ -41,6 +43,22 @@ class SeasonRerunTests(unittest.TestCase):
         with self.assertRaises(ValueError):validate_editorial(*args)
         args=list(self.example());args[0]['cues'][1]['emotion']='fearful'
         with self.assertRaises(ValueError):validate_editorial(*args)
+
+    def test_reviewed_gap_policy_still_prohibits_cross_speaker_groups(self):
+        args=list(self.example());args[1][1]['start']=1.72
+        with self.assertRaises(ValueError):validate_editorial(*args)
+        validate_editorial(*args,max_gap=.85)
+        args[3]['b']['speaker']='Carmilla'
+        with self.assertRaises(ValueError):validate_editorial(*args,max_gap=.85)
+
+    def test_tiny_overflow_may_borrow_silence_but_not_overlap_or_exceed_80ms(self):
+        start,target,factor=speech_window(1.87,1.534,44.666,44.0,True)
+        self.assertLessEqual(44.666-start,.08);self.assertLessEqual(factor,1.2)
+        self.assertGreaterEqual(start,44.1)
+        start,target,factor=speech_window(1.87,1.534,44.666,44.64,True)
+        self.assertEqual(start,44.666);self.assertGreater(factor,1.2)
+        start,target,factor=speech_window(10.,1.,.02,-.1,True)
+        self.assertGreaterEqual(start,0.);self.assertGreater(factor,1.2)
 
     def banks(self):return {'Laura':{'voice_id':'cartesia:saved-laura'}},{'Laura':{'voice_id':'saved-minimax-laura'}}
 
@@ -131,6 +149,25 @@ class SeasonRerunTests(unittest.TestCase):
                 self.assertEqual(feedback['source_sha256'][str(wav)],digest(wav))
                 wav.write_bytes(b'changed audio')
                 with self.assertRaises(ValueError):revision_feedback(1,args)
+
+    def test_finalize_resume_keeps_completed_and_renders_editorial_ready(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base=Path(temp)/'base';retry=Path(temp)/'retry';final=Path(temp)/'final'
+            for root in (base,retry,final):root.mkdir()
+            states={str(n):{'stage':'rendered_candidate'} for n in range(1,33)}
+            states['9']={'stage':'requires_review'};states['22']={'stage':'requires_review'}
+            save_json(base/'season-progress.json',{'episodes':states})
+            save_json(retry/'season-progress.json',{'episodes':{'9':states['9'],'22':states['22']}})
+            save_json(final/'season-progress.json',{'episodes':{'3':{'stage':'rendered_candidate'},'22':{'stage':'editorial_ready'}}})
+            ff=Path(temp)/'ffmpeg';ff.touch()
+            argv=['worker','--stage','render','--finalize-pending','--ffmpeg',str(ff),'--mcp-config',str(ff)]
+            with patch.multiple(season,BASE_ROOT=base,ROOT=base,RETRY_ROOT=retry,FINAL_ROOT=final), \
+                 patch('sys.argv',argv),patch('sys.platform','win32'),patch.object(season,'render') as renderer:
+                season.main()
+            self.assertEqual([c.args[0] for c in renderer.call_args_list],[9,22])
+            state=read_json(final/'season-progress.json')
+            self.assertEqual(state['episodes']['3']['stage'],'rendered_candidate')
+            self.assertEqual(state['episodes']['22']['stage'],'rendered_candidate')
 
 
 if __name__=='__main__':unittest.main()

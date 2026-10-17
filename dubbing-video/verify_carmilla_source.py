@@ -44,11 +44,15 @@ def main():
         if marker.exists() and read_json(marker)['fingerprint']!=sha:raise ValueError('Source verification inputs changed')
         save_json(marker,{'fingerprint':sha})
         for model_name in a.models:
-            model=WhisperModel(model_name,device='cpu',compute_type='int8',cpu_threads=8,num_workers=1,
+            local=Path('output/tools/source-asr-models')/model_name
+            local_model=(local/'verified.json').exists()
+            model=WhisperModel(str(local.resolve()) if local_model else model_name,device='cpu',compute_type='int8',cpu_threads=8,num_workers=1,
                               download_root=str(Path('output/tools/whisper-models').resolve()))
-            model_files={str(p):digest(p) for p in Path('output/tools/whisper-models').rglob('*')
+            model_files={str(p):digest(p) for p in (local if local_model else Path('output/tools/whisper-models')).rglob('*')
                          if p.is_file() and any(s in str(p) for s in [f'whisper-{model_name}',f'whisper-{model_name.replace(".en","")}'])
                          and p.name in ('model.bin','config.json','tokenizer.json')}
+            if local_model:
+                model_files={str(local/p):digest(local/p) for p in ['model.bin','config.json','tokenizer.json'] if (local/p).exists()}
             for item in todo:
                 cue=item['cue'];folder=ROOT/f'episode-{item["episode"]:02}'/cue['id'];folder.mkdir(parents=True,exist_ok=True)
                 result_path=folder/f'{model_name}.json'

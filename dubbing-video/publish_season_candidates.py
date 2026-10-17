@@ -42,6 +42,12 @@ def validate_candidate(n,folder,ffmpeg):
     for expected,actual in zip(plan['units'],report['utterances']):
         if any(actual.get(k)!=v for k,v in expected.items()):raise ValueError('Rendered translation/casting/timing differs')
         if actual['atempo_factor']>1.2:raise ValueError('Unapproved speech speed')
+        start=actual.get('audio_start',actual['start'])
+        if start<max(0,actual['start']-.080001) or start>actual['start']:
+            raise ValueError('Unapproved speech onset shift')
+    for a,b in zip(report['utterances'],report['utterances'][1:]):
+        if a.get('audio_start',a['start'])+a['fitted_duration_seconds']>b.get('audio_start',b['start'])+.001:
+            raise ValueError('Rendered speech overlaps another unit')
     for filename,key in [('reviewed.json','reviewed_response_sha256'),('screenplay-context.json','reviewed_context_sha256'),
                          (subtitle.name,'translation_srt_sha256')]:
         if digest(folder/filename)!=plan[key]:raise ValueError('Approved translation changed')

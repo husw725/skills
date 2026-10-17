@@ -22,6 +22,7 @@ from translate import fingerprint, read_json, save_json, validate_bible, write_s
 ROOT = Path('output/carmilla-season-revision-20261016')
 BASE_ROOT = ROOT
 RETRY_ROOT = Path('output/carmilla-season-revision-20261017-retry1')
+FINAL_ROOT = Path('output/carmilla-season-final-20261017')
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -39,7 +40,7 @@ def response_schema():
             'required':['cues','groups','consistency_notes'],'additionalProperties':False}
 
 
-def validate_editorial(data, rows, old, annotations, glossary):
+def validate_editorial(data, rows, old, annotations, glossary, max_gap=.6):
     ids=[r['id'] for r in rows]
     if [r['id'] for r in data['cues']] != ids: raise ValueError('Editorial cue IDs/order changed')
     covered=[c for g in data['groups'] for c in g]
@@ -61,7 +62,7 @@ def validate_editorial(data, rows, old, annotations, glossary):
             raise ValueError('Cannot group across speakers/production voices')
         if 'unknown' in speakers and len({old[c]['id'] for c in group})>1:
             raise ValueError('Unknown readers cannot be inferred identical from voice casting')
-        if any(b['start']<a['end'] or b['start']-a['end']>.6 for a,b in zip(members,members[1:])):
+        if any(b['start']<a['end'] or b['start']-a['end']>max_gap for a,b in zip(members,members[1:])):
             raise ValueError('Grouping crosses overlap/long pause')
         by_cue={c['id']:c for c in data['cues']}
         if len({by_cue[c]['emotion'] for c in group})!=1:
@@ -125,6 +126,19 @@ def prepare(n,args,preceding):
     if any(not source_binding_matches(u,by_id,annotations) for u in plan['units']):
         raise ValueError('Original screenplay/source binding changed')
     if any(u['production_voice'] not in ROLES for u in plan['units']): raise ValueError('Unexpected role')
+    max_gap={9:.85,15:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
+    if getattr(args,'finalize_pending',False) and n in (21,22):
+        # Fix a known excerpt/episode association error using the user's mapped
+        # final storyboard. Original English timed source and reader evidence stay intact.
+        context=copy.deepcopy(context)
+        refs=storyboard_reference(n,storyboard.read_text(encoding='utf-8-sig'))
+        context['episodes'][str(n)]['script_excerpt']='\n\n'.join(e['script'] for e in refs['entries'])
+        context['mapped_excerpt_revision']={'old_context_sha256':inputs[str(context_path)],
+            'reference_sha256':inputs[str(storyboard)],'reference_entries':[e['storyboard_episode'] for e in refs['entries']],
+            'reason':'Old script_excerpt used the previous storyboard episode; mapped dialogue reference corrected.'}
+        if not any(s['sha256']==inputs[str(storyboard)] for s in context['sources']):
+            context['sources'].append({'filename':storyboard.name,'sha256':inputs[str(storyboard)],
+                                       'version':'user-supplied final storyboard; dialogue-mapped 2026-10-17'})
     bible=read_json(bible_path);glossary=validate_bible(bible)
     payload={'episode':n,'locked_bible':bible,'reviewed_screenplay_context':context,
              'user_storyboard_sha256':inputs[str(storyboard)],
@@ -133,6 +147,7 @@ def prepare(n,args,preceding):
              'old_translation_reference':[{'cue_ids':u['cue_ids'],'text':u['translation']} for u in plan['units']],
              'production_voice_per_cue':{c:u['production_voice'] for c,u in old.items()},
              'known_issue':'EP29 e29-8 source How many years. conflicts with screenplay minions; retain original text and flag for original-audio verification, never silently replace it.'}
+    payload['grouping_max_gap_seconds']=max_gap
     if getattr(args,'prior_root',None):
         payload['revision_feedback']=revision_feedback(n,args,preceding)
         payload['previous_episode_revisions']=payload['revision_feedback'].pop('previous_episode_revisions')
@@ -145,7 +160,7 @@ def prepare(n,args,preceding):
             'The user storyboard is reference only and has 33 entries for 32 videos: do not assume episode numbers align. '
             'Keep correct existing wording where suitable; improve awkward language or overly long phrasing faithfully. '
             'Translate complete thoughts, distribute wording across their original cues, and propose adjacent same-speaker '
-            'groups for natural delivery; groups cover ALL cues once, including singleton groups. Gap <=0.6s. '
+            f'groups for natural delivery; groups cover ALL cues once, including singleton groups. Gap <={max_gap}s. '
             'Keep changes of emotion/performance direction in separate groups. '
             'Unknown readers may share a group only if already in the same original production unit. '
             'Do not mechanically add ellipses at subtitle boundaries. Use punctuation for actual performance. '
@@ -170,7 +185,7 @@ def prepare(n,args,preceding):
     reviewed=read_json(reviewed_path) if reviewed_path.exists() else call_codex(args.codex_exe,
         prompt+'\nPerform a second semantic and continuity review, correct the candidate, verify all grouping constraints.\n'+
         __import__('json').dumps(draft,ensure_ascii=False),schema,reviewed_path,folder/'review.private.log')
-    validate_editorial(reviewed,rows,old,annotations,glossary)
+    validate_editorial(reviewed,rows,old,annotations,glossary,max_gap)
     if any(digest(Path(p))!=sha for p,sha in inputs.items()): raise ValueError('Editorial inputs changed')
     revised_context=copy.deepcopy(context)
     revised_context['revision_basis']={'original_context_sha256':inputs[str(context_path)],'policy':'EP02-feedback full-season rerun; no native listening approval'}
@@ -202,13 +217,15 @@ def prepare(n,args,preceding):
 
 def revision_feedback(n,args,preceding=()):
     prior=Path(args.prior_root)
-    if prior.resolve()!=BASE_ROOT.resolve():raise ValueError('Only the existing season may seed this retry')
+    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve()}:raise ValueError('Only existing season attempts may seed this retry')
     folder=prior/f'episode-{n:02}'
     continuity={int(row['episode']):row for row in preceding[-2:]}
     data={'source_root':str(prior),'source_sha256':{},'prior_editorial':None,'measured_groups':[]}
     for previous in range(max(1,n-2),n):
-        ep=prior/f'episode-{previous:02}'
-        if previous in continuity or not (ep/'render-report.json').exists():continue
+        if previous in continuity:continue
+        ep=next((root/f'episode-{previous:02}' for root in (prior,BASE_ROOT)
+                 if (root/f'episode-{previous:02}'/'render-report.json').exists()),None)
+        if ep is None:continue
         p=read_json(ep/'plan.json');validate_reviewed_plan(ep,p)
         if digest(ep/'reviewed.json')!=p['reviewed_response_sha256']:
             raise ValueError('Prior completed episode editorial changed')
@@ -227,6 +244,11 @@ def revision_feedback(n,args,preceding=()):
     duration=float(probe(Path(plan['assets']['video']),args.ffmpeg)['format']['duration'])
     for i,u in enumerate(plan['units']):
         wav=folder/'utterances'/u['id']/'original.wav'
+        if not wav.exists() and prior.resolve()==RETRY_ROOT.resolve():
+            cartesia=read_json('output/drama-01/cartesia-pilot-voices/voice-bank.json')
+            minimax=read_json('output/drama-01/voice-bank.json')['voices']
+            req,_=request(u,cartesia,minimax)
+            wav=paid_audio_folder(n,req,wav.parent,BASE_ROOT)/'original.wav'
         receipt=wav.parent/'audio-receipt.json'
         if not wav.exists():continue
         if not receipt.exists() or digest(wav)!=read_json(receipt)['sha256']:
@@ -249,7 +271,7 @@ def paid_audio_folder(n,req,target,prior_root=None):
     """Reuse the exact prior request, including ambiguous receipts; never route around them."""
     if prior_root is None:return target
     prior=Path(prior_root)
-    if prior.resolve()!=BASE_ROOT.resolve():raise ValueError('Unexpected paid cache root')
+    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve()}:raise ValueError('Unexpected paid cache root')
     # A changed text must not bypass an ambiguous earlier payment. Check the
     # entire original episode, even when its request marker is missing.
     for pending in (prior/f'episode-{n:02}'/'utterances').rglob('*.submission-pending.json'):
@@ -280,6 +302,15 @@ def request(unit,cartesia,minimax):
     return req,'minimax'
 
 
+def speech_window(natural,target,start,previous_end,allow_preroll=False):
+    audio_start=start
+    if natural/target>1.2 and allow_preroll:
+        available=min(.08,max(0,start-max(0,previous_end+.1)))
+        lead=min(available,max(0,natural/1.2-target)+.012)
+        audio_start-=lead;target+=lead
+    return audio_start,target,max(1.,natural/target)
+
+
 def render(n,args):
     folder=ROOT/f'episode-{n:02}';plan=read_json(folder/'plan.json')
     validate_reviewed_plan(folder,plan)
@@ -307,13 +338,22 @@ def render(n,args):
     if (any(u['start']<0 or u['end']<=u['start'] or u['end']>duration for u in plan['units'])
             or any(a['end']>b['start'] for a,b in zip(plan['units'],plan['units'][1:]))):
         raise ValueError('Invalid or overlapping source group windows before paid work')
-    bind(folder/'render-input.json',{'plan':plan,'asset_hashes':asset_hashes,'requests':requests,
+    render_input={'plan':plan,'asset_hashes':asset_hashes,'requests':requests,
           'cartesia_bank_sha256':digest(cartesia_path),'minimax_bank_sha256':digest(minimax_path),
-          'max_atempo':1.2,'max_post_subtitle_gap_seconds':.8,'cloning_enabled':False})
+          'max_atempo':1.2,'max_post_subtitle_gap_seconds':.8,'cloning_enabled':False}
+    if getattr(args,'finalize_pending',False):render_input['max_pre_subtitle_gap_seconds']=.08
+    bind(folder/'render-input.json',render_input)
+    cache_roots=getattr(args,'cache_roots',None) or ([args.prior_root] if getattr(args,'prior_root',None) else [])
+    # Preflight all prior attempts, including requests whose wording changed.
+    for prior in cache_roots:paid_audio_folder(n,{},folder/'unused-cache-probe',prior)
     client=Mflix(args.mcp_config);results=[]
     for index,(unit,(req,provider)) in enumerate(zip(plan['units'],requests)):
         target_dir=folder/'utterances'/unit['id']
-        cached=paid_audio_folder(n,req,target_dir,getattr(args,'prior_root',None))
+        cached=target_dir
+        for prior in cache_roots:
+            found=paid_audio_folder(n,req,target_dir,prior)
+            if found!=target_dir:
+                cached=found;break
         path,receipt=generate(client,req,cached)
         target_dir.mkdir(parents=True,exist_ok=True)
         samples,_,_=trim_edges(read_audio(path,args.ffmpeg));natural=len(samples)/RATE
@@ -321,7 +361,8 @@ def render(n,args):
         limit=min(duration,next_start-.1,unit['end']+.8)
         if limit<unit['end']-.001: limit=unit['end']
         target=max(unit['end'],min(limit,unit['start']+natural))-unit['start']
-        factor=max(1.,natural/target)
+        previous_end=results[-1]['audio_start']+results[-1]['fitted_duration_seconds'] if results else -.1
+        audio_start,target,factor=speech_window(natural,target,unit['start'],previous_end,getattr(args,'finalize_pending',False))
         if factor>1.2: raise ValueError('Measured speech too long: revise faithfully; no automatic paid speed retries')
         trimmed,fitted=target_dir/'trimmed.wav',target_dir/'fitted.wav';write_audio(trimmed,samples)
         for _ in range(4):
@@ -333,14 +374,15 @@ def render(n,args):
         if factor>1.2 or len(audio)>math.floor(target*RATE): raise ValueError('Cannot fit without truncating/over-speeding')
         results.append({**unit,'provider':provider,'task_id':receipt['task_id'],'request':req,'atempo_factor':factor,
                         'paid_audio_reused_from_prior_attempt':cached!=target_dir,
+                        'audio_start':audio_start,'pre_subtitle_gap_used_seconds':unit['start']-audio_start,
                         'natural_duration_seconds':natural,'fitted_duration_seconds':len(audio)/RATE,
-                        'post_subtitle_gap_used_seconds':max(0,unit['start']+len(audio)/RATE-unit['end']),
+                        'post_subtitle_gap_used_seconds':max(0,audio_start+len(audio)/RATE-unit['end']),
                         'fitted_path':str(fitted),'fitted_sha256':digest(fitted),'native_listening_passed':False})
         save_json(folder/'progress.json',{'episode':n,'stage':'synthesizing','complete':len(results),'total':len(requests),'updated_at':time.time()})
     import numpy as np
     dialogue=np.zeros(math.ceil(duration*RATE),dtype=np.float32)
     for r in results:
-        audio=read_audio(Path(r['fitted_path']),args.ffmpeg);start=round(r['start']*RATE)
+        audio=read_audio(Path(r['fitted_path']),args.ffmpeg);start=round(r['audio_start']*RATE)
         if start+len(audio)>len(dialogue): raise ValueError('Dialogue exceeds video')
         dialogue[start:start+len(audio)]+=audio
     d,m=folder/'dialogue-ptBR.wav',folder/'mix-ptBR.wav';write_audio(d,dialogue)
@@ -366,24 +408,38 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--stage',choices=('editorial','render','all'),default='all')
     p.add_argument('--codex-exe',type=Path);p.add_argument('--mcp-config',type=Path);p.add_argument('--ffmpeg',type=Path)
     p.add_argument('--retry-pending',action='store_true',help='Isolated second attempt using measured feedback and exact paid-request reuse')
+    p.add_argument('--finalize-pending',action='store_true',help='Use latest measured attempt, mapped excerpts, and both paid caches')
+    p.add_argument('--episodes',nargs='+',type=int,help='Explicit subset of pending episodes; never rerun completed candidates')
     a=p.parse_args()
     if sys.platform!='win32':p.error('All business execution remains on Windows')
     if a.stage in ('editorial','all') and (not a.codex_exe or not a.codex_exe.is_file()):p.error('Existing native Codex executable required')
     if a.stage in ('render','all') and (not a.mcp_config or not a.ffmpeg or not a.ffmpeg.is_file()):p.error('Production config/ffmpeg required')
-    episodes=list(range(1,33));a.prior_root=None
-    if a.retry_pending:
+    if a.retry_pending and a.finalize_pending:p.error('Choose one revision stage')
+    if a.episodes and not (a.retry_pending or a.finalize_pending):p.error('Episode subsets require an isolated revision stage')
+    episodes=list(range(1,33));a.prior_root=None;a.cache_roots=[]
+    if a.retry_pending or a.finalize_pending:
         if not a.ffmpeg or not a.ffmpeg.is_file():p.error('Measured retry needs FFmpeg')
         a.prior_root=BASE_ROOT;ROOT=RETRY_ROOT
+        if a.finalize_pending:a.prior_root=RETRY_ROOT;ROOT=FINAL_ROOT
+        a.cache_roots=[a.prior_root]+([BASE_ROOT] if a.finalize_pending else [])
     ROOT.mkdir(parents=True,exist_ok=True)
     # Share the original season lock so an old runner cannot submit in parallel.
     with process_lock(BASE_ROOT/'season.lock',timeout=0):
-        if a.retry_pending:
+        previous_state=read_json(ROOT/'season-progress.json') if (ROOT/'season-progress.json').exists() else {'episodes':{}}
+        if a.retry_pending or a.finalize_pending:
             baseline=read_json(BASE_ROOT/'season-progress.json')
             if set(baseline['episodes'])!={str(i) for i in range(1,33)}:p.error('Incomplete prior season status')
-            episodes=[n for n in episodes if baseline['episodes'][str(n)]['stage']=='requires_review']
+            if a.finalize_pending:baseline['episodes'].update(read_json(RETRY_ROOT/'season-progress.json')['episodes'])
+            baseline['episodes'].update(previous_state['episodes'])
+            episodes=[n for n in episodes if baseline['episodes'][str(n)]['stage']!='rendered_candidate']
+            if a.episodes:
+                if len(set(a.episodes))!=len(a.episodes) or not set(a.episodes).issubset(episodes):
+                    p.error('Explicit episodes must be unique pending episodes')
+                episodes=[n for n in episodes if n in a.episodes]
             if not episodes:p.error('No pending episodes to retry')
         state={'authorized_scope':'Carmilla 32 episode rerun using existing EP02 feedback; no waiting for diagnostic reviews',
-               'selected_episodes':episodes,'native_acceptance_passed':False,'episodes':{}};preceding=[]
+               'selected_episodes':episodes,'native_acceptance_passed':False,
+               'episodes':dict(previous_state['episodes']) if a.retry_pending or a.finalize_pending else {}};preceding=[]
         if a.stage in ('editorial','all'):
             for n in episodes:
                 try:
@@ -404,7 +460,7 @@ def main():
                     print('RENDER_REQUIRES_REVIEW',n,type(exc).__name__,flush=True)
                 state['updated_at']=time.time();save_json(ROOT/'season-progress.json',state)
         expected='editorial_ready' if a.stage=='editorial' else 'rendered_candidate'
-        complete='editorial_complete' if a.stage=='editorial' else ('selected_candidates_complete' if a.retry_pending else 'complete_candidates')
+        complete='editorial_complete' if a.stage=='editorial' else ('selected_candidates_complete' if a.retry_pending or a.finalize_pending else 'complete_candidates')
         state['stage']=complete if all(e['stage']==expected for e in state['episodes'].values()) else 'requires_review'
         save_json(ROOT/'season-progress.json',state)
         if state['stage']=='requires_review':raise SystemExit(2)
