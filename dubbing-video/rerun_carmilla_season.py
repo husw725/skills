@@ -26,10 +26,11 @@ FINAL_ROOT = Path('output/carmilla-season-final-20261017')
 TIMING_ROOT = Path('output/carmilla-season-timing-repair-20261017')
 TIMING2_ROOT = Path('output/carmilla-season-timing-repair2-20261017')
 RESUME_ROOT = Path('output/carmilla-season-resume-20261017')
+SOURCE_RESUME_ROOT = Path('output/carmilla-season-source-resume-20261017')
 
 
 def paid_cache_roots():
-    return [RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [SOURCE_RESUME_ROOT,RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -127,7 +128,8 @@ def reading_tokens(text):
     return result
 
 
-def source_audio_evidence(n,rows,source_audio,prior_root):
+def source_audio_evidence(n,rows,source_audio,prior_root,mode='context'):
+    if mode not in ('context','tight'):raise ValueError('Unexpected source evidence mode')
     review=read_json(Path(prior_root)/f'episode-{n:02}'/'reviewed.json')
     required={c['id'] for c in review['cues'] if any(i['severity']=='error' for i in c['issues'])}
     result={};source_sha=digest(source_audio);inputs={str(source_audio):source_sha}
@@ -151,8 +153,29 @@ def source_audio_evidence(n,rows,source_audio,prior_root):
             if (data['cue']!=row or data['model']!=model or data['source_audio_sha256']!=source_sha
                     or digest(clip)!=data['clip_sha256']):raise ValueError('Original-audio evidence does not match this cue')
             inputs[str(path)]=digest(path);inputs[str(clip)]=digest(clip)
-            records[model]={'segments':record['segments'],'baseline_segments':baseline['segments'],'model_files_sha256':data['model_files'],
-                            'evidence_sha256':inputs[str(path)],'human_listened':False}
+            selected_record=record;selected_path=path
+            if mode=='tight':
+                tight_folder=Path('output/carmilla-source-tight-20261017')/f'episode-{n:02}'/row['id']
+                selected_path=tight_folder/(model+'.json');selected_record=read_json(selected_path)
+                tight=selected_record['input'];tight_clip=tight_folder/'original-tight.wav'
+                clip_marker=tight_folder/'clip-input.json'
+                expected_clip={'source_audio_sha256':source_sha,'start':max(0,row['start']-.15),
+                    'end':row['end']+.15,'decoding':{'channels':1,'sample_rate':16000,'codec':'pcm_s16le'}}
+                if (tight.get('method')!='unprompted-cue-tight-v1' or tight.get('cue')!=row
+                        or tight.get('model')!=model or tight.get('source_audio_sha256')!=source_sha
+                        or tight.get('model_files')!=data['model_files']
+                        or tight.get('source_review_sha256')!=digest(Path(prior_root)/f'episode-{n:02}'/'reviewed.json')
+                        or tight.get('padding_seconds')!=.15 or tight.get('clip_start')!=expected_clip['start']
+                        or tight.get('clip_end')!=expected_clip['end'] or tight.get('clip_sha256')!=digest(tight_clip)
+                        or read_json(clip_marker).get('fingerprint')!=fingerprint(expected_clip)
+                        or tight.get('decoding')!={'language':'en','beam_size':5,'temperature':0,
+                            'condition_on_previous_text':False,'word_timestamps':True,'vad_filter':False}):
+                    raise ValueError('Tight source evidence provenance mismatch')
+                for extra in (selected_path,tight_clip,clip_marker):inputs[str(extra)]=digest(extra)
+            records[model]={'segments':selected_record['segments'],'baseline_segments':baseline['segments'],
+                            'model_files_sha256':data['model_files'],'evidence_sha256':inputs[str(selected_path)],
+                            'human_listened':False}
+            if mode!='context':records[model]['method']=mode
         result[row['id']]={'cue':row,'models':records,'source_speaker_verified':False}
     if required!=set(result):raise ValueError('Missing disputed-cue audio evidence')
     return result,inputs
@@ -259,7 +282,8 @@ def prepare(n,args,preceding):
     audio_evidence={}
     if getattr(args,'source_evidence',False):
         audio_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),
-            getattr(args,'source_prior_root',None) or args.prior_root)
+            getattr(args,'source_prior_root',None) or args.prior_root,
+            mode=getattr(args,'source_evidence_mode','context'))
         inputs.update(extra)
         if n==20 and 'e20-8' in audio_evidence:
             # The final storyboard labels this voiceover Laura; the prior

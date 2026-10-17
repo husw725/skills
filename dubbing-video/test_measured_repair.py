@@ -90,9 +90,46 @@ class MeasuredRepairTests(TestCase):
             audio,factor=season.fit_speech(Path('trim'),Path('fit'),100/RATE,1.19,Path('ffmpeg'))
             self.assertEqual(factor,1.2);self.assertEqual(len(audio),99)
             self.assertEqual(run.call_count,2)
+
         with patch.object(season,'run') as run,patch.object(season,'read_audio',return_value=[0]*103):
             with self.assertRaises(ValueError):season.fit_speech(Path('trim'),Path('fit'),100/RATE,1.19,Path('ffmpeg'))
             self.assertEqual(run.call_count,2)
+
+    def test_tight_evidence_requires_clip_binding_and_exact_source_not_context_fallback(self):
+        with TemporaryDirectory() as temp,in_directory(temp):
+            source=Path('source.wav');source.write_bytes(b'source')
+            prior=Path('prior/episode-06');prior.mkdir(parents=True)
+            review=prior/'reviewed.json';save_json(review,{'cues':[{'id':'x','issues':[{'severity':'error'}]}]})
+            row={'id':'x','start':1.,'end':2.,'text':'Original'}
+            folder=Path('output/carmilla-source-verification-20261017/episode-06/x');folder.mkdir(parents=True)
+            clip=folder/'original-context.wav';clip.write_bytes(b'original clip')
+            tight_folder=Path('output/carmilla-source-tight-20261017/episode-06/x');tight_folder.mkdir(parents=True)
+            tight_clip=tight_folder/'original-tight.wav';tight_clip.write_bytes(b'tight clip')
+            clip_spec={'source_audio_sha256':digest(source),'start':.85,'end':2.15,
+                'decoding':{'channels':1,'sample_rate':16000,'codec':'pcm_s16le'}}
+            bind(tight_folder/'clip-input.json',clip_spec)
+            words=[{'word':'Who','start':1.,'end':1.5,'probability':.9}]
+            segments=[{'words':words}]
+            for model in ('small.en','medium.en'):
+                original={'cue':row,'model':model,'source_audio_sha256':digest(source),
+                    'clip_sha256':digest(clip),'model_files':{}}
+                save_json(folder/(model+'.json'),{'input':original,'segments':segments})
+                full=folder.parent/(model+'.context-full.json')
+                spec={**original,'method':'unprompted-full-episode-vad-v1','decoding':{'vad_filter':True}}
+                save_json(full,{'input':spec,'segments':[]})
+                save_json(folder/(model+'.context.json'),{'input':{**spec,'whole_episode_evidence':str(full),
+                    'whole_episode_sha256':digest(full)},'segments':[]})
+                tight={**original,'method':'unprompted-cue-tight-v1','clip_sha256':digest(tight_clip),
+                    'source_review_sha256':digest(review),'padding_seconds':.15,'clip_start':.85,'clip_end':2.15,
+                    'decoding':{'language':'en','beam_size':5,'temperature':0,'condition_on_previous_text':False,
+                        'word_timestamps':True,'vad_filter':False}}
+                save_json(tight_folder/(model+'.json'),{'input':tight,'segments':segments})
+            evidence,inputs=season.source_audio_evidence(6,[row],source,Path('prior'),mode='tight')
+            self.assertEqual(evidence['x']['models']['small.en']['segments'],segments)
+            self.assertIn(str(tight_clip),inputs)
+            tight_clip.write_bytes(b'changed source clip')
+            with self.assertRaisesRegex(ValueError,'Tight source evidence'):
+                season.source_audio_evidence(6,[row],source,Path('prior'),mode='tight')
 
     def measure_fixture(self,root):
         bank=Path('output/drama-01');(bank/'cartesia-pilot-voices').mkdir(parents=True)
