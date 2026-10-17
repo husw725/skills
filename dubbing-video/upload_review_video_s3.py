@@ -4,6 +4,8 @@ import hashlib
 from pathlib import Path
 import sys
 import time
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from dub_episode import digest
 from process_lock import process_lock
 from translate import read_json, save_json
@@ -30,6 +32,35 @@ def remote_digest(s3, bucket, key, size):
                 if body is not None: body.close()
         h.update(block)
         print('VERIFIED_MIB', round((end+1)/1024**2, 1), flush=True)
+    return h.hexdigest()
+
+
+def parallel_remote_digest(s3,bucket,key,size):
+    """Bounded four-range readback; hash every byte in order with smaller retries."""
+    chunk=1024**2
+    def fetch(start):
+        end=min(size-1,start+chunk-1)
+        for attempt in range(3):
+            body=None
+            try:
+                response=s3.get_object(Bucket=bucket,Key=key,Range=f'bytes={start}-{end}')
+                body=response['Body'];data=body.read(end-start+2)
+                if response.get('ContentRange')!=f'bytes {start}-{end}/{size}' or len(data)!=end-start+1:
+                    raise ValueError('Incomplete remote range')
+                return data
+            except Exception:
+                if attempt==2:raise RuntimeError('Remote range verification failed') from None
+                time.sleep(2**attempt)
+            finally:
+                if body is not None:body.close()
+    h=hashlib.sha256();starts=iter(range(0,size,chunk));complete=0
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        pending=deque(pool.submit(fetch,start) for start in __import__('itertools').islice(starts,4))
+        while pending:
+            data=pending.popleft().result();h.update(data);complete+=len(data)
+            print('VERIFIED_MIB',round(complete/1024**2,1),flush=True)
+            start=next(starts,None)
+            if start is not None:pending.append(pool.submit(fetch,start))
     return h.hexdigest()
 
 

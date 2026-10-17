@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from rerun_carmilla_season import request, validate_editorial, validate_reviewed_plan, storyboard_reference, paid_audio_folder, revision_feedback, speech_window
+from rerun_carmilla_season import request, validate_editorial, validate_reviewed_plan, storyboard_reference, paid_audio_folder, revision_feedback, speech_window, validate_source_readings
 from unittest.mock import patch
 from types import SimpleNamespace
 from dub_episode import digest, RATE
@@ -168,6 +168,35 @@ class SeasonRerunTests(unittest.TestCase):
             state=read_json(final/'season-progress.json')
             self.assertEqual(state['episodes']['3']['stage'],'rendered_candidate')
             self.assertEqual(state['episodes']['22']['stage'],'rendered_candidate')
+
+    def audio_evidence(self):
+        row={'id':'x','text':'How many years?','start':1.,'end':2.}
+        words=[{'word':'Her','start':1.1,'end':1.3,'probability':.9},
+               {'word':'minions.','start':1.3,'end':1.8,'probability':.9}]
+        evidence={'x':{'models':{m:{'segments':[{'words':copy.deepcopy(words)}]} for m in ['small.en','medium.en']}}}
+        data={'cues':[{'id':'x','source_reading_status':'transcription_corrected',
+                       'source_audio_reading':'Her minions.','source_reading_evidence':'Both model word timestamps match the cue.'}]}
+        return data,[row],evidence
+
+    def test_source_reading_requires_two_models_and_keeps_original_text(self):
+        data,rows,evidence=self.audio_evidence();before=copy.deepcopy(rows)
+        result=validate_source_readings(data,rows,evidence)
+        self.assertEqual(rows,before);self.assertEqual(result['x']['original_subtitle_text'],'How many years?')
+        self.assertFalse(result['x']['human_listened'])
+        evidence['x']['models']['medium.en']['segments'][0]['words'][0]['word']='My'
+        with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
+
+    def test_source_reading_rejects_uncertainty_low_confidence_and_outside_cue(self):
+        data,rows,evidence=self.audio_evidence();data['cues'][0]['source_reading_status']='uncertain'
+        with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
+        data,rows,evidence=self.audio_evidence()
+        for m in evidence['x']['models'].values():
+            for w in m['segments'][0]['words']:w['probability']=.4
+        with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
+        data,rows,evidence=self.audio_evidence()
+        for m in evidence['x']['models'].values():
+            for w in m['segments'][0]['words']:w['start']+=10;w['end']+=10
+        with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
 
 
 if __name__=='__main__':unittest.main()

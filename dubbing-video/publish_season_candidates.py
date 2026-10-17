@@ -11,7 +11,7 @@ from process_lock import process_lock
 from publish_review import materials, register
 from rerun_carmilla_season import validate_reviewed_plan
 from translate import read_json, save_json
-from upload_review_video_s3 import remote_digest
+from upload_review_video_s3 import parallel_remote_digest
 
 ROOTS = [Path('output/carmilla-season-revision-20261016'),
          Path('output/carmilla-season-revision-20261017-retry1'),
@@ -91,7 +91,7 @@ def s3_video(video,sha,config,folder):
     if head is None:
         s3.upload_file(str(video),bucket,key,ExtraArgs={'ContentType':'video/mp4','Metadata':{'sha256':sha}},
                        Config=TransferConfig(multipart_threshold=5*1024**2,multipart_chunksize=5*1024**2,max_concurrency=3))
-    if remote_digest(s3,bucket,key,size)!=sha:raise ValueError('Remote content differs')
+    if parallel_remote_digest(s3,bucket,key,size)!=sha:raise ValueError('Remote content differs')
     if requests.head(url,timeout=20).status_code!=200:raise ValueError('Video not publicly readable')
     save_json(folder/'upload.private.json',{'url':url,'sha256':sha,'bytes':size,'remote_sha256_verified':True})
     return url

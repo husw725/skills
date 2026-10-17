@@ -27,13 +27,17 @@ ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01'
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
 
-def response_schema():
+def response_schema(include_source=False):
     issue={'type':'object','properties':{'severity':{'type':'string','enum':['warning','error']},
            'reason':{'type':'string'}},'required':['severity','reason'],'additionalProperties':False}
     cue = {'type':'object','properties':{'id':{'type':'string'},'translation':{'type':'string'},
            'emotion':{'type':'string','enum':['calm','fearful','angry','sad','happy','surprised','disgusted']},
            'script_evidence':{'type':'string'}, 'issues':{'type':'array','items':issue}},
            'required':['id','translation','emotion','script_evidence','issues'],'additionalProperties':False}
+    if include_source:
+        cue['properties'].update({'source_audio_reading':{'type':'string'},'source_reading_evidence':{'type':'string'},
+            'source_reading_status':{'type':'string','enum':['not_requested','subtitle_confirmed','transcription_corrected','uncertain']}})
+        cue['required']+=['source_audio_reading','source_reading_evidence','source_reading_status']
     return {'type':'object','properties':{'cues':{'type':'array','items':cue},
             'groups':{'type':'array','items':{'type':'array','items':{'type':'string'}}},
             'consistency_notes':{'type':'array','items':{'type':'string'}}},
@@ -103,6 +107,69 @@ def validate_reviewed_plan(folder, plan):
         raise ValueError('Plan is not bound to its validated editorial result; no paid synthesis')
 
 
+def reading_tokens(text):
+    text=text.casefold().replace('’',"'")
+    contractions={"can't":"can not","cannot":"can not","won't":"will not","don't":"do not", "doesn't":"does not",
+        "didn't":"did not","isn't":"is not","aren't":"are not","wasn't":"was not","weren't":"were not",
+        "i'll":"i will","you'll":"you will","we'll":"we will","they'll":"they will","i'd":"i would",
+        "i'm":"i am","it's":"it is","she's":"she is","he's":"he is","you're":"you are","we're":"we are"}
+    numbers=dict(zip(map(str,range(21)),['zero','one','two','three','four','five','six','seven','eight','nine','ten',
+        'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty']))
+    result=[]
+    for token in re.findall(r"[a-z0-9]+(?:'[a-z]+)?",text):result.extend(contractions.get(token,numbers.get(token,token)).split())
+    return result
+
+
+def source_audio_evidence(n,rows,source_audio,prior_root):
+    review=read_json(Path(prior_root)/f'episode-{n:02}'/'reviewed.json')
+    required={c['id'] for c in review['cues'] if any(i['severity']=='error' for i in c['issues'])}
+    result={};inputs={};source_sha=digest(source_audio)
+    for row in rows:
+        if row['id'] not in required:continue
+        folder=Path('output/carmilla-source-verification-20261017')/f'episode-{n:02}'/row['id']
+        clip=folder/'original-context.wav';records={}
+        for model in ('small.en','medium.en'):
+            path=folder/f'{model}.json';record=read_json(path);data=record['input']
+            if (data['cue']!=row or data['model']!=model or data['source_audio_sha256']!=source_sha
+                    or digest(clip)!=data['clip_sha256']):raise ValueError('Original-audio evidence does not match this cue')
+            inputs[str(path)]=digest(path);inputs[str(clip)]=digest(clip)
+            records[model]={'segments':record['segments'],'model_files_sha256':data['model_files'],
+                            'evidence_sha256':inputs[str(path)],'human_listened':False}
+        result[row['id']]={'cue':row,'models':records,'source_speaker_verified':False}
+    if required!=set(result):raise ValueError('Missing disputed-cue audio evidence')
+    return result,inputs
+
+
+def validate_source_readings(review,rows,evidence):
+    originals={r['id']:r for r in rows};readings={}
+    for cue in review['cues']:
+        if cue['id'] not in evidence:
+            if cue.get('source_reading_status')!='not_requested' or cue.get('source_audio_reading'):
+                raise ValueError('Unsupported source reading without audio evidence')
+            continue
+        reading=cue.get('source_audio_reading','');status=cue.get('source_reading_status')
+        if status not in ('subtitle_confirmed','transcription_corrected') or not reading.strip() or not cue.get('source_reading_evidence'):
+            raise ValueError('Unresolved source reading; no synthesis')
+        tokens=reading_tokens(reading);row=originals[cue['id']]
+        if not tokens:raise ValueError('Empty original-audio reading')
+        if status=='subtitle_confirmed' and tokens!=reading_tokens(row['text']):raise ValueError('Subtitle confirmation changed words')
+        for model in evidence[cue['id']]['models'].values():
+            words=[w for s in model['segments'] for w in s.get('words',[])
+                   if row['start']-.35<=(w['start']+w['end'])/2<=row['end']+.35]
+            heard=[];probabilities=[]
+            for w in words:
+                # Do not let very uncertain words support an automatic source change.
+                word_tokens=reading_tokens(w['word']) if w['probability']>=.35 else ['[uncertain]']
+                heard.extend(word_tokens);probabilities.extend([w['probability']]*len(word_tokens))
+            threshold=.65 if status=='transcription_corrected' else .5
+            if not any(heard[i:i+len(tokens)]==tokens and sum(probabilities[i:i+len(tokens)])/len(tokens)>=threshold
+                       for i in range(len(heard)-len(tokens)+1)):
+                raise ValueError('Source reading is not corroborated by both models inside the original cue')
+        readings[cue['id']]={'original_subtitle_text':row['text'],'corroborated_audio_reading':reading,
+            'status':status,'evidence':cue['source_reading_evidence'],'human_listened':False}
+    return readings
+
+
 def prepare(n,args,preceding):
     folder=ROOT/f'episode-{n:02}';folder.mkdir(parents=True,exist_ok=True)
     plan_path,source_path,context_path=sources(n)
@@ -139,6 +206,16 @@ def prepare(n,args,preceding):
         if not any(s['sha256']==inputs[str(storyboard)] for s in context['sources']):
             context['sources'].append({'filename':storyboard.name,'sha256':inputs[str(storyboard)],
                                        'version':'user-supplied final storyboard; dialogue-mapped 2026-10-17'})
+    audio_evidence={}
+    if getattr(args,'source_evidence',False):
+        audio_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),args.prior_root)
+        inputs.update(extra)
+        if n==20 and 'e20-8' in audio_evidence:
+            # The final storyboard labels this voiceover Laura; the prior
+            # Carmilla assignment was provisional, not an audio-verified identity.
+            if old['e20-8']['cue_ids']!=['e20-8'] or annotations['e20-8']['speaker']!='unknown':
+                raise ValueError('Unexpected source reader scope; review before changing provisional casting')
+            old=copy.deepcopy(old);old['e20-8']['production_voice']='Laura'
     bible=read_json(bible_path);glossary=validate_bible(bible)
     payload={'episode':n,'locked_bible':bible,'reviewed_screenplay_context':context,
              'user_storyboard_sha256':inputs[str(storyboard)],
@@ -148,12 +225,14 @@ def prepare(n,args,preceding):
              'production_voice_per_cue':{c:u['production_voice'] for c,u in old.items()},
              'known_issue':'EP29 e29-8 source How many years. conflicts with screenplay minions; retain original text and flag for original-audio verification, never silently replace it.'}
     payload['grouping_max_gap_seconds']=max_gap
+    payload['source_audio_evidence']=audio_evidence
+    if n==20 and audio_evidence:payload['provisional_casting_revision']='e20-8 uses Laura per user final storyboard voiceover; source evidence reader remains unknown, NOT audio-verified.'
     if getattr(args,'prior_root',None):
         payload['revision_feedback']=revision_feedback(n,args,preceding)
         payload['previous_episode_revisions']=payload['revision_feedback'].pop('previous_episode_revisions')
         inputs.update(payload['revision_feedback']['source_sha256'])
     bind(folder/'editorial-input.json',{'sha256':inputs,'context':payload,'policy_version':1})
-    schema=folder/'schema.json';save_json(schema,response_schema())
+    schema=folder/'schema.json';save_json(schema,response_schema(bool(audio_evidence)))
     prompt=('Revise this entire episode into natural spoken Brazilian Portuguese with screenplay context. '
             'Preserve meaning, names, negation, relationship, deadlines and original cue IDs/order/times. '
             'Do not invent dialogue from the screenplay or silently fix uncertain ASR. Keep unknown evidence readers unknown. '
@@ -176,6 +255,14 @@ def prepare(n,args,preceding):
             'the existing speaker/timing constraints. Preserve complete meaning and all deadlines/names. '
             'Aim for a margin below the provided maximum_seconds; do not assume synthesized duration is verified. '
             'Keep prior correct wording for unaffected cues to reuse paid audio. '
+            'When original source_audio_evidence is supplied, quote the actual English source_audio_reading for each '
+            'disputed cue, supported by BOTH timestamped ASR models. Do not import words from outside its cue window. '
+            'Use subtitle_confirmed for the original wording, transcription_corrected for a corroborated different reading, '
+            'and uncertain if the evidence disagrees or is unclear. Translate the corroborated spoken reading while '
+            'retaining the original subtitle text/times as provenance. Other cues use not_requested with an empty reading. '
+            'A current-cut reading corroborated by both ASR models takes priority over an older script: retain the '
+            'documentary difference as a warning; unresolved speech meaning remains an error. ASR is not human listening '
+            'or speaker identification. Never claim source_speaker_verified or native pronunciation approval. '
             'Consult the supplied inline context and mapped storyboard references. Do not call MCP, clone/TTS/upload, edit files, '
             'change source/casting or credentials. Return only structured data.\n'+__import__('json').dumps(payload,ensure_ascii=False))
     draft_path=folder/'draft.json'
@@ -185,10 +272,16 @@ def prepare(n,args,preceding):
     reviewed=read_json(reviewed_path) if reviewed_path.exists() else call_codex(args.codex_exe,
         prompt+'\nPerform a second semantic and continuity review, correct the candidate, verify all grouping constraints.\n'+
         __import__('json').dumps(draft,ensure_ascii=False),schema,reviewed_path,folder/'review.private.log')
+    readings=validate_source_readings(reviewed,rows,audio_evidence) if audio_evidence else {}
     validate_editorial(reviewed,rows,old,annotations,glossary,max_gap)
     if any(digest(Path(p))!=sha for p,sha in inputs.items()): raise ValueError('Editorial inputs changed')
     revised_context=copy.deepcopy(context)
     revised_context['revision_basis']={'original_context_sha256':inputs[str(context_path)],'policy':'EP02-feedback full-season rerun; no native listening approval'}
+    if readings:revised_context['corroborated_source_audio_readings']=readings
+    if n==20 and readings:
+        revised_context['provisional_production_casting']={'e20-8':{'prior':'Carmilla','revised':'Laura',
+            'reference':'final.html mapped EP-21 voiceover Laura','reference_sha256':inputs[str(storyboard)],
+            'evidence_type':'screenplay_not_audio','source_speaker_verified':False}}
     new_annotations=revised_context['episodes'][str(n)]['cue_annotations']
     for row,cue in zip(rows,reviewed['cues']):
         new_annotations[row['id']]['emotion_intent']=cue['emotion']
@@ -205,11 +298,12 @@ def prepare(n,args,preceding):
                       'production_voice':old[group[0]]['production_voice'],'source_speaker':annotations[group[0]]['speaker'],
                       'emotion':cs[0]['emotion'],'emotion_transitions':[c['emotion'] for c in cs],
                       'source_windows':[{k:r[k] for k in ('id','start','end')} for r in members],
+                      'source_audio_readings':{c:readings[c] for c in group if c in readings},
                       'issues':[issue for c in cs for issue in c['issues']]})
     new_plan={'episode':n,'project_id':59,'assets':plan['assets'],'units':units,'input_sha256':inputs,
               'reviewed_context_sha256':digest(folder/'screenplay-context.json'),
               'reviewed_response_sha256':digest(reviewed_path),'translation_srt_sha256':digest(folder/f'Carmilla_EP{n:02}_pt-BR_revised.srt'),
-              'blocking_issues':['Original audio verification required for e29-8 before complete new episode release'] if n==29 else []}
+              'blocking_issues':['Original audio verification required for e29-8 before complete new episode release'] if n==29 and 'e29-8' not in readings else []}
     bind(folder/'reviewed-plan-fingerprint.json',new_plan)
     save_json(folder/'plan.json',new_plan)
     return {'episode':n,'cues':reviewed['cues'],'consistency_notes':reviewed['consistency_notes']}
@@ -410,12 +504,16 @@ def main():
     p.add_argument('--retry-pending',action='store_true',help='Isolated second attempt using measured feedback and exact paid-request reuse')
     p.add_argument('--finalize-pending',action='store_true',help='Use latest measured attempt, mapped excerpts, and both paid caches')
     p.add_argument('--episodes',nargs='+',type=int,help='Explicit subset of pending episodes; never rerun completed candidates')
+    p.add_argument('--source-evidence',action='store_true',help='Require two timestamped original-audio ASR records for disputed cues')
+    p.add_argument('--wait-for-production-lock',type=int,default=0)
     a=p.parse_args()
     if sys.platform!='win32':p.error('All business execution remains on Windows')
     if a.stage in ('editorial','all') and (not a.codex_exe or not a.codex_exe.is_file()):p.error('Existing native Codex executable required')
     if a.stage in ('render','all') and (not a.mcp_config or not a.ffmpeg or not a.ffmpeg.is_file()):p.error('Production config/ffmpeg required')
     if a.retry_pending and a.finalize_pending:p.error('Choose one revision stage')
     if a.episodes and not (a.retry_pending or a.finalize_pending):p.error('Episode subsets require an isolated revision stage')
+    if a.source_evidence and not a.finalize_pending:p.error('Source evidence requires an isolated final revision')
+    if not 0<=a.wait_for_production_lock<=14400:p.error('Production lock wait must be 0..14400 seconds')
     episodes=list(range(1,33));a.prior_root=None;a.cache_roots=[]
     if a.retry_pending or a.finalize_pending:
         if not a.ffmpeg or not a.ffmpeg.is_file():p.error('Measured retry needs FFmpeg')
@@ -424,7 +522,7 @@ def main():
         a.cache_roots=[a.prior_root]+([BASE_ROOT] if a.finalize_pending else [])
     ROOT.mkdir(parents=True,exist_ok=True)
     # Share the original season lock so an old runner cannot submit in parallel.
-    with process_lock(BASE_ROOT/'season.lock',timeout=0):
+    with process_lock(BASE_ROOT/'season.lock',timeout=a.wait_for_production_lock):
         previous_state=read_json(ROOT/'season-progress.json') if (ROOT/'season-progress.json').exists() else {'episodes':{}}
         if a.retry_pending or a.finalize_pending:
             baseline=read_json(BASE_ROOT/'season-progress.json')

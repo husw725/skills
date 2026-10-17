@@ -36,12 +36,23 @@ def download(name):
                 if piece.exists() and piece.stat().st_size==end-start+1:return piece
                 for attempt in range(3):
                     try:
-                        with requests.get(url,params={'download':'true','range_part':start},
-                             headers={'Range':f'bytes={start}-{end}'},stream=True,timeout=(15,60)) as r:
-                            if r.status_code!=206 or r.headers.get('Content-Range')!=f'bytes {start}-{end}/{size}':
-                                raise ValueError('Unexpected model range response')
-                            data=r.raw.read(end-start+2)
-                            if len(data)!=end-start+1:raise ValueError('Incomplete model range')
+                        step=1024**2 if size-start<=2*chunk else chunk;blocks=[]
+                        for substart in range(start,end+1,step):
+                            subend=min(end,substart+step-1)
+                            tail=folder/'tail-pieces'/f'{substart:012}.bin'
+                            if step<chunk and tail.exists() and tail.stat().st_size==subend-substart+1:
+                                block=tail.read_bytes()
+                            else:
+                                with requests.get(url,params={'download':'true','range_part':f'{substart}-{subend}'},
+                                     headers={'Range':f'bytes={substart}-{subend}'},stream=True,timeout=(15,30)) as r:
+                                    if r.status_code!=206 or r.headers.get('Content-Range')!=f'bytes {substart}-{subend}/{size}':
+                                        raise ValueError('Unexpected model range response')
+                                    block=r.raw.read(subend-substart+1)
+                                    if len(block)!=subend-substart+1:raise ValueError('Incomplete model range')
+                                if step<chunk:
+                                    tail.parent.mkdir(exist_ok=True);tail.write_bytes(block)
+                            blocks.append(block)
+                        data=b''.join(blocks)
                         temporary=piece.with_suffix('.part');temporary.write_bytes(data);temporary.replace(piece)
                         print('MODEL_PART',name,start,len(data),flush=True);return piece
                     except Exception:
