@@ -2,6 +2,64 @@
 
 ## 当前接力记录
 
+
+
+
+### 2026-10-17 最新实做：Review已核9集，整集原声核对和全量测时派生返修已启动
+
+- 发布交接已自然成功，没kill上传/Review进程：旧EP02完成Review新2604/v4与字幕2605后，旧尾部候选被per-candidate锁安全阻断并自然退出；新publisher已用服务端SHA256校验继续发布。最新实际publication-result9集：01/02/03/07/11/13/14/15/16（01v2、02v4、07v3、其余v2），均对应独立字幕，旧链保留。新S3校验已真实运行不是只测试；后面持续发布，读最新回执再计数。全32钉钉通知未发。
+- 当前实际新版候选至少16集：原10+FINAL03/15/21/23+timing11/26。timing首轮还在31/32等；9/10虽修过原超时点，却遇此前未合成的后续短句再超，不能一直每次只修第一条。
+- 新finish_carmilla_measured.py固定第五ROOT output/carmilla-season-timing-repair2-20261017，只选首12集合内timing-root精确时长失败且非完成集。先对已有已审计划measure_only补齐所有缺音频并记录各组真实自然时长；仍先执行原指纹/输入/角色/音色冻结/4根cache与全部pending守门，0clone，但缺缓存的TTS是已授权的真实付费，不能称零付费。只测时不拟合/混音/生成report；之后WAV/receipt及测时JSON SHA进入新两遍文本审核，再新目录渲染。regroup_candidates仅已知同speaker/voice/emotion/合法gap相邻对的建议，宿主仍独立验证，不自动合组。
+- 音频拟合修正：旧启发式可能factor1.19跳到>1.2而未实际测试1.2，新fit_speech最多4次且始终<=1.2，确实试过上限仍不适配才拒绝；不截断/不再TTS。前借仍<=80ms且保留前一声部后100ms，padding余量12→50ms。实际Windows用FINAL26现有付费WAV做独立诊断：natural1.88s，target1.614，fitted1.6129167，factor1.175134866，preroll.08，原WAV SHA未变，newTTS0；诊断仅忽略output/timing-fit-diagnostic-20261017，不覆写旧fitted/成片。
+- 原声增加整集上下文取证verify_carmilla_source_context.py：相同官方已验证small/medium，本机CPU整集无剧本/无initial prompt识别，VAD200ms并由faster-whisper映回原声时间，缓解孤立3秒片段与前1秒静音导致的识别/首词时间问题。保存.context-full与逐cue.context，不覆盖旧raw clip证据；source_audio_evidence核原音轨/model/解码参数/整集SHA及真实subset一致，原±.35词全区间/core全覆盖/双模型置信门没放松，另外Counter防VAD丢raw核心±.1内高置信否定/modal/数字。只有两套context结果过门才生成source10。自动证据不是人工听审。
+- evidence coordinator已替换为原small/medium下载和raw转写后追加整集context脚本，明确started_at1792215481.1248338，evidence_method unprompted-full-episode-vad-v1；当前medium实际已下载约1.16GB/1.5279GB，偶有SSLError206由新增安全状态日志+5次分块重试恢复；只重启自己的公开权重/取证task，未碰TTS/发布。先前medium断网曾让source finish有限任务requires_review，已在证据任务新状态后重启，当前等待production锁，23成片不重复处理。
+- f0d8b86已GitHub push/Windows明确pull，两端62相关tests全通过；独立审先后放行全量测时、整集ASR数据门及拟合边界修正。Windows有限任务Codex-Carmilla-Timing-Final-20261017 Running，ROOT2/coordinator.py→finish helper等同一production锁，再发布，32齐才通知。source finish也等锁/证据，所有生产串行守同一锁但下载/取证/上传并行；不是重复克隆或无限自动重试。
+- 14集独立文本审核已完成放行，244原cue/223意群，未发现明确实质误译/否定翻转/期限或人物关系错；Mac私有结果output/season-text-audit-20261017/independent-audit.private.md，输入SHA绑定且读回核验。不是口音/情绪/混音或母语验收，新增11/26尚未纳入这14集独立文本审。
+- 试写过缓存-only REFIT优化但未部署/未运行，已完全撤回本地额外改动，当前只f0d8b86的五root；不要假设存在season-refit目录/第六root。通知标题补“配音任务”只描述本轮任务，所有32集实时读回/防重/异常脱敏门不变；实际尚未通知。
+
+### 2026-10-17 后续实际：14集新版成片，首集Review已交付；测时返修任务与发布交接继续
+
+- 原10+FINAL新增03/15/21/23，共14候选文件实际存在，全部report video_payload_identical=true/new_clone_count=0。EP23浮点修复锁内prepare用当时21/22前文成功，已实际成片，不是继续源错误。专业巴葡口音/表演/EP13与31混音未验收，不能称完美。
+- 首集真实Review新asset2602 v2、字幕asset2603，旧v1保留；publication-result在season-revision-20261017/episode-01/f4ad...。旧worker加载30251bf所以旧回执缺subtitle_url，等新publisher重复读回安全补全，通知门不能绕。首集S3完整GET81.9MiB核SHA通过。EP02目前S3已传，在旧完整GET（日志新5MiB），尚未Review新版本。
+- FINAL12首轮实际结束：03/15/21成片；09/10/11/22/26/28/31/32共8个实测时长仍超；23浮点误挡已修后成片。没有删/覆写旧付费音频和计划。新repair_carmilla_measured.py仅原首12里精确timing错误，独立新ROOT output/carmilla-season-timing-repair-20261017；重审等义精简/分组并目标留20%余量，cache FINAL+retry1+BASE全请求指纹复用+全部pending前检、freeze voicepolicy、0clone、max1.2且不截断。publisher增加第四ROOT择最新候选。独立安全/数据审放行，Mac57全相关tests、Windows36 targeted通过，b036089已push且Windows明确pull。
+- 新有限任务Codex-Carmilla-Timing-Repair-20261017实际Running，timing ROOT/coordinator.py先repair（等production锁），再publisher等锁，最后仅all32实际齐通知；不是自动无限循环。详情coordinator-progress.json。Source finish coordinator已完成23，接下来等双ASR，source10（4/5/6/8/12/18/20/25/27/29）付费尚未执行，须两模型证据通过；已审过源码完整核心词/置信/区间/输入SHA门，不能以单模型听审或文本通过代替。
+- medium公开权重8MiB rawread长时间0parts，1MiB诊断8.1秒成功；0c9d43d改所有子段1MiB可恢复、8线程，官方整文件hash不变。已Windows pull并只重启自己公开模型下载task（没碰TTS/publisher），当前实际48个8MiB assembled parts、405个1MiB tail-pieces缓存，约400MiB，small20处ASR完整且旧结果不覆写。evidence-coordinator当前started_at1792213981.8015852/stage medium.en:download。别将旧PyAV traceback当现任务仍失败。
+- 新有限发布交接任务Codex-Carmilla-Publish-Resume-20261017：原计划持除EP01外候选pub.lock、待旧worker自然结束再新publisher；首次因EP02已取得锁安全退出无业务写。修为仅允许一个busy旧候选，记录active=[2]，持住其余候选pub.lock、让旧EP02完整上传/读回/Review提交自然结束后跳过其余，再释放锁新publisher；2h期限、runner-exit必须晚于旧runner-start，不kill任何正在上传/提交的进程。当前checksum-transition/progress.json waiting_for_active_legacy_publication。旧全局发布锁仍守，首轮FINAL coordinator也在等待同一锁；新publisher用服务SHA256完整/分块checksum校验新上传，旧首两集receipt复用免重复整GET。
+- 新鲜只读Review2557/2558/2559评论均空，不能当专业通过；快照Windows output/review-feedback/2026-10-17/fresh-diagnostic-comments.private.json。
+- 14集只读译稿+原字幕+锁bible+final映射参考已从Windows复制Mac忽略output/season-text-audit-20261017/completed-text.private.json，audit_review_feedback在独立跨集文本核查（非听审），结果看independent-audit.private.md。真实素材与音轨未复制Mac；仅文本分析。进一步实际进度仍按四个root render-report和Review实际publication-result核，不按协调器Running算完成；全32完成通知尚未发。
+
+### 2026-10-17 续接实做：双ASR原声门已审定，20处small证据已生成，收尾编排已运行
+
+- 用户本轮所有集按最好方案完成并上传Review，继续既有全32授权；未完成/未知不能当已交付。当前已完成新候选仍10集（原BASE/retry1），新增FINAL需继续读实际report。首轮FINAL12集：3/9/10/11/15/21/22/26/28/31/32均已editorial_ready，正在render3（24组已有19）；23是浮点误挡，不是实质长停顿。Review新season publication-result仍0；原旧publisher顺序GET日志到65MiB/EP01总85884285bytes，不能称已Review上传。
+- 新source-evidence模式经过独立audit修正后放行：source_audio SHA也绑定plan inputs，small.en+medium.en两指定模型的候选须覆盖原cue核心全部词（低置信不可删除）、词完整start/end在±.35及有序、逐原始word算平均概率，不因缩写展开多加权；边缘否定/数字/modal不能略掉。EP20 provisional Laura变更仅e20-8实际证据/reading存在才记录；source speaker unknown与音色选角分开。原文/时码不覆写，ASR不称人工听审，source-mode付费尚未启动。
+- 实际small模型已完整官方SHA验证成功。ASR第一次失败是isolated PyAV不接受metadata_errors；verify改用标准库wave读取自己生成的monoPCM16/16kHz→numpy给faster-whisper，本地CPU推理不外发。修复已Windows执行，small.en真实生成20处争议台词JSON；medium.en正在官方公开权重分块下载。small部分有低置信/错误，不能只凭单模型放行、不能承诺全部疑点已解。
+- 重要同步坑：Windows分支无默认remote upstream，裸git pull显示Already up to date其实没拉GitHub。必须git pull --ff-only origin codex/cartesia-episode-v2并rev-parse验证。Windows已明确拉到8653702，32 targeted测试通过（包含新source与parallel）；Mac主55测试通过。最新1499e49 S3 SHA优化已push但尚Windows pull，不能误称实际运行。
+- 23误挡gap .6000000000000014，校验max_gap+1e-9仅容float，.601仍挡；独立审放行。source_audio_evidence空key不写payload，以兼容旧无source指纹。一次性finish-coordinator.py已SCP在output/carmilla-source-verification-20261017，Task Codex-Carmilla-Finish-Source-20261017实际Running，等待同一production锁。os.chdir(base)，锁内prepare23复用原reviewed与当时前文21/22（指纹不同就失败，绝不删marker），render23仅复用现有音色/回执，再等双ASR有限4h，然后source-mode10集4/5/6/8/12/18/20/25/27/29，publisher等待锁，32齐且实时核验后通知；否则requires_review。薄编排安全审两点建议均修好才启动。
+- 最新publisher1499e49：新S3上传开启ChecksumAlgorithm SHA256；服务head ChecksumMode ENABLED的实际SHA256 FULL_OBJECT/COMPOSITE与本地完整SHA及5MiB有序分块摘要/部件数比对，匹配可免整集GET；无/布局不同保留full-range GET fallback。receipt记录验证方法与AWS checksum类型/值；不拿metadata/ETag当内容校验。AWS官方multipart tutorial第9步核公式，独立安全/数据审放行，Mac新增2测试通过。既有EP01对象只有CRC32 composite，旧worker未热加载优化，仍原GET；不得伪报提速或重启时误杀付费worker。
+- 仍须：将1499e49明确pull Windows/tests；等旧publisher EP01完成后安全切换新worker，避免后续旧顺序GET拖慢整季；核medium下载真实进度/两套ASR严门，不确定仍待审；核FINAL12和23实际成片及source10逐集结果，真实发布回执逐条计数。所有成片+字幕32/32回读齐才钉钉，目前未发全完成通知。生产/ASR/上传均在Windows，Mac仅代码与私有结果分析。
+
+### 2026-10-17 用户要求所有集按最好方案完成并上传Review，现已启动发布/返修/原声取证三条有限任务
+
+- 最新用户“所以有集用你最完美的方案做完并上传review”按所有集继续执行，已向用户说明逐项修复而非盲重跑，不承诺完美巴葡/母语验收。原10候选仍01/02/07/13/14/16/17/19/24/30，新增产物计数须读各root。
+- 新publish_season_candidates.py固定BASE/retry1/FINAL三root，核计划指纹、原输入/SRT/审核稿、实际最终视频SHA、全解码和原画面流SHA；S3仅视频、全SHA对象名和远端逐字节校验；Review148同名Carmilla材料追加版本，intent+before-chain+safe_submit防重复并保留旧链。每集SRT通过MCP独立文档，名称含对应videoSHA，URL内容读回一致才算发布。已核实际Review latest32结构与API支持，EP02当前v3/EP07 v2/EP29 v2均须在其后追加，不能固定所有集v2。
+- 有限任务Codex-Carmilla-Season-Publish-20261017实际Running，输出output/review-publication/148/Carmilla/season-revision-20261017；当前已上传EP01 S3并在完整GET SHA读回（日志到40MiB），尚无publication-result，不能说已Review完成。Windows传S3慢，不重复付费。原worker加载30251bf仍用5MiB顺序读；后续publisher可缓存已远端验证receipt/head一致对象免重复整GET。另本地准备1MiB四并发顺序hash helper+重试测试，尚未push/Windows执行，不能误说旧worker已提速。
+- 新--finalize-pending，ROOT output/carmilla-season-final-20261017，BASE+retry1+当前FINAL状态锁内合并，跳过rendered_candidate，保留editorial_ready可render及以前subset状态；显式--episodes12集3/9/10/11/15/21/22/23/26/28/31/32。latest测时反馈、两套原付费缓存全pending预检；原文本/时码不改。21/22派生context的script_excerpt改为用户final.html正确映射正文、保留旧SHA/注释并追加来源；9/15经两遍审核可同角色同情绪gap .85/1.0s，其余仍.6。语义error与EP29源听核阻断仍在。
+- 少量测时边界最多前借80ms已有译配声部之间的空窗，保留原subtitle/source时码，实际audio_start写report，前一音频末尾+100ms防交叠、maxatempo1.2不变，publisher核前借范围与实际不交叠；不是已听证原声静音。post-subtitle占用已按实际audio_start计算。audio/preroll开关绑定render-input。
+- 有限任务Codex-Carmilla-Finalize-20261017实际Running，FINAL/coordinator.py先12集production，再publication --wait-for-lock14400（等现有publisher结束，防并行版本写入），如pub全32exit0才调用通知。coordinator-progress.json记录phase。最新已EP03/09 editorial_ready，其余继续；不是全32成片完成。
+- 原声取证：Windows新隔离output/tools/asr-venv安装faster-whisper成功（pip默认C盘junction WinError448，改本项目pip-cache解决，不改base依赖）；basePython3.13.5 Torch2.6+cpu无CUDA，用本地CPU int8/8threads分析争议原声片段，原音频不向外上传。verify_carmilla_source.py固定原cue±1s、clip/source/model SHA、单独保存small.en/medium.en词时间/置信度，human_listened/source_speaker_verified均false，不自动改字幕。
+- 初始HF hub/Xet模型下载0字节，已仅停止自己的Codex-Carmilla-Source-Verify-20261017/对应verify_carmilla_source.py进程，无TTS或clone。改download_source_asr_models.py从官方HF API pin commit，8MiB四线程可恢复公开权重分块，整bin核官方LFS SHA256、配置/tokenizer核官方GitblobSHA1才标verified。small.en官方commit d1d751a5f8271d482d14ca55d9e2deeebbae577f/modelSHA62b2a45b05ee59acb4a5341b33ee35e041395d378d418a18acfe4c9e768ee37a。实际part448MiB已下，最后少量尚未完成，暂0 ASR results，不能误称已听核原冲突。
+- 有限任务Codex-Carmilla-Source-Evidence-20261017 Running，source-verification/evidence-coordinator.py按small下载/核验→small转写→medium下载/核验→medium转写；进度evidence-coordinator-progress.json，日志evidence-coordinator.private.log。原旧runner-exit文件为上次停止，判断新任务须按新coordinator.started_at，不能把旧退出当新任务结束。剩余12真实源疑点还未重新合成，等实际转写证据后逐项核对、必要时做可追溯源文纠正，不能只把error降级。
+- notify_season_complete.py明确全32pub+实时Review视频/字幕ID唯一、各集name/gate/project/version/URL/tag、字幕SHA说明一致后才读取私有webhook；pending先写、未知不重发、sent receipt只一次。调用已复制的dingtalk-sender skill send.py（output/tools/dingtalk-send.py），失败stdout/stderr仅内存截获脱敏，socket超时本进程临时30秒后恢复。文案交付完成但专业口音/表演/混音待听审，不冒称母语验收。当前未发送。
+- 独立audit_review_feedback分别放行publisher、首轮12集finalize、修正后的通知代码（修了字幕URL门与sender错误外泄/timeout）。代码30251bf/cfc5759/4364510/e77faa9均已push且Windows pull；Mac/Windows主46相关测试通过（Windows先44、e77后23 targeted），新本地S3parallel测试后47通过待同步。Mac实际worktree /tmp/dubbing-video-season-finish，branch codex/cartesia-episode-v2。SSH/SCP必须 -B ppp0 / -o BindInterface=ppp0。
+- 后续必须：核实际Review发布回执/三条worker真实状态，拿small+medium结果逐cue分析12源疑点，尤其EP05 Connor/proper/calm、18 lover、27截断、29minions。EP20 e20-8为107.433–109.866秒“Está vindo... já está aqui...”旧provisional Carmilla与final分镜Laura冲突；unknown证据与casting分开，不能用ASR认说话人。真实候选交付还需专业听审，EP13/31混音来源复核仍未解决。
+
+### 2026-10-17 用户问是否完成，实时核验累计10/32候选；本轮已结束待修
+
+- SSH -B ppp0成功。retry1 runner-exit=2、finished_at1792208557.383176，season-progress.stage=requires_review；无持续后台运行。两目录合并去重后实际视频存在共10集：01/02/07/13/14/16/17/19/24/30。新增完成01/13/17/24/30，所有报告video_payload_identical=true/new_clone_count=0，非母语口音或EP13混音验收。
+- retry1剩余22集：9集实测过长（03/09/10/11/15/26/28/31/32）；12集语义/ASR/上下文source问题（04/05/06/08/12/18/20/21/22/25/27/29）；23为Grouping crosses overlap/long pause。两轮付费音频和回执均需保留，不能原样盲重跑。
+- 21/22明确script_excerpt错位，23只分组约束，可通过证据匹配后修上下文/拆分组重审处理；其余真实词义源冲突仍需原声/画面证据，不可把prompt重试当听核。当前尚无season Review发布目录，未上传本轮新版成片，未发全完成钉钉通知。
+- 本次只查询实际状态与日志，没有启动新付费/克隆/后台重跑。
+
 ### 2026-10-17 已实际启动剩余27集的定向重试（新目录、旧付费缓存复用）
 
 - 用户说“再试一下”。ssh -B ppp0 win已实测连通；默认流量仍可能被utun4代理接管。实际核原season锁空闲，未完成集合固定为1/3/4/5/6/8/9/10/11/12/13/15/17/18/20/21/22/23/24/25/26/27/28/29/30/31/32，保留完成5集2/7/14/16/19。

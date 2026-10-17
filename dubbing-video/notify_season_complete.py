@@ -64,7 +64,7 @@ def main():
         client=Mflix(a.mcp_config);published=verify_delivery(progress,materials(client,148))
         config=read_json(a.dingtalk_config);url=config['webhook_url']
         if not url.startswith('https://oapi.dingtalk.com/robot/send?'):raise ValueError('Unexpected configured webhook')
-        message=('### Carmilla 巴葡新版已上传 Review\n\n32/32 集新版成片及对应字幕已上传，旧版本保留。'
+        message=('### Carmilla 巴葡配音任务：新版已上传 Review\n\n32/32 集新版成片及对应字幕已上传，旧版本保留。'
                  '\n\nReview 项目：PT Transalte（148）。请查看 Carmilla 各集最新版本。'
                  '\n\n本轮按第 2 集专业反馈优化巴葡译文、发音处理和时长，复用已有音色，未新增克隆。'
                  '口音、情绪表演、音色衔接和混音仍请专业人员听审；这条通知表示交付完成，不表示母语验收通过。')
