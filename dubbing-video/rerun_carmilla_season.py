@@ -24,6 +24,12 @@ BASE_ROOT = ROOT
 RETRY_ROOT = Path('output/carmilla-season-revision-20261017-retry1')
 FINAL_ROOT = Path('output/carmilla-season-final-20261017')
 TIMING_ROOT = Path('output/carmilla-season-timing-repair-20261017')
+TIMING2_ROOT = Path('output/carmilla-season-timing-repair2-20261017')
+RESUME_ROOT = Path('output/carmilla-season-resume-20261017')
+
+
+def paid_cache_roots():
+    return [RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -237,7 +243,7 @@ def prepare(n,args,preceding):
     if any(not source_binding_matches(u,by_id,annotations) for u in plan['units']):
         raise ValueError('Original screenplay/source binding changed')
     if any(u['production_voice'] not in ROLES for u in plan['units']): raise ValueError('Unexpected role')
-    max_gap={9:.85,15:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
+    max_gap={9:.85,15:1.0,28:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
     if getattr(args,'finalize_pending',False) and n in (21,22):
         # Fix a known excerpt/episode association error using the user's mapped
         # final storyboard. Original English timed source and reader evidence stay intact.
@@ -252,7 +258,8 @@ def prepare(n,args,preceding):
                                        'version':'user-supplied final storyboard; dialogue-mapped 2026-10-17'})
     audio_evidence={}
     if getattr(args,'source_evidence',False):
-        audio_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),args.prior_root)
+        audio_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),
+            getattr(args,'source_prior_root',None) or args.prior_root)
         inputs.update(extra)
         if n==20 and 'e20-8' in audio_evidence:
             # The final storyboard labels this voiceover Laura; the prior
@@ -297,7 +304,7 @@ def prepare(n,args,preceding):
             'True ambiguous words, negation, referents, source/cut mismatch or unexplained speaker conflicts remain errors. '
             'Never mark source audio verified. For measured overlong groups, shorten faithfully or regroup only within '
             'the existing speaker/timing constraints. Preserve complete meaning and all deadlines/names. '
-            'Aim for a margin below the provided maximum_seconds; do not assume synthesized duration is verified. '
+            'Aim for a margin below maximum_seconds, including groups flagged requires_timing_margin even if they were just under the prior ceiling; do not assume synthesized duration is verified. '
             'Keep prior correct wording for unaffected cues to reuse paid audio. '
             'Inspect revision_feedback.regroup_candidates for overlong short fragments: adjacent same-speaker '
             'clauses may be delivered together when semantically natural; validate every original grouping constraint. '
@@ -359,7 +366,7 @@ def prepare(n,args,preceding):
 
 def revision_feedback(n,args,preceding=()):
     prior=Path(args.prior_root)
-    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve(),FINAL_ROOT.resolve(),TIMING_ROOT.resolve()}:raise ValueError('Only existing season attempts may seed this retry')
+    if prior.resolve() not in {p.resolve() for p in paid_cache_roots()}:raise ValueError('Only existing season attempts may seed this retry')
     folder=prior/f'episode-{n:02}'
     continuity={int(row['episode']):row for row in preceding[-2:]}
     data={'source_root':str(prior),'source_sha256':{},'prior_editorial':None,'measured_groups':[]}
@@ -386,12 +393,11 @@ def revision_feedback(n,args,preceding=()):
     duration=float(probe(Path(plan['assets']['video']),args.ffmpeg)['format']['duration'])
     for i,u in enumerate(plan['units']):
         wav=folder/'utterances'/u['id']/'original.wav'
-        if not wav.exists() and prior.resolve() in {RETRY_ROOT.resolve(),FINAL_ROOT.resolve(),TIMING_ROOT.resolve()}:
+        if not wav.exists() and prior.resolve() in {p.resolve() for p in paid_cache_roots()}:
             cartesia=read_json('output/drama-01/cartesia-pilot-voices/voice-bank.json')
             minimax=read_json('output/drama-01/voice-bank.json')['voices']
             req,_=request(u,cartesia,minimax)
-            for cache in ([FINAL_ROOT,RETRY_ROOT,BASE_ROOT] if prior.resolve()==TIMING_ROOT.resolve() else
-                          [RETRY_ROOT,BASE_ROOT] if prior.resolve()==FINAL_ROOT.resolve() else [BASE_ROOT]):
+            for cache in [p for p in paid_cache_roots() if p.resolve()!=prior.resolve()]:
                 candidate=paid_audio_folder(n,req,wav.parent,cache)/'original.wav'
                 if candidate.exists():wav=candidate;break
         receipt=wav.parent/'audio-receipt.json'
@@ -405,9 +411,10 @@ def revision_feedback(n,args,preceding=()):
         end=max(u['end'],min(duration,following-.1,u['end']+.8))
         maximum=(end-u['start'])*1.2
         data['measured_groups'].append({'cue_ids':u['cue_ids'],'translation':u['translation'],
-            'natural_seconds':natural,'maximum_seconds':maximum,'requires_shortening':natural>maximum,
+            'natural_seconds':natural,'maximum_seconds':maximum,'requires_shortening':natural>maximum,'requires_timing_margin':natural>maximum*.9,
+            'recommended_seconds':maximum*.85,
             'audio_sha256':read_json(receipt)['sha256']})
-    max_gap={9:.85,15:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
+    max_gap={9:.85,15:1.0,28:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
     data['regroup_candidates']=[]
     for index,(a,b) in enumerate(zip(plan['units'],plan['units'][1:])):
         if (a.get('source_speaker') in (None,'unknown') or a.get('source_speaker')!=b.get('source_speaker')
@@ -427,7 +434,7 @@ def paid_audio_folder(n,req,target,prior_root=None):
     """Reuse the exact prior request, including ambiguous receipts; never route around them."""
     if prior_root is None:return target
     prior=Path(prior_root)
-    if prior.resolve() not in {BASE_ROOT.resolve(),RETRY_ROOT.resolve(),FINAL_ROOT.resolve(),TIMING_ROOT.resolve()}:raise ValueError('Unexpected paid cache root')
+    if prior.resolve() not in {p.resolve() for p in paid_cache_roots()}:raise ValueError('Unexpected paid cache root')
     # A changed text must not bypass an ambiguous earlier payment. Check the
     # entire original episode, even when its request marker is missing.
     for pending in (prior/f'episode-{n:02}'/'utterances').rglob('*.submission-pending.json'):
@@ -467,7 +474,7 @@ def speech_window(natural,target,start,previous_end,allow_preroll=False):
     return audio_start,target,max(1.,natural/target)
 
 
-def fit_speech(trimmed,fitted,target,factor,ffmpeg):
+def fit_speech(trimmed,fitted,target,factor,ffmpeg,rubberband_fallback=False):
     if not 1<=factor<=1.2:raise ValueError('Unapproved speech speed')
     for attempt in range(4):
         run([ffmpeg,'-v','error','-y','-i',trimmed,'-af',f'atempo={factor:.8f}',
@@ -478,6 +485,13 @@ def fit_speech(trimmed,fitted,target,factor,ffmpeg):
         # Codec frame padding must not make the heuristic jump beyond the
         # approved cap without testing that cap. No truncation or new TTS.
         factor=1.2 if attempt>=2 else min(1.2,factor*len(audio)/(target*RATE)*1.005)
+    if rubberband_fallback:
+        # Rubber Band uses the same approved tempo cap, without trimming samples.
+        # This alternate algorithm avoids atempo frame rounding at a tight edge.
+        run([ffmpeg,'-v','error','-y','-i',trimmed,'-af','rubberband=tempo=1.2',
+             '-ar',str(RATE),'-ac','1','-c:a','pcm_s16le',fitted])
+        audio=read_audio(fitted,ffmpeg)
+        if len(audio)<=math.floor(target*RATE):return audio,1.2
     raise ValueError('Cannot fit without truncating/over-speeding')
 
 
@@ -512,6 +526,7 @@ def render(n,args):
           'cartesia_bank_sha256':digest(cartesia_path),'minimax_bank_sha256':digest(minimax_path),
           'max_atempo':1.2,'max_post_subtitle_gap_seconds':.8,'cloning_enabled':False}
     if getattr(args,'finalize_pending',False):render_input['max_pre_subtitle_gap_seconds']=.08
+    if getattr(args,'rubberband_fallback',False):render_input['fitting_policy']='atempo-with-rubberband-ceiling-v1'
     bind(folder/'render-input.json',render_input)
     cache_roots=getattr(args,'cache_roots',None) or ([args.prior_root] if getattr(args,'prior_root',None) else [])
     # Preflight all prior attempts, including requests whose wording changed.
@@ -544,7 +559,8 @@ def render(n,args):
         audio_start,target,factor=speech_window(natural,target,unit['start'],previous_end,getattr(args,'finalize_pending',False))
         if factor>1.2: raise ValueError('Measured speech too long: revise faithfully; no automatic paid speed retries')
         trimmed,fitted=target_dir/'trimmed.wav',target_dir/'fitted.wav';write_audio(trimmed,samples)
-        audio,factor=fit_speech(trimmed,fitted,target,factor,args.ffmpeg)
+        audio,factor=fit_speech(trimmed,fitted,target,factor,args.ffmpeg,
+            rubberband_fallback=getattr(args,'rubberband_fallback',False))
         results.append({**unit,'provider':provider,'task_id':receipt['task_id'],'request':req,'atempo_factor':factor,
                         'paid_audio_reused_from_prior_attempt':cached!=target_dir,
                         'audio_start':audio_start,'pre_subtitle_gap_used_seconds':unit['start']-audio_start,
