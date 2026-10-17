@@ -20,6 +20,8 @@ from screenplay_context import load_screenplay_context
 from translate import fingerprint, read_json, save_json, validate_bible, write_srt
 
 ROOT = Path('output/carmilla-season-revision-20261016')
+BASE_ROOT = ROOT
+RETRY_ROOT = Path('output/carmilla-season-revision-20261017-retry1')
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -131,6 +133,10 @@ def prepare(n,args,preceding):
              'old_translation_reference':[{'cue_ids':u['cue_ids'],'text':u['translation']} for u in plan['units']],
              'production_voice_per_cue':{c:u['production_voice'] for c,u in old.items()},
              'known_issue':'EP29 e29-8 source How many years. conflicts with screenplay minions; retain original text and flag for original-audio verification, never silently replace it.'}
+    if getattr(args,'prior_root',None):
+        payload['revision_feedback']=revision_feedback(n,args,preceding)
+        payload['previous_episode_revisions']=payload['revision_feedback'].pop('previous_episode_revisions')
+        inputs.update(payload['revision_feedback']['source_sha256'])
     bind(folder/'editorial-input.json',{'sha256':inputs,'context':payload,'policy_version':1})
     schema=folder/'schema.json';save_json(schema,response_schema())
     prompt=('Revise this entire episode into natural spoken Brazilian Portuguese with screenplay context. '
@@ -147,6 +153,14 @@ def prepare(n,args,preceding):
             'Those are AUDIO issues: do not corrupt correct spelling or claim textual edits verify accent/emotion. '
             'No new feedback on the three diagnostic candidates is available; do not claim those methods passed. '
             'Mark unresolved semantic/source/cut errors as severity error; only audio/listening uncertainty is warning. '
+            'When revision_feedback is supplied, review every prior issue individually. Timed dialogue is authoritative: '
+            'a screenplay-only extra clause, plot inconsistency shared by both sources, or unknown evidence reader '
+            'does not by itself make a faithful translation invalid. Keep those as documented warnings if wording is clear. '
+            'True ambiguous words, negation, referents, source/cut mismatch or unexplained speaker conflicts remain errors. '
+            'Never mark source audio verified. For measured overlong groups, shorten faithfully or regroup only within '
+            'the existing speaker/timing constraints. Preserve complete meaning and all deadlines/names. '
+            'Aim for a margin below the provided maximum_seconds; do not assume synthesized duration is verified. '
+            'Keep prior correct wording for unaffected cues to reuse paid audio. '
             'Consult the supplied inline context and mapped storyboard references. Do not call MCP, clone/TTS/upload, edit files, '
             'change source/casting or credentials. Return only structured data.\n'+__import__('json').dumps(payload,ensure_ascii=False))
     draft_path=folder/'draft.json'
@@ -186,6 +200,68 @@ def prepare(n,args,preceding):
     return {'episode':n,'cues':reviewed['cues'],'consistency_notes':reviewed['consistency_notes']}
 
 
+def revision_feedback(n,args,preceding=()):
+    prior=Path(args.prior_root)
+    if prior.resolve()!=BASE_ROOT.resolve():raise ValueError('Only the existing season may seed this retry')
+    folder=prior/f'episode-{n:02}'
+    continuity={int(row['episode']):row for row in preceding[-2:]}
+    data={'source_root':str(prior),'source_sha256':{},'prior_editorial':None,'measured_groups':[]}
+    for previous in range(max(1,n-2),n):
+        ep=prior/f'episode-{previous:02}'
+        if previous in continuity or not (ep/'render-report.json').exists():continue
+        p=read_json(ep/'plan.json');validate_reviewed_plan(ep,p)
+        if digest(ep/'reviewed.json')!=p['reviewed_response_sha256']:
+            raise ValueError('Prior completed episode editorial changed')
+        reviewed=read_json(ep/'reviewed.json')
+        continuity[previous]={'episode':previous,'cues':reviewed['cues'],'consistency_notes':reviewed['consistency_notes'],
+                              'native_listening_approved':False}
+        for name in ('plan.json','reviewed.json','render-report.json'):
+            data['source_sha256'][str(ep/name)]=digest(ep/name)
+    data['previous_episode_revisions']=[continuity[k] for k in sorted(continuity)[-2:]]
+    for name in ('reviewed.json','plan.json'):
+        p=folder/name
+        if p.exists():data['source_sha256'][str(p)]=digest(p)
+    if (folder/'reviewed.json').exists():data['prior_editorial']=read_json(folder/'reviewed.json')
+    if not (folder/'plan.json').exists():return data
+    plan=read_json(folder/'plan.json');validate_reviewed_plan(folder,plan)
+    duration=float(probe(Path(plan['assets']['video']),args.ffmpeg)['format']['duration'])
+    for i,u in enumerate(plan['units']):
+        wav=folder/'utterances'/u['id']/'original.wav'
+        receipt=wav.parent/'audio-receipt.json'
+        if not wav.exists():continue
+        if not receipt.exists() or digest(wav)!=read_json(receipt)['sha256']:
+            raise ValueError('Prior paid audio receipt missing or changed; inspect before retry')
+        data['source_sha256'][str(wav)]=digest(wav)
+        data['source_sha256'][str(receipt)]=digest(receipt)
+        samples,_,_=trim_edges(read_audio(wav,args.ffmpeg));natural=len(samples)/RATE
+        following=plan['units'][i+1]['start'] if i+1<len(plan['units']) else duration
+        end=max(u['end'],min(duration,following-.1,u['end']+.8))
+        maximum=(end-u['start'])*1.2
+        data['measured_groups'].append({'cue_ids':u['cue_ids'],'translation':u['translation'],
+            'natural_seconds':natural,'maximum_seconds':maximum,'requires_shortening':natural>maximum,
+            'audio_sha256':read_json(receipt)['sha256']})
+    if any(digest(Path(p))!=sha for p,sha in data['source_sha256'].items()):
+        raise ValueError('Prior revision changed while collecting feedback')
+    return data
+
+
+def paid_audio_folder(n,req,target,prior_root=None):
+    """Reuse the exact prior request, including ambiguous receipts; never route around them."""
+    if prior_root is None:return target
+    prior=Path(prior_root)
+    if prior.resolve()!=BASE_ROOT.resolve():raise ValueError('Unexpected paid cache root')
+    # A changed text must not bypass an ambiguous earlier payment. Check the
+    # entire original episode, even when its request marker is missing.
+    for pending in (prior/f'episode-{n:02}'/'utterances').rglob('*.submission-pending.json'):
+        accepted=pending.with_name(pending.name.removesuffix('.submission-pending.json')+'.json')
+        if not accepted.exists() or not read_json(accepted).get('taskId'):
+            raise ValueError('Ambiguous prior paid request; reconcile before retry')
+    matches=[]
+    for marker in sorted((prior/f'episode-{n:02}'/'utterances').glob('*/request-fingerprint.json')):
+        if read_json(marker).get('fingerprint')==fingerprint(req):matches.append(marker.parent)
+    return matches[0] if matches else target
+
+
 def request(unit,cartesia,minimax):
     role=unit['production_voice'];text=unit['translation']
     if role not in ROLES: raise ValueError('Unknown production role; no cloning allowed')
@@ -215,6 +291,10 @@ def render(n,args):
     bind(ROOT/'frozen-voice-policy.json',{'cartesia':cartesia,'minimax':minimax,
          'main_cartesia_roles':['Laura','Carmilla'],'short_fearful_no':'existing-role-minimax',
          'tts_speed':1.0,'max_atempo':1.2,'cloning_enabled':False})
+    if getattr(args,'prior_root',None):
+        prior_policy=Path(args.prior_root)/'frozen-voice-policy.json'
+        if not prior_policy.exists() or read_json(prior_policy)!=read_json(ROOT/'frozen-voice-policy.json'):
+            raise ValueError('Existing voice policy changed; no payment permitted')
     if (plan['project_id'],plan['episode'])!=(59,n): raise ValueError('Revision scope differs')
     for p,sha in plan['input_sha256'].items():
         if digest(Path(p))!=sha: raise ValueError('Original inputs changed after review')
@@ -233,7 +313,9 @@ def render(n,args):
     client=Mflix(args.mcp_config);results=[]
     for index,(unit,(req,provider)) in enumerate(zip(plan['units'],requests)):
         target_dir=folder/'utterances'/unit['id']
-        path,receipt=generate(client,req,target_dir)
+        cached=paid_audio_folder(n,req,target_dir,getattr(args,'prior_root',None))
+        path,receipt=generate(client,req,cached)
+        target_dir.mkdir(parents=True,exist_ok=True)
         samples,_,_=trim_edges(read_audio(path,args.ffmpeg));natural=len(samples)/RATE
         next_start=plan['units'][index+1]['start'] if index+1<len(plan['units']) else duration
         limit=min(duration,next_start-.1,unit['end']+.8)
@@ -250,6 +332,7 @@ def render(n,args):
             factor*=len(audio)/(target*RATE)*1.005
         if factor>1.2 or len(audio)>math.floor(target*RATE): raise ValueError('Cannot fit without truncating/over-speeding')
         results.append({**unit,'provider':provider,'task_id':receipt['task_id'],'request':req,'atempo_factor':factor,
+                        'paid_audio_reused_from_prior_attempt':cached!=target_dir,
                         'natural_duration_seconds':natural,'fitted_duration_seconds':len(audio)/RATE,
                         'post_subtitle_gap_used_seconds':max(0,unit['start']+len(audio)/RATE-unit['end']),
                         'fitted_path':str(fitted),'fitted_sha256':digest(fitted),'native_listening_passed':False})
@@ -272,24 +355,37 @@ def render(n,args):
     if hashes[0]!=hashes[1]: raise ValueError('Video payload changed')
     save_json(folder/'render-report.json',{'episode':n,'status':'rendered_season_revision_candidate','output':str(final),
         'output_sha256':digest(final),'video_payload_identical':True,'source_audio_in_output':False,'new_clone_count':0,
-        'tts_task_count':len(results),'native_ptBR_listening_reviewed':False,'performance_verified':False,
+        'tts_task_count':len(results),'prior_attempt_audio_reused_count':sum(r['paid_audio_reused_from_prior_attempt'] for r in results),
+        'native_ptBR_listening_reviewed':False,'performance_verified':False,
         'mixed_model_timbre_review_required':True,'source_speaker_unknown_preserved':True,
         'mix_source_isolation_review_required':n in (13,31),'utterances':results})
 
 
 def main():
+    global ROOT
     p=argparse.ArgumentParser();p.add_argument('--stage',choices=('editorial','render','all'),default='all')
     p.add_argument('--codex-exe',type=Path);p.add_argument('--mcp-config',type=Path);p.add_argument('--ffmpeg',type=Path)
+    p.add_argument('--retry-pending',action='store_true',help='Isolated second attempt using measured feedback and exact paid-request reuse')
     a=p.parse_args()
     if sys.platform!='win32':p.error('All business execution remains on Windows')
     if a.stage in ('editorial','all') and (not a.codex_exe or not a.codex_exe.is_file()):p.error('Existing native Codex executable required')
     if a.stage in ('render','all') and (not a.mcp_config or not a.ffmpeg or not a.ffmpeg.is_file()):p.error('Production config/ffmpeg required')
+    episodes=list(range(1,33));a.prior_root=None
+    if a.retry_pending:
+        if not a.ffmpeg or not a.ffmpeg.is_file():p.error('Measured retry needs FFmpeg')
+        a.prior_root=BASE_ROOT;ROOT=RETRY_ROOT
     ROOT.mkdir(parents=True,exist_ok=True)
-    with process_lock(ROOT/'season.lock',timeout=0):
+    # Share the original season lock so an old runner cannot submit in parallel.
+    with process_lock(BASE_ROOT/'season.lock',timeout=0):
+        if a.retry_pending:
+            baseline=read_json(BASE_ROOT/'season-progress.json')
+            if set(baseline['episodes'])!={str(i) for i in range(1,33)}:p.error('Incomplete prior season status')
+            episodes=[n for n in episodes if baseline['episodes'][str(n)]['stage']=='requires_review']
+            if not episodes:p.error('No pending episodes to retry')
         state={'authorized_scope':'Carmilla 32 episode rerun using existing EP02 feedback; no waiting for diagnostic reviews',
-               'native_acceptance_passed':False,'episodes':{}};preceding=[]
+               'selected_episodes':episodes,'native_acceptance_passed':False,'episodes':{}};preceding=[]
         if a.stage in ('editorial','all'):
-            for n in range(1,33):
+            for n in episodes:
                 try:
                     preceding.append(prepare(n,a,preceding))
                     state['episodes'][str(n)]={'stage':'editorial_ready'}
@@ -298,7 +394,7 @@ def main():
                     print('EDITORIAL_REQUIRES_REVIEW',n,type(exc).__name__,flush=True)
                 state['updated_at']=time.time();save_json(ROOT/'season-progress.json',state)
         if a.stage in ('render','all'):
-            for n in range(1,33):
+            for n in episodes:
                 if a.stage=='all' and state['episodes'][str(n)]['stage']!='editorial_ready':continue
                 try:
                     with process_lock(ROOT/f'episode-{n:02}'/'render.lock',timeout=0):render(n,a)
@@ -308,7 +404,8 @@ def main():
                     print('RENDER_REQUIRES_REVIEW',n,type(exc).__name__,flush=True)
                 state['updated_at']=time.time();save_json(ROOT/'season-progress.json',state)
         expected='editorial_ready' if a.stage=='editorial' else 'rendered_candidate'
-        state['stage']=('editorial_complete' if a.stage=='editorial' else 'complete_candidates') if all(e['stage']==expected for e in state['episodes'].values()) else 'requires_review'
+        complete='editorial_complete' if a.stage=='editorial' else ('selected_candidates_complete' if a.retry_pending else 'complete_candidates')
+        state['stage']=complete if all(e['stage']==expected for e in state['episodes'].values()) else 'requires_review'
         save_json(ROOT/'season-progress.json',state)
         if state['stage']=='requires_review':raise SystemExit(2)
 
