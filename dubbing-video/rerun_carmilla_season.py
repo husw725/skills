@@ -123,7 +123,7 @@ def reading_tokens(text):
 def source_audio_evidence(n,rows,source_audio,prior_root):
     review=read_json(Path(prior_root)/f'episode-{n:02}'/'reviewed.json')
     required={c['id'] for c in review['cues'] if any(i['severity']=='error' for i in c['issues'])}
-    result={};inputs={};source_sha=digest(source_audio)
+    result={};source_sha=digest(source_audio);inputs={str(source_audio):source_sha}
     for row in rows:
         if row['id'] not in required:continue
         folder=Path('output/carmilla-source-verification-20261017')/f'episode-{n:02}'/row['id']
@@ -153,18 +153,40 @@ def validate_source_readings(review,rows,evidence):
         tokens=reading_tokens(reading);row=originals[cue['id']]
         if not tokens:raise ValueError('Empty original-audio reading')
         if status=='subtitle_confirmed' and tokens!=reading_tokens(row['text']):raise ValueError('Subtitle confirmation changed words')
-        for model in evidence[cue['id']]['models'].values():
-            words=[w for s in model['segments'] for w in s.get('words',[])
-                   if row['start']-.35<=(w['start']+w['end'])/2<=row['end']+.35]
-            heard=[];probabilities=[]
+        models=evidence[cue['id']]['models']
+        if set(models)!={'small.en','medium.en'}:raise ValueError('Two designated ASR models required')
+        for model in models.values():
+            words=[w for segment in model['segments'] for w in segment.get('words',[])]
+            previous=-math.inf
             for w in words:
-                # Do not let very uncertain words support an automatic source change.
-                word_tokens=reading_tokens(w['word']) if w['probability']>=.35 else ['[uncertain]']
-                heard.extend(word_tokens);probabilities.extend([w['probability']]*len(word_tokens))
+                if not (math.isfinite(w['start']) and math.isfinite(w['end']) and
+                        previous<=w['start']<=w['end'] and 0<=w['probability']<=1):
+                    raise ValueError('Invalid ASR word timing or confidence')
+                previous=w['end']
+            # Edge padding can contain adjacent dialogue. Every word whose
+            # midpoint belongs to the original cue MUST be covered, including
+            # low-confidence words (which block rather than silently disappear).
+            core=[i for i,w in enumerate(words) if row['start']<=(w['start']+w['end'])/2<=row['end']]
+            if not core:raise ValueError('No core-cue words support the reading')
             threshold=.65 if status=='transcription_corrected' else .5
-            if not any(heard[i:i+len(tokens)]==tokens and sum(probabilities[i:i+len(tokens)])/len(tokens)>=threshold
-                       for i in range(len(heard)-len(tokens)+1)):
-                raise ValueError('Source reading is not corroborated by both models inside the original cue')
+            supported=False
+            for first in range(core[0]+1):
+                for last in range(core[-1],len(words)):
+                    covered=words[first:last+1]
+                    if any(w['start']<row['start']-.35 or w['end']>row['end']+.35 or
+                           w['probability']<.35 for w in covered):continue
+                    heard=[t for w in covered for t in reading_tokens(w['word'])]
+                    if heard!=tokens:continue
+                    # Do not clip a negation, number or modal from a cue edge.
+                    omitted=words[:first]+words[last+1:]
+                    critical={'not','no','never','cannot','can','could','would','should','must','will','shall',
+                              'zero','one','two','three','four','five','six','seven','eight','nine','ten',
+                              'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'}
+                    if any(w['end']>=row['start']-.35 and w['start']<=row['end']+.35 and
+                           any(t in critical or t.isdigit() for t in reading_tokens(w['word'])) for w in omitted):continue
+                    if sum(w['probability'] for w in covered)/len(covered)>=threshold:supported=True
+            if not supported:
+                raise ValueError('Source reading must cover all core words in both models inside the original cue')
         readings[cue['id']]={'original_subtitle_text':row['text'],'corroborated_audio_reading':reading,
             'status':status,'evidence':cue['source_reading_evidence'],'human_listened':False}
     return readings
@@ -226,7 +248,7 @@ def prepare(n,args,preceding):
              'known_issue':'EP29 e29-8 source How many years. conflicts with screenplay minions; retain original text and flag for original-audio verification, never silently replace it.'}
     payload['grouping_max_gap_seconds']=max_gap
     payload['source_audio_evidence']=audio_evidence
-    if n==20 and audio_evidence:payload['provisional_casting_revision']='e20-8 uses Laura per user final storyboard voiceover; source evidence reader remains unknown, NOT audio-verified.'
+    if n==20 and 'e20-8' in audio_evidence:payload['provisional_casting_revision']='e20-8 uses Laura per user final storyboard voiceover; source evidence reader remains unknown, NOT audio-verified.'
     if getattr(args,'prior_root',None):
         payload['revision_feedback']=revision_feedback(n,args,preceding)
         payload['previous_episode_revisions']=payload['revision_feedback'].pop('previous_episode_revisions')
@@ -278,7 +300,7 @@ def prepare(n,args,preceding):
     revised_context=copy.deepcopy(context)
     revised_context['revision_basis']={'original_context_sha256':inputs[str(context_path)],'policy':'EP02-feedback full-season rerun; no native listening approval'}
     if readings:revised_context['corroborated_source_audio_readings']=readings
-    if n==20 and readings:
+    if n==20 and 'e20-8' in readings:
         revised_context['provisional_production_casting']={'e20-8':{'prior':'Carmilla','revised':'Laura',
             'reference':'final.html mapped EP-21 voiceover Laura','reference_sha256':inputs[str(storyboard)],
             'evidence_type':'screenplay_not_audio','source_speaker_verified':False}}

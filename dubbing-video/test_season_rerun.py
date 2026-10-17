@@ -198,5 +198,32 @@ class SeasonRerunTests(unittest.TestCase):
             for w in m['segments'][0]['words']:w['start']+=10;w['end']+=10
         with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
 
+    def test_source_reading_cannot_omit_negation_or_low_confidence_core(self):
+        for probability in [.9,.1]:
+            data,rows,evidence=self.audio_evidence()
+            data['cues'][0]['source_audio_reading']='Save him'
+            for m in evidence['x']['models'].values():
+                m['segments'][0]['words']=[{'word':w,'start':1+i*.2,'end':1.2+i*.2,
+                    'probability':probability if w=='not' else .9} for i,w in enumerate(['Do','not','save','him'])]
+            with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
+
+    def test_source_reading_rejects_wrong_models_crossing_words_and_weighted_confidence(self):
+        data,rows,evidence=self.audio_evidence();evidence['x']['models'].pop('medium.en')
+        with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
+        data,rows,evidence=self.audio_evidence()
+        evidence['x']['models']['small.en']['segments'][0]['words'][0]['start']=.5
+        with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
+        data,rows,evidence=self.audio_evidence();data['cues'][0]['source_audio_reading']="Can't I go"
+        for m in evidence['x']['models'].values():
+            m['segments'][0]['words']=[{'word':w,'start':1+i*.2,'end':1.2+i*.2,'probability':p}
+                for i,(w,p) in enumerate([("Can't",.9),('I',.4),('go',.4)])]
+        with self.assertRaises(ValueError):validate_source_readings(data,rows,evidence)
+
+    def test_source_reading_can_exclude_neighbor_padding(self):
+        data,rows,evidence=self.audio_evidence()
+        for m in evidence['x']['models'].values():
+            m['segments'][0]['words'].insert(0,{'word':'Hello','start':.7,'end':.85,'probability':.9})
+        self.assertIn('x',validate_source_readings(data,rows,evidence))
+
 
 if __name__=='__main__':unittest.main()

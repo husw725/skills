@@ -68,7 +68,13 @@ def main():
                 if result_path.exists():
                     if read_json(result_path)['input']!=signature:raise ValueError('ASR evidence changed')
                     continue
-                segments,info=model.transcribe(str(clip),language='en',beam_size=5,temperature=0,
+                import wave
+                import numpy as np
+                with wave.open(str(clip),'rb') as wav:
+                    if (wav.getnchannels(),wav.getsampwidth(),wav.getframerate())!=(1,2,16000):
+                        raise ValueError('Expected mono PCM16 16kHz source clip')
+                    samples=np.frombuffer(wav.readframes(wav.getnframes()),dtype='<i2').astype(np.float32)/32768.0
+                segments,info=model.transcribe(samples,language='en',beam_size=5,temperature=0,
                                                condition_on_previous_text=False,word_timestamps=True,vad_filter=False)
                 rows=[{'start':s.start+start,'end':s.end+start,'text':s.text,'avg_logprob':s.avg_logprob,
                        'no_speech_prob':s.no_speech_prob,'words':[{'word':w.word,'start':w.start+start,
