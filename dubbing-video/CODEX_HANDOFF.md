@@ -2,6 +2,15 @@
 
 ## 当前接力记录
 
+### 2026-10-19 实时：27成片音尾核验过待发布，05新证据编辑恢复已审待部署
+
+- 4c03154已push/Windows明确pull+65targeted；Task Codex-Carmilla-ReconstructionTiming-20261019实际ROOT18 render成功20组，16 prior paid reuse/newclone0/video payload同。第16组自然6.77/fit5.678875/tempo1.1950357/尾75.811875≤75.84，距下一Laura.554125，独立数据审成片放行。publisher仍等全局串行发布，全Review回执目前28/32。
+- 大模型公开权重SCP session79103完成，Windowswrapper全官方model/configSHA复核后Task Codex-Carmilla-Large-ASR-20261019完成6cue×2窗，progress evidence_ready。完整新识别原记录Mac私有export output/season-finish-20261019/large-evidence.private.json。
+- 05 tight明确Carmilla(.660)，旧medium Camilla与final同场支持；context仍Come in there，保留异文，独立审准editorial_name_normalization，非全模型一致。26privacy字幕语义规范化可行。新carmilla_ep05_basis.py绑定原7/26文本时码、原SRT/音频与全旧证据门、large官方revision/bin已知SHA/4物理模型/clip/source/review，mediumraw+final短语，10/20继续原双ASR readings门。新RECONCILED_ROOT output/carmilla-season-reconciled-20261019/仅05helper复制ROOT17有限流程，两遍审核后两锁定PT，原cache/锁/0clone/1.2。Mac及独立83test过、安全审放行，待push/pull/Windows实际basisgate后启动。
+- 私有ep05-hints/coordinator审报快照remaining-source-review-3a8bf094189c.private.md，7锁Camila, vem pro meu quarto!/26锁Deixe-nos a sós, senhor.；所有素材、译稿仅ignored，不进Git。
+- 08新两窗evil for her与SRT even/board involve冲突；29新两窗Amen仍不确定，旧A minion低p、boardHer minions。已异步请用户选择按final两明确句作编辑定稿或等人工听审；尚未答，不把超时当同意、不为这两集启动付费。其他集继续。全32通知仍未发，第二剧暂停。
+
+
 ### 2026-10-19 实时续完：04已Review28/32；27音尾新root安全审放行；large权重传Windows
 
 - EP04 timing root实际render成功（video_payload_identicaltrue/clone0/13of14 prior cache），Review新video2668 v2及subtitle2669回执已留，现28/32；完整实际译稿独立审放行。pub仍全量复核中，不把发布协调器未结束说上传失败。

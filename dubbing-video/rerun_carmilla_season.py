@@ -38,10 +38,11 @@ SUBTITLE_MEANING_ROOT = Path('output/carmilla-season-subtitle-meaning-20261019')
 SUBTITLE_TIMING_ROOT = Path('output/carmilla-season-subtitle-timing-20261019')
 RECONSTRUCTION_ROOT = Path('output/carmilla-season-reconstruction-20261019')
 RECONSTRUCTION_TIMING_ROOT = Path('output/carmilla-season-reconstruction-timing-20261019')
+RECONCILED_ROOT = Path('output/carmilla-season-reconciled-20261019')
 
 
 def paid_cache_roots():
-    return [RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -343,6 +344,17 @@ def prepare(n,args,preceding):
                 model_record['source_review_sha256']=read_json(baseline)['input'].get('source_review_sha256')
         editorial_readings=reconstruct(rows,source_evidence,storyboard_reference(n,storyboard.read_text(encoding='utf-8-sig')),
                                        inputs[str(prior_review)])
+    if getattr(args,'reconcile_ep05',False):
+        if n!=5:raise ValueError('This name normalization is restricted to EP05')
+        from carmilla_ep05_basis import reconstruct as reconstruct_ep05
+        source_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),args.source_prior_root)
+        inputs.update(extra)
+        prior_review=Path(args.source_prior_root)/'episode-05/reviewed.json'
+        inputs[str(prior_review)]=digest(prior_review)
+        editorial_readings,audio_evidence,extra=reconstruct_ep05(rows,source_evidence,
+            storyboard_reference(n,storyboard.read_text(encoding='utf-8-sig')),
+            Path(plan['assets']['source_audio']),inputs[str(prior_review)])
+        inputs.update(extra)
     if getattr(args,'source_evidence',False):
         audio_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),
             getattr(args,'source_prior_root',None) or args.prior_root,
