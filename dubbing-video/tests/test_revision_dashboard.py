@@ -1,7 +1,7 @@
 import copy,tempfile,io
 from pathlib import Path
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import Mock,patch
 from cartesia_pilot import bind
 from dub_episode import digest
 from translate import save_json
@@ -9,6 +9,12 @@ from publish_revision_dashboard import delivery,subtitle_link
 
 
 class RevisionDashboardTests(TestCase):
+    def setUp(self):
+        p=patch('publish_revision_dashboard.probe',return_value={'format':{'duration':'123.45'}})
+        self.probe=p.start();self.addCleanup(p.stop)
+        p=patch('publish_revision_dashboard.shutil.which',return_value='ffmpeg.exe')
+        p.start();self.addCleanup(p.stop)
+
     def fixture(self,folder):
         for name in ['reviewed.json','screenplay-context.json']:save_json(folder/name,{'content':name})
         video=folder/'Carmilla_EP05_pt-BR_season-revision.mp4';video.write_bytes(b'rendered-video')
@@ -28,15 +34,15 @@ class RevisionDashboardTests(TestCase):
     def test_only_matching_published_version_and_approved_unsigned_origin(self):
         with tempfile.TemporaryDirectory() as d:
             folder=Path(d);r,_=self.fixture(folder);base='https://starlitshorts.s3.amazonaws.com/';prefix='aigc/drama/test/'
-            delivery(5,folder,r,base,prefix,set())
+            self.assertEqual(delivery(5,folder,r,base,prefix,{})[-1],123.45)
             for field,value in [('episode',8),('subtitle_sha256','old'),('video_sha256','old'),('prior_versions_retained',False),
                                 ('url','https://other.invalid/aigc/drama/test/videos/ep05.mp4'),
                                 ('url',r['url']+'?token=private'),('url','https://starlitshorts.s3.amazonaws.com/aigc/other/videos/ep05.mp4')]:
-                with self.assertRaises(ValueError):delivery(5,folder,{**r,field:value},base,prefix,set())
+                with self.assertRaises(ValueError):delivery(5,folder,{**r,field:value},base,prefix,{})
 
     def test_local_video_tampering_cannot_enter_page(self):
         with tempfile.TemporaryDirectory() as d:
-            folder=Path(d);r,_=self.fixture(folder);cache=set();base='https://starlitshorts.s3.amazonaws.com/'
+            folder=Path(d);r,_=self.fixture(folder);cache={};base='https://starlitshorts.s3.amazonaws.com/'
             delivery(5,folder,r,base,'aigc/drama/test/',cache)
             (folder/'Carmilla_EP05_pt-BR_season-revision.mp4').write_bytes(b'tampered')
             with self.assertRaises(ValueError):delivery(5,folder,r,base,'aigc/drama/test/',cache)

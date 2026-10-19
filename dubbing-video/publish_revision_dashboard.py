@@ -1,9 +1,9 @@
 """Publish the existing S3 page from delivered season revisions; reuse uploaded videos."""
 import argparse
 from pathlib import Path
-import time,sys,hashlib,os
+import time,sys,hashlib,os,shutil
 from urllib.parse import urlsplit,unquote,quote
-from dub_episode import digest
+from dub_episode import digest,probe
 from translate import read_json,save_json
 from process_lock import process_lock
 from publish_dashboard import collect,build_html,safe_read
@@ -34,8 +34,10 @@ def delivery(n,folder,receipt,base,prefix,validated):
     stat=video.stat();cache_key=(str(video),stat.st_size,stat.st_mtime_ns,report['output_sha256'],digest(folder/'plan.json'),digest(folder/'render-report.json'))
     if cache_key not in validated:
         if digest(video)!=report['output_sha256']:raise ValueError('Delivered local video changed')
-        validated.add(cache_key)
-    return report,subtitle,key
+        ffmpeg=shutil.which('ffmpeg')
+        if not ffmpeg:raise ValueError('Existing ffmpeg/ffprobe required for video duration')
+        validated[cache_key]=float(probe(video,Path(ffmpeg))['format']['duration'])
+    return report,subtitle,key,validated[cache_key]
 
 
 def subtitle_link(n,path,receipt,state,s3,bucket,prefix,base,state_path=None):
@@ -72,9 +74,9 @@ def snapshot(project,state,s3,bucket,prefix,validated):
             folder=project/relative;report=read_json(folder/'render-report.json')
             receipt_path=project/PUBLICATION/f'episode-{n:02}'/report['output_sha256']/'publication-result.json'
             if receipt_path.is_file():
-                receipt=read_json(receipt_path);report,sub,key=delivery(n,folder,receipt,base,prefix,validated)
+                receipt=read_json(receipt_path);report,sub,key,duration=delivery(n,folder,receipt,base,prefix,validated)
                 row.update(status='completed',status_label='播放新版',video_url=base+quote(key),
-                    subtitle_url=subtitle_link(n,sub,receipt,state,s3,bucket,prefix,base,project/'output/dashboard/season-publication-state.json'),duration_seconds=report['duration_seconds'],
+                    subtitle_url=subtitle_link(n,sub,receipt,state,s3,bucket,prefix,base,project/'output/dashboard/season-publication-state.json'),duration_seconds=duration,
                     timing_review_count=sum(u['atempo_factor']>1.15 for u in report['utterances']))
                 published+=1;ready+=1
             else:row.update(status='uploading',status_label='新版待发布');ready+=1
@@ -123,7 +125,7 @@ def main():
     project=Path(__file__).resolve().parent;os.chdir(project);folder=project/'output/dashboard';folder.mkdir(parents=True,exist_ok=True)
     with process_lock(folder/'season-dashboard.lock',timeout=0):
         state_path=folder/'season-publication-state.json';old=safe_read(folder/'publication-state.json',{})
-        state=safe_read(state_path,{'history':old.get('history',[]),'subtitles':{},'last_history':0});validated=set()
+        state=safe_read(state_path,{'history':old.get('history',[]),'subtitles':{},'last_history':0});validated={}
         while True:
             try:
                 data=snapshot(project,state,s3,bucket,prefix,validated)
