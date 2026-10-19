@@ -46,10 +46,11 @@ DIARY_ROOT = Path('output/carmilla-season-diary-20261019')
 SPEECH_ROOT = Path('output/carmilla-season-speech-20261019')
 SPEECH2_ROOT = Path('output/carmilla-season-speech-v2-20261019')
 VO_ALIGNMENT_ROOT = Path('output/carmilla-season-vo-alignment-20261019')
+STORYBOARD_FINAL_ROOT = Path('output/carmilla-season-user-final-20261019')
 
 
 def paid_cache_roots():
-    return [VO_ALIGNMENT_ROOT,SPEECH2_ROOT,SPEECH_ROOT,DIARY_ROOT,PARAGRAPH_ROOT,RECONCILED_TIMING_ROOT,RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [STORYBOARD_FINAL_ROOT,VO_ALIGNMENT_ROOT,SPEECH2_ROOT,SPEECH_ROOT,DIARY_ROOT,PARAGRAPH_ROOT,RECONCILED_TIMING_ROOT,RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -379,6 +380,29 @@ def prepare(n,args,preceding):
             if old['e20-8']['cue_ids']!=['e20-8'] or annotations['e20-8']['speaker']!='unknown':
                 raise ValueError('Unexpected source reader scope; review before changing provisional casting')
             old=copy.deepcopy(old);old['e20-8']['production_voice']='Laura'
+    final_authorized_source=getattr(args,'final_authorized_source',False)
+    if final_authorized_source:
+        from carmilla_final_authority import reconstruct as reconstruct_final
+        authority=read_json(args.editorial_hints)[str(n)]['source_basis']
+        source_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),args.source_prior_root)
+        inputs.update(extra)
+        prior_review=Path(args.source_prior_root)/f'episode-{n:02}/reviewed.json'
+        inputs[str(prior_review)]=digest(prior_review)
+        for key in ('audit_report','original_subtitle','evidence_packet'):
+            item=Path(authority[key]['path']);inputs[str(item)]=digest(item)
+        editorial_readings=reconstruct_final(n,rows,storyboard_reference(n,storyboard.read_text(encoding='utf-8-sig')),source_evidence,authority)
+        for cue_id,reading in editorial_readings.items():
+            if cue_id=='e29-19':continue
+            reading['archived_large_asr']={}
+            for label in ('context','tight'):
+                record_path=Path('output/carmilla-source-large-20261019')/f'episode-{n:02}'/cue_id/label/'large-v3.json'
+                record=read_json(record_path)
+                if (record['input']['cue']!=by_id[cue_id]
+                        or record['input']['source_audio_sha256']!=inputs[str(Path(plan['assets']['source_audio']))]):
+                    raise ValueError('Archived large ASR belongs to another source')
+                inputs[str(record_path)]=digest(record_path)
+                reading['archived_large_asr'][label]=record
+
     production_groupings=[]
     if getattr(args,'ep05_diary',False):
         if n!=5 or not ep05_paragraph:raise ValueError('Diary policy is restricted to this EP05 paragraph revision')
@@ -397,6 +421,8 @@ def prepare(n,args,preceding):
              'old_translation_reference':[{'cue_ids':u['cue_ids'],'text':u['translation']} for u in plan['units']],
              'production_voice_per_cue':{c:u['production_voice'] for c,u in old.items()},
              'known_issue':'EP29 e29-8 source How many years. conflicts with screenplay minions; retain original text and flag for original-audio verification, never silently replace it.'}
+    if final_authorized_source:
+        payload['known_issue']='User explicitly chose the final storyboard meanings for e08-6/e29-8. Keep original SRT/timecodes/ASR and unknown source identity. This is an editorial resolution, not acoustic confirmation; e29-19 already matches final, preserve secure (not surrounded).'
     payload['grouping_max_gap_seconds']=max_gap
     if production_groupings:payload['approved_unknown_production_groups']=production_groupings
     if editorial_readings:payload['editorial_source_reconstructions']=editorial_readings
@@ -524,7 +550,7 @@ def prepare(n,args,preceding):
     new_plan={'episode':n,'project_id':59,'assets':plan['assets'],'units':units,'input_sha256':inputs,
               'reviewed_context_sha256':digest(folder/'screenplay-context.json'),
               'reviewed_response_sha256':digest(reviewed_path),'translation_srt_sha256':digest(folder/f'Carmilla_EP{n:02}_pt-BR_revised.srt'),
-              'blocking_issues':['Original audio verification required for e29-8 before complete new episode release'] if n==29 and 'e29-8' not in readings else []}
+              'blocking_issues':['Original audio verification required for e29-8 before complete new episode release'] if n==29 and 'e29-8' not in readings and 'e29-8' not in editorial_readings else []}
     if production_groupings:new_plan['production_grouping_policies']=production_groupings
     bind(folder/'reviewed-plan-fingerprint.json',new_plan)
     save_json(folder/'plan.json',new_plan)
