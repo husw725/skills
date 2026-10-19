@@ -2,6 +2,23 @@
 
 ## 当前接力记录
 
+### 2026-10-19 用户明确续完：EP04有限语义恢复已审待部署，large-v3公开权重正在下载
+
+- 用户“继续完成它”是继续生产授权，非只读状态；本轮要持续跟实际成片和Review。Mac持久隔离worktree已重建 /Users/husw/demo/.codex-worktrees/dubbing-video-season-finish，branch codex/cartesia-episode-v2；不碰主repo无关用户改动。连接辅助output/tools/remote_company.py（不是已消失/tmp）。
+- 数据独立审核remaining-source-review.private.md放行04 Te vejo esta noite字幕语义规范化/05privacy；澄清27原声双context有when you're at your weakest和七日仪式onlychancefightback，原字幕窗截短不能推论音轨无尾句；这仍须新证据版本与时长适配，不是人听确认。
+- 新SUBTITLE_MEANING_ROOT output/carmilla-season-subtitle-meaning-20261019，resume_carmilla_subtitle_meaning.py固定04/原cue文本+时码+原物理SRT SHA+独立报告SHA+wholehints指纹，旧root/15cache不删；2pass后强制singleton+exact译文才可TTS，source_evidencefalse只在本已审字幕语义规范化使用，audio_listened/speaker_verifiedfalse，无source改写。test_subtitle_meaning针对错身份/译文/原文件/不同episode守门；49targeted本机过，独立安全68tests放行。协调器ep04-coordinator.py沿既有生产→全量发布→全32强核通知模板，未全32按已授权停顿消息，防重保持。
+- 官方更大ASR模型来源已核 https://huggingface.co/Systran/faster-whisper-large-v3 。Windows有限Task Codex-Carmilla-Large-Model-20261019 Running，既有已审download函数download('large-v3')、公开SHA校验/断点、不触发付费，根output/tools/source-asr-models/large-v3，repo revision edaa852ec7e145841d8ffdb056a99866b5f0a478、bin2944.26MiB，目前tail-pieces19MiB增长。下载状态output/carmilla-source-large-20261019/download-progress.json。尚未新识别结果，不得宣称模糊词已确证。
+- 新verify_carmilla_large.py仅额外本机无prompt识别6cue×context/tight两窗，独立输出source-large；还在安全复核，不修改源SRT/生产。原声音色只复用，诊断clip不上传S3，第二部剧仍暂停。
+
+
+### 2026-10-19 12:13 用户电脑重启后只读核验：仍27/32，成果保留，无新生产
+
+- ssh win hostname husw成功；Windows自报LastBoot2026-10-08T11:05+08、Now2026-10-19T12:13+08，Windows未因本次用户侧重启重新开机。Mac /tmp/dub_company.py已不存在，本次在忽略output/tools/remote_company.py重建相同只读SSH/EncodedCommand连接辅助；后续不要依赖已消失/tmp工具或假定原/tmp隔离worktree仍在。
+- Windows实际candidates27，27份视频和对应SRT均存在、missing_files[]；最新EP20视频完整SHA与render-report相符；两个已有音色库存在。Carmilla生产/渲染/发布任务State3=Ready未运行，只有Codex-Carmilla-Notify State4监控，不可当生产续跑。ROOT14仍finished1792376443.2889297/production0/publication2/requires_review，未被重启打断。
+- 实时Review全27视频/字幕scope/name/version/URL/videoTags/subtitle exactname+videoSHA+kind+fullSHA note/历史标记核对全过，mismatches[]，余04/05/08/27/29。Windows证据output/season-resume-20261019/post-restart-check.private.json。本轮new_paid_calls0、production_restartedfalse，未重复通知/重克隆。
+- 用户应获知成果未丢、没有新增成片、目前没有配音任务在跑；上一轮完成的是字幕分级与候选分析，尚未转为新生产。保留2语义整理/2实质校订候选/2仍缺义分类，不把鼓励消息当原声听审或放行推断。
+
+
 ### 2026-10-19 用户问基于原始字幕分析：六处重新分级，未启动重配
 
 - 已按用户问题实际取Windows原字幕：04/08/27/29 SRT及carmilla_Ep05.st（扩展名误写）。Mac忽略original-srt-five.private.json保留5文件完整CRLF文本与Windows原SHA，五份text.encodeUTF8均可重算SHA匹配；对照subtitle-context-review.private.json的source逐id/text/time全122条（16+36+28+23+19）零差异。27截断确在原件，无parser漏行；原文件序号错序按时间分析，未改原时码。
