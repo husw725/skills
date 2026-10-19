@@ -36,10 +36,11 @@ NEIGHBOR_TIMING_ROOT = Path('output/carmilla-season-neighbor-timing-20261019')
 NEIGHBOR_PAUSE_ROOT = Path('output/carmilla-season-neighbor-pause-20261019')
 SUBTITLE_MEANING_ROOT = Path('output/carmilla-season-subtitle-meaning-20261019')
 SUBTITLE_TIMING_ROOT = Path('output/carmilla-season-subtitle-timing-20261019')
+RECONSTRUCTION_ROOT = Path('output/carmilla-season-reconstruction-20261019')
 
 
 def paid_cache_roots():
-    return [SUBTITLE_TIMING_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -312,6 +313,10 @@ def prepare(n,args,preceding):
         raise ValueError('Original screenplay/source binding changed')
     if any(u['production_voice'] not in ROLES for u in plan['units']): raise ValueError('Unexpected role')
     max_gap={9:.85,10:1.0,12:.8,15:1.0,28:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
+    reconstruct_source=getattr(args,'reconstruct_ep27',False)
+    if reconstruct_source:
+        if n!=27:raise ValueError('This editorial reconstruction is restricted to EP27')
+        max_gap=1.9
     if getattr(args,'finalize_pending',False) and n in (21,22):
         # Fix a known excerpt/episode association error using the user's mapped
         # final storyboard. Original English timed source and reader evidence stay intact.
@@ -324,7 +329,19 @@ def prepare(n,args,preceding):
         if not any(s['sha256']==inputs[str(storyboard)] for s in context['sources']):
             context['sources'].append({'filename':storyboard.name,'sha256':inputs[str(storyboard)],
                                        'version':'user-supplied final storyboard; dialogue-mapped 2026-10-17'})
-    audio_evidence={}
+    audio_evidence={};editorial_readings={}
+    if reconstruct_source:
+        from carmilla_ep27_basis import reconstruct
+        source_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),args.source_prior_root)
+        inputs.update(extra)
+        prior_review=Path(args.source_prior_root)/f'episode-{n:02}'/'reviewed.json'
+        inputs[str(prior_review)]=digest(prior_review)
+        for cue_id,evidence_record in source_evidence.items():
+            for model,model_record in evidence_record['models'].items():
+                baseline=Path('output/carmilla-source-verification-20261017')/f'episode-{n:02}'/cue_id/(model+'.json')
+                model_record['source_review_sha256']=read_json(baseline)['input'].get('source_review_sha256')
+        editorial_readings=reconstruct(rows,source_evidence,storyboard_reference(n,storyboard.read_text(encoding='utf-8-sig')),
+                                       inputs[str(prior_review)])
     if getattr(args,'source_evidence',False):
         audio_evidence,extra=source_audio_evidence(n,rows,Path(plan['assets']['source_audio']),
             getattr(args,'source_prior_root',None) or args.prior_root,
@@ -345,6 +362,7 @@ def prepare(n,args,preceding):
              'production_voice_per_cue':{c:u['production_voice'] for c,u in old.items()},
              'known_issue':'EP29 e29-8 source How many years. conflicts with screenplay minions; retain original text and flag for original-audio verification, never silently replace it.'}
     payload['grouping_max_gap_seconds']=max_gap
+    if editorial_readings:payload['editorial_source_reconstructions']=editorial_readings
     if audio_evidence:payload['source_audio_evidence']=audio_evidence
     if n==20 and 'e20-8' in audio_evidence:payload['provisional_casting_revision']='e20-8 uses Laura per user final storyboard voiceover; source evidence reader remains unknown, NOT audio-verified.'
     if getattr(args,'prior_root',None):
@@ -393,6 +411,9 @@ def prepare(n,args,preceding):
             'A current-cut reading corroborated by both ASR models takes priority over an older script: retain the '
             'documentary difference as a warning; unresolved speech meaning remains an error. ASR is not human listening '
             'or speaker identification. Never claim source_speaker_verified or native pronunciation approval. '
+            'When editorial_source_reconstructions are supplied, translate their complete editorial_reading, including '
+            'the independently evidenced missing clause. Keep original caption text/timecodes as provenance. This '
+            'is an explicit editorial reconstruction, NOT word-for-word acoustic confirmation or human listening. '
             'Consult the supplied inline context and mapped storyboard references. Do not call MCP, clone/TTS/upload, edit files, '
             'change source/casting or credentials. Return only structured data.\n'+__import__('json').dumps(payload,ensure_ascii=False))
     draft_path=folder/'draft.json'
@@ -411,6 +432,12 @@ def prepare(n,args,preceding):
             if any(b['start']-a['end']>.6+1e-9 for a,b in zip(members,members[1:])):
                 if group!=allowed_long_group:
                     raise ValueError('Only the independently reviewed exact thought may use the longer pause')
+    if reconstruct_source:
+        allowed=[['e27-11','e27-12'],['e27-1','e27-2']]
+        for group in reviewed['groups']:
+            members=[by_id[c] for c in group]
+            if any(b['start']-a['end']>.6+1e-9 for a,b in zip(members,members[1:])) and group not in allowed:
+                raise ValueError('Only the two reviewed EP27 paragraphs may cross the longer pause')
     for group in payload.get('targeted_revision_guidance',{}).get('group_together',[]):
         if not group or not any(set(group).issubset(g) for g in reviewed['groups']):
             raise ValueError('Required reviewed thought grouping missing; no synthesis')
@@ -418,6 +445,7 @@ def prepare(n,args,preceding):
     revised_context=copy.deepcopy(context)
     revised_context['revision_basis']={'original_context_sha256':inputs[str(context_path)],'policy':'EP02-feedback full-season rerun; no native listening approval'}
     if readings:revised_context['corroborated_source_audio_readings']=readings
+    if editorial_readings:revised_context['editorial_source_reconstructions']=editorial_readings
     if n==20 and 'e20-8' in readings:
         revised_context['provisional_production_casting']={'e20-8':{'prior':'Carmilla','revised':'Laura',
             'reference':'final.html mapped EP-21 voiceover Laura','reference_sha256':inputs[str(storyboard)],
@@ -440,6 +468,8 @@ def prepare(n,args,preceding):
                       'source_windows':[{k:r[k] for k in ('id','start','end')} for r in members],
                       'source_audio_readings':{c:readings[c] for c in group if c in readings},
                       'issues':[issue for c in cs for issue in c['issues']]})
+        if editorial_readings:
+            units[-1]['editorial_source_reconstructions']={c:editorial_readings[c] for c in group if c in editorial_readings}
     new_plan={'episode':n,'project_id':59,'assets':plan['assets'],'units':units,'input_sha256':inputs,
               'reviewed_context_sha256':digest(folder/'screenplay-context.json'),
               'reviewed_response_sha256':digest(reviewed_path),'translation_srt_sha256':digest(folder/f'Carmilla_EP{n:02}_pt-BR_revised.srt'),

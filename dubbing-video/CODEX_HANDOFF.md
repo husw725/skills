@@ -2,6 +2,18 @@
 
 ## 当前接力记录
 
+### 2026-10-19 续完实时：04全16已测正在修订，27重建版安全放行待部署，large模型Mac下载中
+
+- 05af5b6已push/Windows明确pull+49targeted，Task Codex-Carmilla-SubtitleMeaning-20261019启动后两遍成功，但4在complete1/16时卡cue2：自然1.47>max1.3596，缓存保留。未出新成片/Review仍27。不能说04继续TTS仍运行。
+- 8ca2da9已push/Windows明确pull+49targeted，新root SUBTITLE_TIMING_ROOT output/carmilla-season-subtitle-timing-20261019 /Task Codex-Carmilla-SubtitleTiming-20261019已Running，started1792388365.887364；helper --timing只旧精确TIMING_ERRORS+无candidate才测旧全16再新root2pass，当前16/16已测完(stageeditorial)。Father精确[2,3,4]（gap0/.2）冰冷/立即请Dr.Miller/身上是什么三义全保留，独立语义与68项安全审放行。ep04-timing-hints/privatecoordinator用内容SHA快照remaining-source-review-6dbda363a8b5.private.md，勿覆写旧版已绑定报告。新root入完整paidcache/pub白名单。
+- 27有实证新路径，不能继续称音轨尾句没有：final.html storyboard EP28 shot10/20精确英文+两个完整context支持weakest/fightback/Youmustbeready。新carmilla_ep27_basis.py固定3原cue1/2/12文本/时码/相邻原cue，验证当前final分镜英文tokens、完整两ASR短语p>=.35均>=.65到next原cue-.1；旧源/clip/whole transcript/baseline/model绑定原门保留，另物理baseline的source_review_sha256逐模型核当前RETRYreviewSHA入inputs；保护否定/情态/zero–twenty。e27-12干净Irina/cursedpower前缀来自原SRT，willstrikewhen...来自完整双ASR，保留powerpower/ofpower异文，不声称全句音素一致。
+- 新source_basis单独editorial_source_reconstructions写context/plan，原source_text/时码不改、不用subtitle_confirmed/不标humantrue。准精确同Carmilla[11,12]gap1.866/fearful和[1,2]gap1.067/calm例外<=1.9，其它group仍<=.6，不扩到别的说话者。锁定PT11 Laura, pare；12 O poder maldito de Irina vai atacar quando você estiver mais fraca；1 Irina vai voltar. Prepare-se；2 Só o ritual de selamento de sete dias nos permite reagir；独立语义均放行。不能追加尚未由当前ASR完整支持的You're draining yourself。
+- 新RECONSTRUCTION_ROOT output/carmilla-season-reconstruction-20261019 /resume_carmilla_reconstruction.py仅27，原SRT和独立审报SHA/全部hints/2pass后四精确PT守门，再实测付款。77Mactests+独立77tests和diffcheck放行；待push/明确pull/Windows实际旧证据门试验后启动。私有ep27-hints+coordinator在output/season-finish-20261019，用快照remaining-source-review-18755d01140f.private.md。
+- 原Windows公开模型下载太慢：仅停止Task Codex-Carmilla-Large-Model-20261019（无付费），Mac原1MiB公开download进程32852按独占公共download.lock精确停止，改同一已有校验download函数range_step_mib8（默认1不变，1/8白名单；206/range/大小/全官方SHA不变，独立安全审放行）。Mac公开下载session5396/PID34951，日志output/season-finish-20261019/model-download-fast.private.log，状态model-download-mac.private.json，权重output/tools/source-asr-models/large-v3，当前约2344/2944MiB。完成官方SHA校验后须SCP仅权重/配置去Windows并复核；真实素材和ASR仍Windows、诊断音不上传S3。
+- verify_carmilla_large.py已8ca2部署Windows，6cue×context2s/tight.25s无prompt，记录CPU/int8/inference与officialmetadataSHA，无TTS/生产写；未开始推理。Mac8MB公开探针session6510已完6.37s；Windows公开8MB探针SSHsession16146仍可能仅下载parts，无TTS，勿错杀生产；不计音频任务。
+- 仍要本轮持续盯04/27实际产物与Review，等large权重到Windows后复核05/08/29，再以有来源记录的新版本完成，不能因鼓励就伪称已人听或直接抹去未解语义。当前27/32交付，全32完成通知未发；已有冻结音色不新增clone，第二剧仍暂停。
+
+
 ### 2026-10-19 用户明确续完：EP04有限语义恢复已审待部署，large-v3公开权重正在下载
 
 - 用户“继续完成它”是继续生产授权，非只读状态；本轮要持续跟实际成片和Review。Mac持久隔离worktree已重建 /Users/husw/demo/.codex-worktrees/dubbing-video-season-finish，branch codex/cartesia-episode-v2；不碰主repo无关用户改动。连接辅助output/tools/remote_company.py（不是已消失/tmp）。
