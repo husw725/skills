@@ -29,10 +29,11 @@ RESUME_ROOT = Path('output/carmilla-season-resume-20261017')
 SOURCE_RESUME_ROOT = Path('output/carmilla-season-source-resume-20261017')
 FINISH_ROOT = Path('output/carmilla-season-finish-20261019')
 NEIGHBOR_ROOT = Path('output/carmilla-season-neighbor-20261019')
+FINISH2_ROOT = Path('output/carmilla-season-finish-20261019-v2')
 
 
 def paid_cache_roots():
-    return [NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -304,7 +305,7 @@ def prepare(n,args,preceding):
     if any(not source_binding_matches(u,by_id,annotations) for u in plan['units']):
         raise ValueError('Original screenplay/source binding changed')
     if any(u['production_voice'] not in ROLES for u in plan['units']): raise ValueError('Unexpected role')
-    max_gap={9:.85,15:1.0,28:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
+    max_gap={9:.85,10:1.0,15:1.0,28:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
     if getattr(args,'finalize_pending',False) and n in (21,22):
         # Fix a known excerpt/episode association error using the user's mapped
         # final storyboard. Original English timed source and reader evidence stay intact.
@@ -397,6 +398,12 @@ def prepare(n,args,preceding):
         __import__('json').dumps(draft,ensure_ascii=False),schema,reviewed_path,folder/'review.private.log')
     readings=validate_source_readings(reviewed,rows,audio_evidence) if audio_evidence else {}
     validate_editorial(reviewed,rows,old,annotations,glossary,max_gap)
+    if n==10:
+        for group in reviewed['groups']:
+            members=[by_id[c] for c in group]
+            if any(b['start']-a['end']>.6+1e-9 for a,b in zip(members,members[1:])):
+                if group!=['e10-12','e10-13','e10-14']:
+                    raise ValueError('Only the reviewed EP10 three-cue thought may use the longer pause')
     for group in payload.get('targeted_revision_guidance',{}).get('group_together',[]):
         if not group or not any(set(group).issubset(g) for g in reviewed['groups']):
             raise ValueError('Required reviewed thought grouping missing; no synthesis')
@@ -485,7 +492,7 @@ def revision_feedback(n,args,preceding=()):
             'natural_seconds':natural,'maximum_seconds':maximum,'requires_shortening':natural>maximum,'requires_timing_margin':natural>maximum*.9,
             'recommended_seconds':maximum*.85,
             'audio_sha256':read_json(receipt)['sha256']})
-    max_gap={9:.85,15:1.0,28:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
+    max_gap={9:.85,10:1.0,15:1.0,28:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
     data['regroup_candidates']=[]
     for index,(a,b) in enumerate(zip(plan['units'],plan['units'][1:])):
         if (a.get('source_speaker') in (None,'unknown') or a.get('source_speaker')!=b.get('source_speaker')

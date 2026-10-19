@@ -14,18 +14,21 @@ PRIORS={10:season.RESUME_ROOT,12:season.SOURCE_RESUME_ROOT,18:season.RESUME_ROOT
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('codex-exe','mcp-config','ffmpeg','editorial-hints'):p.add_argument('--'+name,required=True,type=Path)
+    p.add_argument('--ep10-continuity',action='store_true')
     args=p.parse_args()
     if sys.platform!='win32':p.error('Business execution stays on Windows')
     if any(not getattr(args,name).is_file() for name in ('codex_exe','mcp_config','ffmpeg','editorial_hints')):
         p.error('Existing executables, private config and targeted guidance required')
-    root=season.FINISH_ROOT;root.mkdir(parents=True,exist_ok=True)
+    root=season.FINISH2_ROOT if args.ep10_continuity else season.FINISH_ROOT
+    priors={10:season.FINISH_ROOT} if args.ep10_continuity else PRIORS
+    root.mkdir(parents=True,exist_ok=True)
     args.finalize_pending=True;args.rubberband_fallback=True
     args.source_prior_root=season.RETRY_ROOT
     args.cache_roots=[r for r in season.paid_cache_roots() if r!=root]
     with process_lock(season.BASE_ROOT/'season.lock',timeout=14400):
         state=read_json(root/'season-progress.json') if (root/'season-progress.json').exists() else {'episodes':{}}
         episodes=[]
-        for n,prior in PRIORS.items():
+        for n,prior in priors.items():
             if state['episodes'].get(str(n),{}).get('stage')=='rendered_candidate':continue
             if any((r/f'episode-{n:02}'/'render-report.json').exists() for r in args.cache_roots):continue
             old=read_json(prior/'season-progress.json')['episodes'][str(n)]
@@ -34,7 +37,7 @@ def main():
         preceding=[]
         for n in episodes:
             try:
-                prior=PRIORS[n];args.prior_root=prior;season.ROOT=prior;args.measure_only=True
+                prior=priors[n];args.prior_root=prior;season.ROOT=prior;args.measure_only=True
                 state.update(stage='measuring',episode=n,updated_at=time.time());save_json(root/'season-progress.json',state)
                 with process_lock(prior/f'episode-{n:02}'/'render.lock',timeout=0):season.render(n,args)
                 season.ROOT=root;args.measure_only=False
