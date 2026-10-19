@@ -156,7 +156,8 @@ class VOAlignmentTests(TestCase):
             folder=Path(d);req={'text':'approved','voiceId':'existing','speed':1.0}
             with self.assertRaises(FileNotFoundError):completed_audio(folder,req)
             audio=folder/'original.wav';audio.write_bytes(b'paid-audio')
-            receipt={'task_id':42,'request_fingerprint':fingerprint(req),'sha256':digest(audio)}
+            receipt={'task_id':42,'sha256':digest(audio)}
+            save_json(folder/'request-fingerprint.json',{'fingerprint':fingerprint(req)})
             save_json(folder/'audio-receipt.json',receipt)
             self.assertEqual(completed_audio(folder,req)[0],audio)
             with self.assertRaises(ValueError):completed_audio(folder,{**req,'text':'changed'})

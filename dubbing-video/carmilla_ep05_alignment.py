@@ -64,6 +64,6 @@ def completed_audio(folder, request):
     from translate import read_json, fingerprint
     path=folder/'original.wav'
     receipt=read_json(folder/'audio-receipt.json')
-    if not receipt.get('task_id') or receipt.get('request_fingerprint')!=fingerprint(request) or digest(path)!=receipt.get('sha256'):
+    if not receipt.get('task_id') or read_json(folder/'request-fingerprint.json').get('fingerprint')!=fingerprint(request) or digest(path)!=receipt.get('sha256'):
         raise ValueError('Exact completed paid audio required; no synthesis permitted')
     return path, receipt
