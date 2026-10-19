@@ -56,5 +56,5 @@ def reconstruct(rows,evidence,reference,source_audio,review_sha):
             'source_basis':'subtitle_semantic_normalization','other_asr_variants':evidence['e05-26'],
             'human_listened':False,'source_speaker_verified':False,
             'note':'Normalize the original request for privacy and sir; not word-for-word original-audio confirmation.'}}
-    if set(evidence)!={'e05-7','e05-10','e05-20','e05-26'}:raise ValueError('EP05 disputed source scope changed')
-    return recons,{c:evidence[c] for c in ['e05-10','e05-20']},inputs
+    if set(evidence)!={'e05-7','e05-10','e05-20','e05-26','e05-35'}:raise ValueError('EP05 disputed source scope changed')
+    return recons,{c:evidence[c] for c in ['e05-10','e05-20','e05-35']},inputs

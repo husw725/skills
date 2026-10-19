@@ -10,7 +10,7 @@ class NameBasisTests(TestCase):
     def fixture(self):
         rows=[{'id':'e05-7','text':'Connor come in my bedroom','start':16.3,'end':18.733},
               {'id':'e05-26','text':'leave us your privacy sir','start':86.4,'end':88.933}]
-        evidence={k:{'kept':True} for k in ['e05-7','e05-10','e05-20','e05-26']}
+        evidence={k:{'kept':True} for k in ['e05-7','e05-10','e05-20','e05-26','e05-35']}
         board={'entries':[{'storyboard':'Carmilla, come to my bedroom!'}]}
         root=Path('output/tools/source-asr-models/large-v3');files={str(root/f):'sha' for f in ['model.bin','config.json','tokenizer.json','preprocessor_config.json']}
         files[str(root/'model.bin')]='69f74147e3334731bc3a76048724833325d2ec74642fb52620eda87352e3d4f1'
@@ -32,7 +32,7 @@ class NameBasisTests(TestCase):
 
     def test_editorial_name_and_privacy_preserve_conflicting_source(self):
         args=self.fixture();r,audio,inputs=self.run_basis(*args)
-        self.assertEqual(set(r),{'e05-7','e05-26'});self.assertEqual(set(audio),{'e05-10','e05-20'})
+        self.assertEqual(set(r),{'e05-7','e05-26'});self.assertEqual(set(audio),{'e05-10','e05-20','e05-35'})
         self.assertEqual(r['e05-7']['original_subtitle_text'],'Connor come in my bedroom')
         self.assertEqual(r['e05-7']['source_basis'],'editorial_name_normalization');self.assertFalse(r['e05-7']['human_listened'])
 
