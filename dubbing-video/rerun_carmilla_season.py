@@ -41,10 +41,11 @@ RECONSTRUCTION_TIMING_ROOT = Path('output/carmilla-season-reconstruction-timing-
 RECONCILED_ROOT = Path('output/carmilla-season-reconciled-20261019')
 RECONCILED2_ROOT = Path('output/carmilla-season-reconciled-v2-20261019')
 RECONCILED_TIMING_ROOT = Path('output/carmilla-season-reconciled-timing-20261019')
+PARAGRAPH_ROOT = Path('output/carmilla-season-paragraph-20261019')
 
 
 def paid_cache_roots():
-    return [RECONCILED_TIMING_ROOT,RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [PARAGRAPH_ROOT,RECONCILED_TIMING_ROOT,RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -317,6 +318,10 @@ def prepare(n,args,preceding):
         raise ValueError('Original screenplay/source binding changed')
     if any(u['production_voice'] not in ROLES for u in plan['units']): raise ValueError('Unexpected role')
     max_gap={9:.85,10:1.0,12:.8,15:1.0,28:1.0}.get(n,.6) if getattr(args,'finalize_pending',False) else .6
+    ep05_paragraph=getattr(args,'ep05_paragraph',False)
+    if ep05_paragraph:
+        if n!=5:raise ValueError('This paragraph policy is restricted to EP05')
+        max_gap=1.0
     reconstruct_source=getattr(args,'reconstruct_ep27',False)
     if reconstruct_source:
         if n!=27:raise ValueError('This editorial reconstruction is restricted to EP27')
@@ -455,6 +460,11 @@ def prepare(n,args,preceding):
             if any(b['start']-a['end']>.6+1e-9 for a,b in zip(members,members[1:])):
                 if group!=allowed_long_group:
                     raise ValueError('Only the independently reviewed exact thought may use the longer pause')
+    if ep05_paragraph:
+        for group in reviewed['groups']:
+            members=[by_id[c] for c in group]
+            if any(b['start']-a['end']>.6+1e-9 for a,b in zip(members,members[1:])) and group!=['e05-18','e05-19']:
+                raise ValueError('Only the reviewed EP05 internal thought may use the longer pause')
     if reconstruct_source:
         allowed=[['e27-11','e27-12'],['e27-1','e27-2']]
         for group in reviewed['groups']:

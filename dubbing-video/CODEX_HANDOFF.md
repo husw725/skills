@@ -2,6 +2,16 @@
 
 ## 当前接力记录
 
+### 2026-10-19 实时：05全36已测，完整Laura意群ROOT22审准待安全切换
+
+- b04abf0已push/Windows明确pull+69targeted，Task Codex-Carmilla-ReconciledTiming-20261019已完整测完ROOT20全部36，paid receipts全保留；真正超长包含Mother23、Laura18/19、22、28。ROOT21正在editorial，不让它按旧分碎方案继续盲付费。
+- 数据独立审准三精确组：Mother23/16/17；Laura18/19完整内心本应怕她/本能逃/却不能恨/感安全，gap.933，仅此准≤1.0；Laura28/29我的衣服/任意选择gap0。原script恐惧转好奇、原context19auto，旧19calm非听审事实，统一surprised表达内心矛盾是新制作方向，非原声情绪确证。四锁7/26/35/36不变。
+- 新PARAGRAPH_ROOT output/carmilla-season-paragraph-20261019(ROOT22)/helper --paragraph-repair，仅旧20 timing+完整measured exactplanSHA、ROOT21 safelysuperseded且无plan/paid才进；不重测，重新2pass/四PT锁+精确Laura18/19sourcewindow/角色/方向host门。prepare只n5 optin1.0且其它跨>.6一律拒，cache/pub全22根。Mac及独立84通过、安全放行待push/pull。
+- 私有ep05-paragraph-hints/coordinator、immutable actual-final-05-78d56b86ee53.private.md；版21旧稿不复用，原SRT/时码/所有paidcache保留。全文independent复核报告在actual-remaining-audit/final-05-v2-audit.private.md。
+- supersede-ep05-timing.py精确只完整测量后editorial/no plan-review-render-input-utterances、唯一cwd/argvcoord/helper，先suspend后实时重验，失败resume；独立安全审放行。第一次实际拒unknownchild并resume：原树coord25036→helper28020→directconhost21060（System32）+nativecodex33760，均未停止。正在审仅该conhost子Console特例，再执行安全切换；不杀测量/任何在途TTS。未安全切换前不能启动ROOT22。
+- 当前Review仍29/32（04/27新live过），08/29等用户明确编辑选择，第二剧暂停，全32通知未发。
+
+
 ### 2026-10-19 实时：29/32已Reviewlive，05文本全放行进入纯时长ROOT21待部署
 
 - ROOT20 970bdf6已push/Windows明确pull+69targeted，实际basis3editorial/10+20原双ASR gate成功；Task Codex-Carmilla-ReconciledV2-20261019两遍成功、全36实际译文独立审放行。新paid合成complete15/36，第16e05-23自然1.98>紧接下一Mother原窗1.5*1.2，即停no-autoretry。不是来源疑义；已生成WAV/receipt全保留，不重复clone。

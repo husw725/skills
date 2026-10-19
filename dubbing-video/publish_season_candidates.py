@@ -11,7 +11,7 @@ from dub_episode import digest, probe, run, safe_submit
 from mflix_client import Mflix
 from process_lock import process_lock
 from publish_review import materials, register
-from rerun_carmilla_season import validate_reviewed_plan,post_gap_seconds,NEIGHBOR_PAUSE_ROOT,RECONSTRUCTION_TIMING_ROOT,RECONCILED_ROOT,RECONCILED2_ROOT,RECONCILED_TIMING_ROOT
+from rerun_carmilla_season import validate_reviewed_plan,post_gap_seconds,NEIGHBOR_PAUSE_ROOT,RECONSTRUCTION_TIMING_ROOT,RECONCILED_ROOT,RECONCILED2_ROOT,RECONCILED_TIMING_ROOT,PARAGRAPH_ROOT
 from translate import read_json, save_json
 from upload_review_video_s3 import parallel_remote_digest
 
@@ -32,7 +32,7 @@ ROOTS = [Path('output/carmilla-season-revision-20261016'),
          Path('output/carmilla-season-subtitle-meaning-20261019'),
          Path('output/carmilla-season-subtitle-timing-20261019'),
          Path('output/carmilla-season-reconstruction-20261019'),
-         RECONSTRUCTION_TIMING_ROOT,RECONCILED_ROOT,RECONCILED2_ROOT,RECONCILED_TIMING_ROOT]
+         RECONSTRUCTION_TIMING_ROOT,RECONCILED_ROOT,RECONCILED2_ROOT,RECONCILED_TIMING_ROOT,PARAGRAPH_ROOT]
 PUBLICATION = Path('output/review-publication/148/Carmilla/season-revision-20261017')
 
 
