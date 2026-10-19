@@ -2,6 +2,13 @@
 
 ## 当前接力记录
 
+### 2026-10-19 EP20测时返修接续ROOT13
+
+- ROOT12 EP20两遍过，独立文本审final-20-audit.private.md放行35cue/33组；真实10/33完成时e20-15自然3.64s>max3.48s被门挡，失败精确Measured speech too long: revise faithfully; no automatic paid speed retries，11条原WAV已保留，无新clone。不要将10/33当整集已完成。
+- 新ROOT13 NEIGHBOR_TIMING_ROOT output/carmilla-season-neighbor-timing-20261019，复用finish helper互斥--ep20-timing/priorNEIGHBOR2。先measure_only补齐全部33旧已审TTS实测（会有已授权新TTS，不能称零付费），再新版2pass+render；source_evidence20强制raw-neighbor/source_priorRETRY；旧门与13root完整cache不变。71Mactests/47独立相关tests过；代码安全放行，待push/pull再启动。
+- 私有neighbor-timing-hints推荐e20-15 Força a maldição a te matar em três dias：独立文本审同意仅省可恢复Ela，Irina/curse/forcing/killYOU/3days仍在；需陈述而非命令，仍unknown三单组，不增加速度或新clone。是否省够必须实测，不作保证。
+
+
 ### 2026-10-19 EP20新版本已在真实配音；26集live回读一致
 
 - dac7f0c安全独立放行后push并Windows明确pull，46targeted通过。Task Codex-Carmilla-NeighborV2-20261019已Running，ROOT12 output/carmilla-season-neighbor-20261019-v2；started1792374639.5787735，1792374844.0553627两遍审核过门进入rendering，共33组，已1/33。13/14/15三unknown原单元已各singleton，原组门未放宽。原ROOT9失败稿保留；新ROOT12已入全12root缓存/publisher，未新clone。实际final-20.private.json SHA a1d751090068fdcfb7624e9d48b946254863f21feb23f9bbb1de65e0f8dbbdbc交独立文本审核中。

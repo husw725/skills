@@ -17,12 +17,14 @@ def main():
     scope=p.add_mutually_exclusive_group()
     scope.add_argument('--ep10-continuity',action='store_true')
     scope.add_argument('--ep12-continuity',action='store_true')
+    scope.add_argument('--ep20-timing',action='store_true')
     args=p.parse_args()
     if sys.platform!='win32':p.error('Business execution stays on Windows')
     if any(not getattr(args,name).is_file() for name in ('codex_exe','mcp_config','ffmpeg','editorial_hints')):
         p.error('Existing executables, private config and targeted guidance required')
     if args.ep10_continuity:root=season.FINISH2_ROOT;priors={10:season.FINISH_ROOT}
     elif args.ep12_continuity:root=season.FINISH12_ROOT;priors={12:season.FINISH_ROOT}
+    elif args.ep20_timing:root=season.NEIGHBOR_TIMING_ROOT;priors={20:season.NEIGHBOR2_ROOT}
     else:root=season.FINISH_ROOT;priors=PRIORS
     root.mkdir(parents=True,exist_ok=True)
     args.finalize_pending=True;args.rubberband_fallback=True
@@ -44,7 +46,8 @@ def main():
                 state.update(stage='measuring',episode=n,updated_at=time.time());save_json(root/'season-progress.json',state)
                 with process_lock(prior/f'episode-{n:02}'/'render.lock',timeout=0):season.render(n,args)
                 season.ROOT=root;args.measure_only=False
-                args.source_evidence=n in (12,18);args.source_evidence_mode='tight' if n==12 else 'context'
+                args.source_evidence=n in (12,18,20)
+                args.source_evidence_mode='tight' if n==12 else ('raw-neighbor' if n==20 else 'context')
                 state.update(stage='editorial',updated_at=time.time());save_json(root/'season-progress.json',state)
                 preceding.append(season.prepare(n,args,preceding))
                 state['episodes'][str(n)]={'stage':'editorial_ready'}
