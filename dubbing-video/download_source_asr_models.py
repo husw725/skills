@@ -12,7 +12,8 @@ from translate import read_json,save_json
 ROOT=Path('output/tools/source-asr-models')
 
 
-def download(name):
+def download(name,range_step_mib=1):
+    if range_step_mib not in (1,8):raise ValueError('Range step must be 1 or 8 MiB')
     folder=ROOT/name;folder.mkdir(parents=True,exist_ok=True)
     repo='Systran/faster-whisper-'+name
     marker=folder/'official-source.json'
@@ -37,7 +38,7 @@ def download(name):
                 for attempt in range(5):
                     http_status=None;substart=start
                     try:
-                        step=1024**2;blocks=[]
+                        step=range_step_mib*1024**2;blocks=[]
                         for substart in range(start,end+1,step):
                             subend=min(end,substart+step-1)
                             tail=folder/'tail-pieces'/f'{substart:012}.bin'

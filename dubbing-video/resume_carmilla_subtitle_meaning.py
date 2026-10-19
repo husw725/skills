@@ -7,6 +7,7 @@ import rerun_carmilla_season as season
 from dub_episode import digest
 from process_lock import process_lock
 from translate import read_json,save_json
+from repair_carmilla_measured import TIMING_ERRORS
 
 
 def validate_basis(hints,rows):
@@ -28,23 +29,36 @@ def validate_basis(hints,rows):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('codex-exe','mcp-config','ffmpeg','editorial-hints'):p.add_argument('--'+name,required=True,type=Path)
+    p.add_argument('--timing',action='store_true')
     args=p.parse_args()
     if sys.platform!='win32':p.error('Business production runs on Windows')
     if any(not getattr(args,n).is_file() for n in ('codex_exe','mcp_config','ffmpeg','editorial_hints')):
         p.error('Existing executable/config/guidance required')
-    root=season.SUBTITLE_MEANING_ROOT;root.mkdir(parents=True,exist_ok=True)
-    args.prior_root=season.FINAL_ROOT;args.source_evidence=False;args.finalize_pending=True
+    root=season.SUBTITLE_TIMING_ROOT if args.timing else season.SUBTITLE_MEANING_ROOT
+    root.mkdir(parents=True,exist_ok=True)
+    args.prior_root=season.SUBTITLE_MEANING_ROOT if args.timing else season.FINAL_ROOT
+    args.source_evidence=False;args.finalize_pending=True
     args.rubberband_fallback=True;args.cache_roots=[r for r in season.paid_cache_roots() if r!=root]
     with process_lock(season.BASE_ROOT/'season.lock',timeout=14400):
         state=read_json(root/'season-progress.json') if (root/'season-progress.json').exists() else {'episodes':{}}
         if any((r/'episode-04/render-report.json').exists() for r in season.paid_cache_roots()):
             raise ValueError('EP04 already rendered; reconcile publication rather than pay again')
+        if args.timing:
+            old=read_json(args.prior_root/'season-progress.json')['episodes']['4']
+            if old.get('stage')!='requires_review' or old.get('detail') not in TIMING_ERRORS:
+                raise ValueError('Only an inspected timing failure may enter measured repair')
         _,source,_=season.sources(4);basis=validate_basis(read_json(args.editorial_hints),read_json(source)['segments'])
         # The complete guidance, including this original cue and audit hash, is
         # bound into prepare's input fingerprint. Nothing rewrites the source.
         season.ROOT=root;state.update(stage='editorial',episode=4,started_at=time.time(),native_acceptance_passed=False)
         save_json(root/'season-progress.json',state)
         try:
+            if args.timing:
+                state['stage']='measuring';save_json(root/'season-progress.json',state)
+                season.ROOT=args.prior_root;args.measure_only=True
+                with process_lock(args.prior_root/'episode-04/render.lock',timeout=0):season.render(4,args)
+                season.ROOT=root;args.measure_only=False;state['stage']='editorial'
+                save_json(root/'season-progress.json',state)
             season.prepare(4,args,[])
             plan=read_json(root/'episode-04/plan.json')
             unit=next(u for u in plan['units'] if basis['original_cue']['id'] in u['cue_ids'])
