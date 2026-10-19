@@ -7,17 +7,20 @@ import rerun_carmilla_season as season
 from dub_episode import digest
 from process_lock import process_lock
 from translate import read_json,save_json
+from repair_carmilla_measured import TIMING_ERRORS
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('codex-exe','mcp-config','ffmpeg','editorial-hints'):p.add_argument('--'+name,required=True,type=Path)
     p.add_argument('--editorial-repair',action='store_true')
+    p.add_argument('--timing-repair',action='store_true')
     args=p.parse_args()
+    if args.editorial_repair and args.timing_repair:p.error('Choose one versioned repair stage')
     if sys.platform!='win32':p.error('Business execution stays on Windows')
     if any(not getattr(args,n).is_file() for n in ('codex_exe','mcp_config','ffmpeg','editorial_hints')):p.error('Existing inputs required')
-    root=season.RECONCILED2_ROOT if args.editorial_repair else season.RECONCILED_ROOT;root.mkdir(parents=True,exist_ok=True)
-    args.prior_root=season.FINAL_ROOT;args.source_prior_root=season.RETRY_ROOT
+    root=season.RECONCILED_TIMING_ROOT if args.timing_repair else (season.RECONCILED2_ROOT if args.editorial_repair else season.RECONCILED_ROOT);root.mkdir(parents=True,exist_ok=True)
+    args.prior_root=season.RECONCILED2_ROOT if args.timing_repair else season.FINAL_ROOT;args.source_prior_root=season.RETRY_ROOT
     args.reconcile_ep05=True;args.source_evidence=False;args.finalize_pending=True;args.rubberband_fallback=True
     args.cache_roots=[r for r in season.paid_cache_roots() if r!=root]
     with process_lock(season.BASE_ROOT/'season.lock',timeout=14400):
@@ -29,6 +32,9 @@ def main():
                 raise ValueError('Only the inspected editorial field-contract failure may use this repair')
             if any((season.RECONCILED_ROOT/'episode-05').glob('utterances/*/request-fingerprint.json')):
                 raise ValueError('Prior editorial version unexpectedly has paid requests')
+        if args.timing_repair:
+            old=read_json(args.prior_root/'season-progress.json')['episodes']['5']
+            if old.get('detail') not in TIMING_ERRORS:raise ValueError('Only inspected timing errors may be repaired')
         hints=read_json(args.editorial_hints)
         if set(hints)!={'5'}:raise ValueError('Unexpected reconstruction episode')
         approval=hints['5']['source_basis'];audit=approval['audit_report'];original=approval['original_subtitle']
@@ -40,6 +46,12 @@ def main():
         season.ROOT=root;state={'stage':'editorial','episode':5,'episodes':{},'started_at':time.time(),'native_acceptance_passed':False}
         save_json(root/'season-progress.json',state)
         try:
+            if args.timing_repair:
+                season.ROOT=args.prior_root;args.measure_only=True
+                state['stage']='measuring';save_json(root/'season-progress.json',state)
+                with process_lock(args.prior_root/'episode-05/render.lock',timeout=0):season.render(5,args)
+                season.ROOT=root;args.measure_only=False
+                state['stage']='editorial';save_json(root/'season-progress.json',state)
             season.prepare(5,args,[])
             reviewed=read_json(root/'episode-05/reviewed.json');by={c['id']:c for c in reviewed['cues']}
             for cue,text in approval['approved_translations'].items():

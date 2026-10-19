@@ -2,6 +2,15 @@
 
 ## 当前接力记录
 
+### 2026-10-19 实时：29/32已Reviewlive，05文本全放行进入纯时长ROOT21待部署
+
+- ROOT20 970bdf6已push/Windows明确pull+69targeted，实际basis3editorial/10+20原双ASR gate成功；Task Codex-Carmilla-ReconciledV2-20261019两遍成功、全36实际译文独立审放行。新paid合成complete15/36，第16e05-23自然1.98>紧接下一Mother原窗1.5*1.2，即停no-autoretry。不是来源疑义；已生成WAV/receipt全保留，不重复clone。
+- ROOT18 EP27实际已Review video2678/sub2679/v2，EP04video2668/sub2669/v2。主代理live独立回读两集video scope/name/url/version/tags、subtitle exactname/url/kind/fullsha+oldhistory全部过，证据Windows output/season-finish-20261019/new-live-deliveries.private.json。现在29/32，余05/08/29，不把全母语通过。
+- 新RECONCILED_TIMING_ROOT output/carmilla-season-reconciled-timing-20261019(ROOT21) /helper --timing-repair互斥editorialrepair，只ROOT20精确TIMING_ERRORS/无candidate，原season锁内先measure_only全36（复用已有付费+补缺授权TTS）再新root两审/四PT锁定/render。cache/pub全21根，无1.2/音色/付费门放宽。Mac/独立84过，安全审放行待push/Windows明确pull启动。
+- 数据独立审准精确同Mother[23,16,17]连续三陈述（62.566–68.333，gap0/.033，同calm），保留女儿血特殊/能净化黑暗/我在她出生时即察觉，不跨Laura15/18。新private ep05-timing-hints/coordinator、immutable actual-final-05-8f0da8591d81.private.md；四PT与source字段约定不变，其它按实测等义精简。
+- 全32通知未发；08/29用户异步定稿选择仍无答，不能超时当授权。其它旧publisher可能在串行重复核已有29，生产ROOT21可独立同锁推进。第二剧暂停。
+
+
 ### 2026-10-19 实时：05已定位字段合同/邻句No，ROOT20有限修订独立安全84过待部署
 
 - 22b00bd已push/Windows明确pull+68targeted，物理EP05 basis gate成功。根19 Task Codex-Carmilla-Reconciled-20261019两遍完成但无plan/无TTS，报Unsupported source reading without audio evidence：7/26编辑依据却被模型写uncertain字段，20完整nearher被模型误认为越界；实际完整20词末76.2在原end75.9+.35内，可通过原validate门，不需要改容差。
