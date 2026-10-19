@@ -12,6 +12,16 @@ from resume_carmilla_remaining import selected
 
 
 class ResumeTests(TestCase):
+    def test_extra_pause_is_limited_to_exact_ep20_cue_and_original_window(self):
+        unit={'cue_ids':['e20-15'],'start':32.633,'end':34.733,
+              'source_text':"She's forcing it to kill you in three days."}
+        self.assertEqual(season.post_gap_seconds(20,unit),.8)
+        self.assertEqual(season.post_gap_seconds(20,unit,True),1.0)
+        self.assertEqual(season.post_gap_seconds(20,{**unit,'cue_ids':['e20-16']},True),.8)
+        with self.assertRaises(ValueError):season.post_gap_seconds(19,unit,True)
+        with self.assertRaises(ValueError):season.post_gap_seconds(20,{**unit,'end':35},True)
+        with self.assertRaises(ValueError):season.post_gap_seconds(20,{**unit,'source_text':'different'},True)
+
     def test_neighbor_retry_requires_exact_failure_and_no_existing_render(self):
         from resume_carmilla_neighbor import retry_root
         with TemporaryDirectory() as temp:

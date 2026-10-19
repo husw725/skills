@@ -2,6 +2,14 @@
 
 ## 当前接力记录
 
+### 2026-10-19 EP20唯一尾隙例外ROOT14已审，待部署
+
+- ROOT13全部33原组测完：15自然3.64>max3.48、16自然2.97>max2.6004，其余合格。两遍新稿改15 Força a maldição a te matar em três dias（独立语义审准省Ela）；16 Três dias? Explica（独立审准澄清功能，保留surprised而非怒令）。ROOT13新15缓存3.66仍超旧max3.48、10/33后再次requires_review，不盲重发15。16新音频尚未生成。
+- 实际15窗32.633–34.733，下Laura36.033，后方有1.3秒。新ROOT14 NEIGHBOR_PAUSE_ROOT output/carmilla-season-neighbor-pause-20261019 / --ep20-pause仅20/priorROOT13。先旧policy测全33（只缺新16，其余缓存），再新root两遍/渲染。post_gap_seconds精确n20+单cue15+source完整原文+start/end才1.0s，其余.8；next-.1/<=1.2/不截断保持。此窗3.1s，3.66自然需约1.181倍、自然容量上限3.72，不是原速可容。end35.733距Laura.3，原字幕/unknown分组不变，不冒称原声静音/表演验收。
+- 新policy键写render-input指纹，仅新root启用；旧测时强制关闭新policy不会复用不兼容render指纹。全14root cache及publisher候选白名单保持，publisher加实际speech end<=unitend+该quota守门。指导KEEP exact15复用现付费音频，16依新实测；协调器neighbor-pause-coordinator.py仅换root/flag/hints/event。
+- Mac72相关测试、独立48相关测试通过；代码安全独立放行、数据/连续性独立放行该有限安排。待push/Windows明确pull/test/启动，尚非已生成成功。26Review仍齐，5源疑点仍待用户。
+
+
 ### 2026-10-19 EP20测时返修接续ROOT13
 
 - ROOT12 EP20两遍过，独立文本审final-20-audit.private.md放行35cue/33组；真实10/33完成时e20-15自然3.64s>max3.48s被门挡，失败精确Measured speech too long: revise faithfully; no automatic paid speed retries，11条原WAV已保留，无新clone。不要将10/33当整集已完成。
