@@ -37,10 +37,11 @@ NEIGHBOR_PAUSE_ROOT = Path('output/carmilla-season-neighbor-pause-20261019')
 SUBTITLE_MEANING_ROOT = Path('output/carmilla-season-subtitle-meaning-20261019')
 SUBTITLE_TIMING_ROOT = Path('output/carmilla-season-subtitle-timing-20261019')
 RECONSTRUCTION_ROOT = Path('output/carmilla-season-reconstruction-20261019')
+RECONSTRUCTION_TIMING_ROOT = Path('output/carmilla-season-reconstruction-timing-20261019')
 
 
 def paid_cache_roots():
-    return [SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -479,7 +480,25 @@ def prepare(n,args,preceding):
     return {'episode':n,'cues':reviewed['cues'],'consistency_notes':reviewed['consistency_notes']}
 
 
-def post_gap_seconds(n,unit,ep20_pause=False):
+def post_gap_seconds(n,unit,ep20_pause=False,ep27_boundary=False):
+    if ep27_boundary:
+        if n!=27:raise ValueError('EP27 audio boundary cannot apply to another episode')
+        if unit['cue_ids']==['e27-1','e27-2']:
+            from carmilla_ep27_basis import SPECS,phrase_span
+            if (unit['source_text']!='Irina will return. The seven-day sealing ritual is'
+                    or unit['start']!=70.133 or unit['end']!=74.266):
+                raise ValueError('EP27 boundary original source window changed')
+            evidence=unit['editorial_source_reconstructions']['e27-2']
+            if (evidence['original_subtitle_text']!=SPECS['e27-2'][0]
+                    or evidence['editorial_reading']!=SPECS['e27-2'][3]
+                    or evidence['human_listened'] is not False or evidence['source_speaker_verified'] is not False
+                    or set(evidence['complete_asr_records'])!={'small.en','medium.en'}):
+                raise ValueError('EP27 boundary editorial evidence changed')
+            for model,end in [('small.en',75.76),('medium.en',75.84)]:
+                record=evidence['complete_asr_records'][model]
+                span=phrase_span(record['segments'],SPECS['e27-2'][4],72.25,76.266)
+                if abs(span[-1]['end']-end)>1e-6:raise ValueError('EP27 full sentence tail changed')
+            return 75.84-unit['end']
     if not ep20_pause:return .8
     if n!=20:raise ValueError('EP20 pause allowance cannot apply to another episode')
     if unit['cue_ids']!=['e20-15']:return .8
@@ -653,6 +672,7 @@ def render(n,args):
     if getattr(args,'finalize_pending',False):render_input['max_pre_subtitle_gap_seconds']=.08
     if getattr(args,'rubberband_fallback',False):render_input['fitting_policy']='atempo-with-rubberband-ceiling-v1'
     if getattr(args,'ep20_pause',False):render_input['post_subtitle_policy']='ep20-cue15-one-second-v1'
+    if getattr(args,'ep27_boundary',False):render_input['post_subtitle_policy']='ep27-two-asr-tail-75.84-v1'
     bind(folder/'render-input.json',render_input)
     cache_roots=getattr(args,'cache_roots',None) or ([args.prior_root] if getattr(args,'prior_root',None) else [])
     # Preflight all prior attempts, including requests whose wording changed.
@@ -669,7 +689,7 @@ def render(n,args):
         target_dir.mkdir(parents=True,exist_ok=True)
         samples,_,_=trim_edges(read_audio(path,args.ffmpeg));natural=len(samples)/RATE
         next_start=plan['units'][index+1]['start'] if index+1<len(plan['units']) else duration
-        limit=min(duration,next_start-.1,unit['end']+post_gap_seconds(n,unit,getattr(args,'ep20_pause',False)))
+        limit=min(duration,next_start-.1,unit['end']+post_gap_seconds(n,unit,getattr(args,'ep20_pause',False),getattr(args,'ep27_boundary',False)))
         if limit<unit['end']-.001: limit=unit['end']
         target=max(unit['end'],min(limit,unit['start']+natural))-unit['start']
         if getattr(args,'measure_only',False):

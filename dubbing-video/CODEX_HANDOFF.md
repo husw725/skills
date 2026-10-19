@@ -2,6 +2,15 @@
 
 ## 当前接力记录
 
+### 2026-10-19 实时续完：04已Review28/32；27音尾新root安全审放行；large权重传Windows
+
+- EP04 timing root实际render成功（video_payload_identicaltrue/clone0/13of14 prior cache），Review新video2668 v2及subtitle2669回执已留，现28/32；完整实际译稿独立审放行。pub仍全量复核中，不把发布协调器未结束说上传失败。
+- EP27 root17实际两遍与源门过、全译稿独立审放行，但第16组[e27-1,e27-2]自然6.77s被原显示窗+.8限制挡住；付费WAV保留。完整双ASR英语尾75.76/75.84、下Laura76.366，数据独立审放行仅此组新root尾75.84（1.574post/仍.526间隙），不改原SRT/PT，目标tempo约1.1863，不是人听精确测时。
+- 新RECONSTRUCTION_TIMING_ROOT output/carmilla-season-reconstruction-timing-20261019、resume_carmilla_reconstruction_timing.py固定旧root精确timingfail/无candidate/旧plan指纹与SHA/现WAVSHA/审报SHA，复制已审plan；render-input独立尾策略，publisher仅新root同门，完整旧inputs/paidcache/锁/1.2/0clone不变。Mac及独立80tests过；安全审放行，待push/Windows明确pull运行。后续未生成组仍可有授权新TTS，不能把整轮叫零付费。
+- 私有ep27-boundary-basis/coordinator以及immutable actual-final-04-27-000c40179fad.private.md在output/season-finish-20261019，原实际审报告在output/season-resume-20261019/actual-remaining-audit。
+- 官方large-v3 Mac下载完整SHA已过，SCP公共权重到Windows model.bin.incoming（session79103，当前约2.5GiB/2.94GiB）。Task Codex-Carmilla-Large-ASR-20261019已Running，ignored large-asr-coordinator只等待完整size后核官方全SHA/config GitSHA并rename，再用隔离asrvenv执行verify_carmilla_large.py。状态output/carmilla-source-large-20261019/transfer-and-asr-progress.json。没有新识别结果前不宣称05/08/29已解；真实音频仍Windows。
+
+
 ### 2026-10-19 续完实时：04全16已测正在修订，27重建版安全放行待部署，large模型Mac下载中
 
 - 05af5b6已push/Windows明确pull+49targeted，Task Codex-Carmilla-SubtitleMeaning-20261019启动后两遍成功，但4在complete1/16时卡cue2：自然1.47>max1.3596，缓存保留。未出新成片/Review仍27。不能说04继续TTS仍运行。

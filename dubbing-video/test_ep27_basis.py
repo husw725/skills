@@ -51,5 +51,38 @@ class ReconstructionTests(TestCase):
                 {'word':protected,'start':30.8,'end':30.9,'probability':.99})
             with self.assertRaises(ValueError):reconstruct(rows,evidence,board,REVIEW_SHA)
 
+class BoundaryTests(TestCase):
+    def unit(self):
+        from rerun_carmilla_season import post_gap_seconds
+        phrase=SPECS['e27-2'][4]
+        variants={}
+        for model,end in [('small.en',75.76),('medium.en',75.84)]:
+            ws=words(phrase,72.7,step=(end-72.7)/len(phrase.split()))
+            variants[model]={'segments':[{'words':ws}]}
+        return {'cue_ids':['e27-1','e27-2'],'source_text':'Irina will return. The seven-day sealing ritual is',
+                'start':70.133,'end':74.266,'editorial_source_reconstructions':{'e27-2':{
+                'original_subtitle_text':SPECS['e27-2'][0],'editorial_reading':SPECS['e27-2'][3],
+                'human_listened':False,'source_speaker_verified':False,'complete_asr_records':variants}}}
+
+    def test_exact_tail_allows_paid_audio_below_speed_ceiling(self):
+        from rerun_carmilla_season import post_gap_seconds
+        u=self.unit();self.assertEqual(post_gap_seconds(27,u),.8)
+        end=u['end']+post_gap_seconds(27,u,ep27_boundary=True)
+        self.assertAlmostEqual(end,75.84);self.assertLess(6.77/(end-u['start']),1.2)
+        self.assertGreater(76.366-end,.5)
+
+    def test_other_group_or_episode_cannot_use_extended_tail(self):
+        from rerun_carmilla_season import post_gap_seconds
+        u=self.unit()
+        with self.assertRaises(ValueError):post_gap_seconds(5,u,ep27_boundary=True)
+        u['cue_ids']=['e27-5'];self.assertEqual(post_gap_seconds(27,u,ep27_boundary=True),.8)
+
+    def test_changed_original_or_incomplete_tail_is_blocked(self):
+        from rerun_carmilla_season import post_gap_seconds
+        u=self.unit();u['end']+=.1
+        with self.assertRaises(ValueError):post_gap_seconds(27,u,ep27_boundary=True)
+        u=self.unit();u['editorial_source_reconstructions']['e27-2']['complete_asr_records']['medium.en']['segments'][0]['words'].pop()
+        with self.assertRaises(ValueError):post_gap_seconds(27,u,ep27_boundary=True)
+
 
 if __name__=='__main__':main()

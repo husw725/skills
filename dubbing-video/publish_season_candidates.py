@@ -11,7 +11,7 @@ from dub_episode import digest, probe, run, safe_submit
 from mflix_client import Mflix
 from process_lock import process_lock
 from publish_review import materials, register
-from rerun_carmilla_season import validate_reviewed_plan,post_gap_seconds,NEIGHBOR_PAUSE_ROOT
+from rerun_carmilla_season import validate_reviewed_plan,post_gap_seconds,NEIGHBOR_PAUSE_ROOT,RECONSTRUCTION_TIMING_ROOT
 from translate import read_json, save_json
 from upload_review_video_s3 import parallel_remote_digest
 
@@ -31,7 +31,8 @@ ROOTS = [Path('output/carmilla-season-revision-20261016'),
          Path('output/carmilla-season-neighbor-pause-20261019'),
          Path('output/carmilla-season-subtitle-meaning-20261019'),
          Path('output/carmilla-season-subtitle-timing-20261019'),
-         Path('output/carmilla-season-reconstruction-20261019')]
+         Path('output/carmilla-season-reconstruction-20261019'),
+         RECONSTRUCTION_TIMING_ROOT]
 PUBLICATION = Path('output/review-publication/148/Carmilla/season-revision-20261017')
 
 
@@ -61,7 +62,8 @@ def validate_candidate(n,folder,ffmpeg):
         start=actual.get('audio_start',actual['start'])
         if start<max(0,actual['start']-.080001) or start>actual['start']:
             raise ValueError('Unapproved speech onset shift')
-        allowance=post_gap_seconds(n,expected,folder==NEIGHBOR_PAUSE_ROOT/f'episode-{n:02}')
+        allowance=post_gap_seconds(n,expected,folder==NEIGHBOR_PAUSE_ROOT/f'episode-{n:02}',
+                                   folder==RECONSTRUCTION_TIMING_ROOT/f'episode-{n:02}')
         if start+actual['fitted_duration_seconds']>actual['end']+allowance+.001:
             raise ValueError('Unapproved speech end shift')
     for a,b in zip(report['utterances'],report['utterances'][1:]):
