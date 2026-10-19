@@ -39,10 +39,11 @@ SUBTITLE_TIMING_ROOT = Path('output/carmilla-season-subtitle-timing-20261019')
 RECONSTRUCTION_ROOT = Path('output/carmilla-season-reconstruction-20261019')
 RECONSTRUCTION_TIMING_ROOT = Path('output/carmilla-season-reconstruction-timing-20261019')
 RECONCILED_ROOT = Path('output/carmilla-season-reconciled-20261019')
+RECONCILED2_ROOT = Path('output/carmilla-season-reconciled-v2-20261019')
 
 
 def paid_cache_roots():
-    return [RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -427,6 +428,14 @@ def prepare(n,args,preceding):
             'When editorial_source_reconstructions are supplied, translate their complete editorial_reading, including '
             'the independently evidenced missing clause. Keep original caption text/timecodes as provenance. This '
             'is an explicit editorial reconstruction, NOT word-for-word acoustic confirmation or human listening. '
+            'For cues with ONLY editorial_source_reconstructions and NO source_audio_evidence, use '
+            'source_reading_status=not_requested with EMPTY source_audio_reading and source_reading_evidence; '
+            'the editorial evidence is retained separately, never pretend it is acoustic confirmation. '
+            'For source_audio_evidence, a complete word may extend up to 0.35 seconds beyond the original '
+            'caption window, provided the complete phrase and all core words are corroborated by both models. '
+            'Never truncate near her from EP05 cue20 merely because it ends at76.2 after caption75.9; '
+            'that is within the approved alignment tolerance. Keep No from the following cue36 in that '
+            'answer, not the cue35 question; explicit editorial neighbor evidence preserves both complete turns. '
             'Consult the supplied inline context and mapped storyboard references. Do not call MCP, clone/TTS/upload, edit files, '
             'change source/casting or credentials. Return only structured data.\n'+__import__('json').dumps(payload,ensure_ascii=False))
     draft_path=folder/'draft.json'

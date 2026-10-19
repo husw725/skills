@@ -2,6 +2,15 @@
 
 ## 当前接力记录
 
+### 2026-10-19 实时：05已定位字段合同/邻句No，ROOT20有限修订独立安全84过待部署
+
+- 22b00bd已push/Windows明确pull+68targeted，物理EP05 basis gate成功。根19 Task Codex-Carmilla-Reconciled-20261019两遍完成但无plan/无TTS，报Unsupported source reading without audio evidence：7/26编辑依据却被模型写uncertain字段，20完整nearher被模型误认为越界；实际完整20词末76.2在原end75.9+.35内，可通过原validate门，不需要改容差。
+- 另一35原完整问题被context相邻No误入padding挡住。实际原35=111.1–113.7/your eyes is do you have fever/Laura；36=114–116.4/no I'll just take a rest/Carmilla。两完整question尾113.3/113.4、完整No回答起113.3/113.51；rawNo114.08/.14高p支持归属下一回答。独立数据审放行仅精确35/36编辑归属，不能把No添给Laura问题/删掉下句。
+- carmilla_ep05_basis新增固定35/36原文时间邻接+双完整问答、当前core每词必须属于问或完整答、不能重叠，显式editorial_asr_neighbor_assignment/全异文/falsehuman；10/20仍原门。新增RECONCILED2_ROOT output/carmilla-season-reconciled-v2-20261019，helper --editorial-repair仅旧19精确Unsupported且无paidrequest，重做2pass+四锁7/26/35/36。prompt明确editorialonly source字段not_requested/empty，原ASR±.35不是裁词界。Mac/独立84过、安全放行，待push/pull实际gate启动。
+- 四锁PT：Camila, vem pro meu quarto!/Deixe-nos a sós, senhor./Seus olhos… Você tá com febre?/Não. Só vou descansar. 私有ep05-v2-hints/coordinator、immutable审报remaining-source-review-e2681c179a7b.private.md。根19保留拒绝稿，不复用不同版本断点、不重复付费；ROOT18正在全局pub（当时12已核），27成片真实通过仍待新回执，当前28/32。
+- 08/29编辑选择仍等用户，不能把沉默/等待当同意。第二剧暂停，仍未全32通知。
+
+
 ### 2026-10-19 实时：27成片音尾核验过待发布，05新证据编辑恢复已审待部署
 
 - 4c03154已push/Windows明确pull+65targeted；Task Codex-Carmilla-ReconstructionTiming-20261019实际ROOT18 render成功20组，16 prior paid reuse/newclone0/video payload同。第16组自然6.77/fit5.678875/tempo1.1950357/尾75.811875≤75.84，距下一Laura.554125，独立数据审成片放行。publisher仍等全局串行发布，全Review回执目前28/32。

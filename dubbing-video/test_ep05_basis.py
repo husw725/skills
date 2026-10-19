@@ -9,8 +9,11 @@ from test_ep27_basis import words
 class NameBasisTests(TestCase):
     def fixture(self):
         rows=[{'id':'e05-7','text':'Connor come in my bedroom','start':16.3,'end':18.733},
-              {'id':'e05-26','text':'leave us your privacy sir','start':86.4,'end':88.933}]
+              {'id':'e05-26','text':'leave us your privacy sir','start':86.4,'end':88.933},
+              {'id':'e05-35','text':'your eyes is do you have fever','start':111.1,'end':113.7},
+              {'id':'e05-36','text':"no I'll just take a rest",'start':114.0,'end':116.4}]
         evidence={k:{'kept':True} for k in ['e05-7','e05-10','e05-20','e05-26','e05-35']}
+        evidence['e05-35']={'models':{m:{'segments':[{'words':words('Your eyes do you have a fever',111.42)},{'words':words("No I'll just take a rest",113.51)}]} for m in ['small.en','medium.en']}}
         board={'entries':[{'storyboard':'Carmilla, come to my bedroom!'}]}
         root=Path('output/tools/source-asr-models/large-v3');files={str(root/f):'sha' for f in ['model.bin','config.json','tokenizer.json','preprocessor_config.json']}
         files[str(root/'model.bin')]='69f74147e3334731bc3a76048724833325d2ec74642fb52620eda87352e3d4f1'
@@ -32,7 +35,7 @@ class NameBasisTests(TestCase):
 
     def test_editorial_name_and_privacy_preserve_conflicting_source(self):
         args=self.fixture();r,audio,inputs=self.run_basis(*args)
-        self.assertEqual(set(r),{'e05-7','e05-26'});self.assertEqual(set(audio),{'e05-10','e05-20','e05-35'})
+        self.assertEqual(set(r),{'e05-7','e05-26','e05-35'});self.assertEqual(set(audio),{'e05-10','e05-20'})
         self.assertEqual(r['e05-7']['original_subtitle_text'],'Connor come in my bedroom')
         self.assertEqual(r['e05-7']['source_basis'],'editorial_name_normalization');self.assertFalse(r['e05-7']['human_listened'])
 
@@ -52,3 +55,10 @@ class NameBasisTests(TestCase):
             elif mode=='phrase':r['segments'][0]['words'][0]['word']='Connor'
             else:r['input']['model_files']['extra']='sha'
             with self.assertRaises(ValueError):self.run_basis(rows,ev,board,mapping)
+
+    def test_next_negation_requires_complete_bound_question_and_answer(self):
+        rows,ev,board,mapping=self.fixture()
+        ev['e05-35']['models']['medium.en']['segments'][1]['words'][0]['word']='Yes'
+        with self.assertRaises(ValueError):self.run_basis(rows,ev,board,mapping)
+        rows,ev,board,mapping=self.fixture();rows[-1]['text']="I'll just take a rest"
+        with self.assertRaises(ValueError):self.run_basis(rows,ev,board,mapping)

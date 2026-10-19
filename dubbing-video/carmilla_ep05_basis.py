@@ -57,4 +57,24 @@ def reconstruct(rows,evidence,reference,source_audio,review_sha):
             'human_listened':False,'source_speaker_verified':False,
             'note':'Normalize the original request for privacy and sir; not word-for-word original-audio confirmation.'}}
     if set(evidence)!={'e05-7','e05-10','e05-20','e05-26','e05-35'}:raise ValueError('EP05 disputed source scope changed')
-    return recons,{c:evidence[c] for c in ['e05-10','e05-20','e05-35']},inputs
+    question=by['e05-35'];answer=by['e05-36']
+    if (question['text']!='your eyes is do you have fever' or (question['start'],question['end'])!=(111.1,113.7)
+            or answer['text']!="no I'll just take a rest" or (answer['start'],answer['end'])!=(114.0,116.4)
+            or rows.index(answer)!=rows.index(question)+1):raise ValueError('EP05 exact neighbor captions changed')
+    spans={}
+    for model,record in evidence['e05-35']['models'].items():
+        question_words=phrase_span(record['segments'],'Your eyes do you have a fever',110.75,114.05)
+        answer_words=phrase_span(record['segments'],"No I'll just take a rest",113.3,116.75)
+        if question_words[-1]['end']>answer_words[0]['start']+1e-6:raise ValueError('Question and answer overlap in ASR')
+        core=[w for seg in record['segments'] for w in seg.get('words',[])
+              if question['start']<=(w['start']+w['end'])/2<=question['end']]
+        if any(w not in question_words+answer_words for w in core):
+            raise ValueError('Unassigned core word in the exact EP05 question/answer')
+        spans[model]={'question':question_words,'next_answer':answer_words}
+    if set(spans)!={'small.en','medium.en'}:raise ValueError('Both full question/answer records required')
+    recons['e05-35']={'original_subtitle_text':question['text'],'editorial_reading':'Your eyes! Do you have a fever?',
+        'source_basis':'editorial_asr_neighbor_assignment','next_original_caption':answer,
+        'question_and_answer_word_evidence':spans,'other_asr_variants':evidence['e05-35'],
+        'human_listened':False,'source_speaker_verified':False,
+        'note':'Full No answer belongs to next original cue36 and is retained there; ASR onset drift is not a negation in Laura question.'}
+    return recons,{c:evidence[c] for c in ['e05-10','e05-20']},inputs
