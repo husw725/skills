@@ -122,3 +122,12 @@ class SpeechRepairTests(TestCase):
             elif mode=='missing':changed['cues'].pop()
             else:changed['cues'].append(copy.deepcopy(changed['cues'][0]))
             with self.assertRaises(ValueError):validate_retained_editorial(changed,prior,SPEECH_TRANSLATIONS)
+
+
+    def test_v2_retains_successful_mother_text_and_other_paid_groups(self):
+        from resume_carmilla_reconciled import validate_retained_editorial,SPEECH2_TRANSLATIONS
+        _,prior=self.fixture();new=copy.deepcopy(prior)
+        for c in new['cues']:c['translation']=SPEECH2_TRANSLATIONS.get(c['id'],c['translation'])
+        validate_retained_editorial(new,prior,SPEECH2_TRANSLATIONS)
+        new['cues'][0]['translation']='different mother text'
+        with self.assertRaises(ValueError):validate_retained_editorial(new,prior,SPEECH2_TRANSLATIONS)
