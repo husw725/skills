@@ -131,3 +131,34 @@ class SpeechRepairTests(TestCase):
         validate_retained_editorial(new,prior,SPEECH2_TRANSLATIONS)
         new['cues'][0]['translation']='different mother text'
         with self.assertRaises(ValueError):validate_retained_editorial(new,prior,SPEECH2_TRANSLATIONS)
+
+
+class VOAlignmentTests(TestCase):
+    def fixture(self):
+        return {'cue_ids':['e05-18','e05-19'],'production_voice':'Laura','start':68.866,'end':74.4}
+
+    def test_only_this_internal_voiceover_can_enter_bounded_gap(self):
+        from carmilla_ep05_alignment import validate_group,vo_window
+        u=self.fixture();start,target,factor=vo_window(6.93,u,68.475)
+        self.assertEqual(start,68.575);self.assertAlmostEqual(start+target,74.4)
+        self.assertLessEqual(factor,1.2);self.assertAlmostEqual(start-68.475,.1)
+        for field,value in [('cue_ids',['e05-18']),('production_voice','Carmilla'),('start',68.8),('end',75)]:
+            with self.assertRaises(ValueError):validate_group(5,{**u,field:value})
+        with self.assertRaises(ValueError):validate_group(8,u)
+        with self.assertRaises(ValueError):vo_window(6.93,u,68.49)
+
+    def test_cache_only_path_rejects_missing_changed_or_wrong_request(self):
+        import tempfile
+        from carmilla_ep05_alignment import completed_audio
+        from translate import save_json,fingerprint
+        from dub_episode import digest
+        with tempfile.TemporaryDirectory() as d:
+            folder=Path(d);req={'text':'approved','voiceId':'existing','speed':1.0}
+            with self.assertRaises(FileNotFoundError):completed_audio(folder,req)
+            audio=folder/'original.wav';audio.write_bytes(b'paid-audio')
+            receipt={'task_id':42,'request_fingerprint':fingerprint(req),'sha256':digest(audio)}
+            save_json(folder/'audio-receipt.json',receipt)
+            self.assertEqual(completed_audio(folder,req)[0],audio)
+            with self.assertRaises(ValueError):completed_audio(folder,{**req,'text':'changed'})
+            audio.write_bytes(b'changed')
+            with self.assertRaises(ValueError):completed_audio(folder,req)

@@ -45,10 +45,11 @@ PARAGRAPH_ROOT = Path('output/carmilla-season-paragraph-20261019')
 DIARY_ROOT = Path('output/carmilla-season-diary-20261019')
 SPEECH_ROOT = Path('output/carmilla-season-speech-20261019')
 SPEECH2_ROOT = Path('output/carmilla-season-speech-v2-20261019')
+VO_ALIGNMENT_ROOT = Path('output/carmilla-season-vo-alignment-20261019')
 
 
 def paid_cache_roots():
-    return [SPEECH2_ROOT,SPEECH_ROOT,DIARY_ROOT,PARAGRAPH_ROOT,RECONCILED_TIMING_ROOT,RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [VO_ALIGNMENT_ROOT,SPEECH2_ROOT,SPEECH_ROOT,DIARY_ROOT,PARAGRAPH_ROOT,RECONCILED_TIMING_ROOT,RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -723,11 +724,19 @@ def render(n,args):
     if getattr(args,'rubberband_fallback',False):render_input['fitting_policy']='atempo-with-rubberband-ceiling-v1'
     if getattr(args,'ep20_pause',False):render_input['post_subtitle_policy']='ep20-cue15-one-second-v1'
     if getattr(args,'ep27_boundary',False):render_input['post_subtitle_policy']='ep27-two-asr-tail-75.84-v1'
+    if getattr(args,'ep05_vo_alignment',False):
+        if n!=5 or ROOT!=VO_ALIGNMENT_ROOT:raise ValueError('Precise EP05 VO alignment scope required')
+        from carmilla_ep05_alignment import verify_basis
+        verify_basis(folder,plan)
+        render_input['vo_alignment_policy']='ep05-diary-68.475-inner-vo-68.575-v1'
+        render_input['vo_alignment_basis_sha256']=digest(folder/'audio-boundary-basis.json')
+        render_input['existing_audio_only']=True
     bind(folder/'render-input.json',render_input)
     cache_roots=getattr(args,'cache_roots',None) or ([args.prior_root] if getattr(args,'prior_root',None) else [])
     # Preflight all prior attempts, including requests whose wording changed.
     for prior in cache_roots:paid_audio_folder(n,{},folder/'unused-cache-probe',prior)
-    client=Mflix(args.mcp_config);results=[];measurements=[]
+    client=None if getattr(args,'ep05_vo_alignment',False) else Mflix(args.mcp_config)
+    results=[];measurements=[]
     for index,(unit,(req,provider)) in enumerate(zip(plan['units'],requests)):
         target_dir=folder/'utterances'/unit['id']
         cached=target_dir
@@ -735,11 +744,19 @@ def render(n,args):
             found=paid_audio_folder(n,req,target_dir,prior)
             if found!=target_dir:
                 cached=found;break
-        path,receipt=generate(client,req,cached)
+        if getattr(args,'ep05_vo_alignment',False):
+            # This alignment-only version cannot submit or poll any synthesis.
+            from carmilla_ep05_alignment import completed_audio
+            path,receipt=completed_audio(cached,req)
+        else:path,receipt=generate(client,req,cached)
         target_dir.mkdir(parents=True,exist_ok=True)
         samples,_,_=trim_edges(read_audio(path,args.ffmpeg));natural=len(samples)/RATE
         next_start=plan['units'][index+1]['start'] if index+1<len(plan['units']) else duration
         limit=min(duration,next_start-.1,unit['end']+post_gap_seconds(n,unit,getattr(args,'ep20_pause',False),getattr(args,'ep27_boundary',False)))
+        if getattr(args,'ep05_vo_alignment',False):
+            from carmilla_ep05_alignment import validate_group
+            kind=validate_group(n,unit)
+            if kind=='diary':limit=min(limit,68.475)
         if limit<unit['end']-.001: limit=unit['end']
         target=max(unit['end'],min(limit,unit['start']+natural))-unit['start']
         if getattr(args,'measure_only',False):
@@ -753,6 +770,9 @@ def render(n,args):
             continue
         previous_end=results[-1]['audio_start']+results[-1]['fitted_duration_seconds'] if results else -.1
         audio_start,target,factor=speech_window(natural,target,unit['start'],previous_end,getattr(args,'finalize_pending',False))
+        if getattr(args,'ep05_vo_alignment',False) and kind=='inner_vo':
+            from carmilla_ep05_alignment import vo_window
+            audio_start,target,factor=vo_window(natural,unit,previous_end)
         if factor>1.2: raise ValueError('Measured speech too long: revise faithfully; no automatic paid speed retries')
         trimmed,fitted=target_dir/'trimmed.wav',target_dir/'fitted.wav';write_audio(trimmed,samples)
         audio,factor=fit_speech(trimmed,fitted,target,factor,args.ffmpeg,

@@ -11,7 +11,7 @@ from dub_episode import digest, probe, run, safe_submit
 from mflix_client import Mflix
 from process_lock import process_lock
 from publish_review import materials, register
-from rerun_carmilla_season import validate_reviewed_plan,post_gap_seconds,NEIGHBOR_PAUSE_ROOT,RECONSTRUCTION_TIMING_ROOT,RECONCILED_ROOT,RECONCILED2_ROOT,RECONCILED_TIMING_ROOT,PARAGRAPH_ROOT,DIARY_ROOT,SPEECH_ROOT,SPEECH2_ROOT
+from rerun_carmilla_season import validate_reviewed_plan,post_gap_seconds,NEIGHBOR_PAUSE_ROOT,RECONSTRUCTION_TIMING_ROOT,RECONCILED_ROOT,RECONCILED2_ROOT,RECONCILED_TIMING_ROOT,PARAGRAPH_ROOT,DIARY_ROOT,SPEECH_ROOT,SPEECH2_ROOT,VO_ALIGNMENT_ROOT
 from translate import read_json, save_json
 from upload_review_video_s3 import parallel_remote_digest
 
@@ -32,7 +32,7 @@ ROOTS = [Path('output/carmilla-season-revision-20261016'),
          Path('output/carmilla-season-subtitle-meaning-20261019'),
          Path('output/carmilla-season-subtitle-timing-20261019'),
          Path('output/carmilla-season-reconstruction-20261019'),
-         RECONSTRUCTION_TIMING_ROOT,RECONCILED_ROOT,RECONCILED2_ROOT,RECONCILED_TIMING_ROOT,PARAGRAPH_ROOT,DIARY_ROOT,SPEECH_ROOT,SPEECH2_ROOT]
+         RECONSTRUCTION_TIMING_ROOT,RECONCILED_ROOT,RECONCILED2_ROOT,RECONCILED_TIMING_ROOT,PARAGRAPH_ROOT,DIARY_ROOT,SPEECH_ROOT,SPEECH2_ROOT,VO_ALIGNMENT_ROOT]
 PUBLICATION = Path('output/review-publication/148/Carmilla/season-revision-20261017')
 
 
@@ -55,17 +55,37 @@ def validate_candidate(n,folder,ffmpeg):
             or not report['video_payload_identical'] or report['new_clone_count']!=0
             or report['source_audio_in_output'] or Path(report['output'])!=video
             or digest(video)!=report['output_sha256']):raise ValueError('Unverified season candidate')
+    if folder==VO_ALIGNMENT_ROOT/f'episode-{n:02}':
+        from carmilla_ep05_alignment import verify_basis
+        verify_basis(folder,plan)
+        policy=read_json(folder/'render-input.json')
+        if (policy.get('vo_alignment_policy')!='ep05-diary-68.475-inner-vo-68.575-v1'
+                or policy.get('vo_alignment_basis_sha256')!=digest(folder/'audio-boundary-basis.json')
+                or policy.get('existing_audio_only') is not True
+                or not all(u.get('paid_audio_reused_from_prior_attempt') for u in report['utterances'])):
+            raise ValueError('Exact cache-only VO alignment policy required')
     if len(report['utterances'])!=len(plan['units']):raise ValueError('Rendered unit coverage changed')
     for expected,actual in zip(plan['units'],report['utterances']):
         if any(actual.get(k)!=v for k,v in expected.items()):raise ValueError('Rendered translation/casting/timing differs')
         if actual['atempo_factor']>1.2:raise ValueError('Unapproved speech speed')
         start=actual.get('audio_start',actual['start'])
-        if start<max(0,actual['start']-.080001) or start>actual['start']:
+        preroll=.08
+        if folder==VO_ALIGNMENT_ROOT/f'episode-{n:02}':
+            from carmilla_ep05_alignment import validate_group
+            kind=validate_group(n,expected)
+            if kind=='inner_vo':
+                if abs(start-68.575)>1e-6 or start+actual['fitted_duration_seconds']>74.400001:raise ValueError('Fixed inner VO placement changed')
+                preroll=.291
+            elif kind=='diary' and start+actual['fitted_duration_seconds']>68.475001:raise ValueError('Diary tail exceeds approved boundary')
+        if start<max(0,actual['start']-preroll-.000001) or start>actual['start']:
             raise ValueError('Unapproved speech onset shift')
         allowance=post_gap_seconds(n,expected,folder==NEIGHBOR_PAUSE_ROOT/f'episode-{n:02}',
                                    folder==RECONSTRUCTION_TIMING_ROOT/f'episode-{n:02}')
         if start+actual['fitted_duration_seconds']>actual['end']+allowance+.001:
             raise ValueError('Unapproved speech end shift')
+    if folder==VO_ALIGNMENT_ROOT/f'episode-{n:02}':
+        units=report['utterances'];diary=units[15];inner=units[16]
+        if inner['audio_start']-(diary['audio_start']+diary['fitted_duration_seconds'])<.099999:raise ValueError('Reviewed diary-to-VO gap changed')
     for a,b in zip(report['utterances'],report['utterances'][1:]):
         if a.get('audio_start',a['start'])+a['fitted_duration_seconds']>b.get('audio_start',b['start'])+.001:
             raise ValueError('Rendered speech overlaps another unit')
