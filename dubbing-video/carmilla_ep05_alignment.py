@@ -28,9 +28,11 @@ def vo_window(natural, unit, previous_end):
 def verify_basis(folder, plan):
     from pathlib import Path
     from dub_episode import digest
-    from translate import read_json
+    from translate import read_json, fingerprint
     from rerun_carmilla_season import SPEECH_ROOT, SPEECH2_ROOT
-    basis=read_json(folder/'audio-boundary-basis.json')
+    basis=read_json(folder/'audio-boundary-basis.private.json')
+    if read_json(folder/'audio-boundary-basis.json')['fingerprint']!=fingerprint(basis):
+        raise ValueError('Full alignment basis differs from immutable fingerprint')
     if basis['plan_sha256']!=digest(folder/'plan.json'):
         raise ValueError('Reviewed alignment plan changed')
     audit=basis['audit_report'];board=basis['storyboard']

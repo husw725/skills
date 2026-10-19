@@ -162,3 +162,14 @@ class VOAlignmentTests(TestCase):
             with self.assertRaises(ValueError):completed_audio(folder,{**req,'text':'changed'})
             audio.write_bytes(b'changed')
             with self.assertRaises(ValueError):completed_audio(folder,req)
+
+
+    def test_full_basis_cannot_be_replaced_by_a_fingerprint_marker(self):
+        import tempfile
+        from carmilla_ep05_alignment import verify_basis
+        from translate import save_json
+        with tempfile.TemporaryDirectory() as d:
+            folder=Path(d)
+            save_json(folder/'audio-boundary-basis.private.json',{'plan_sha256':'approved'})
+            save_json(folder/'audio-boundary-basis.json',{'fingerprint':'different'})
+            with self.assertRaises(ValueError):verify_basis(folder,{})

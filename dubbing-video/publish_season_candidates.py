@@ -58,7 +58,7 @@ def validate_candidate(n,folder,ffmpeg):
     if folder==VO_ALIGNMENT_ROOT/f'episode-{n:02}':
         from carmilla_ep05_alignment import verify_basis
         verify_basis(folder,plan)
-        policy=read_json(folder/'render-input.json')
+        policy=read_json(folder/'vo-alignment-policy.json')
         if (policy.get('vo_alignment_policy')!='ep05-diary-68.475-inner-vo-68.575-v1'
                 or policy.get('vo_alignment_basis_sha256')!=digest(folder/'audio-boundary-basis.json')
                 or policy.get('existing_audio_only') is not True

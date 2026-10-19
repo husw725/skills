@@ -731,6 +731,10 @@ def render(n,args):
         render_input['vo_alignment_policy']='ep05-diary-68.475-inner-vo-68.575-v1'
         render_input['vo_alignment_basis_sha256']=digest(folder/'audio-boundary-basis.json')
         render_input['existing_audio_only']=True
+        policy={k:render_input[k] for k in ('vo_alignment_policy','vo_alignment_basis_sha256','existing_audio_only')}
+        policy_path=folder/'vo-alignment-policy.json'
+        if policy_path.exists() and read_json(policy_path)!=policy:raise ValueError('VO alignment policy changed')
+        if not policy_path.exists():save_json(policy_path,policy)
     bind(folder/'render-input.json',render_input)
     cache_roots=getattr(args,'cache_roots',None) or ([args.prior_root] if getattr(args,'prior_root',None) else [])
     # Preflight all prior attempts, including requests whose wording changed.

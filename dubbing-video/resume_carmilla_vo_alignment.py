@@ -31,6 +31,9 @@ def main():
             if (dst/name).exists() and digest(dst/name)!=digest(src/name):raise ValueError('New-root editorial copy differs')
             if not (dst/name).exists():shutil.copyfile(src/name,dst/name)
         season.bind(dst/'audio-boundary-basis.json',basis)
+        full_basis=dst/'audio-boundary-basis.private.json'
+        if full_basis.exists() and read_json(full_basis)!=basis:raise ValueError('Full alignment basis changed')
+        if not full_basis.exists():save_json(full_basis,basis)
         a.prior_root=prior;a.cache_roots=[r for r in season.paid_cache_roots() if r!=root]
         from carmilla_ep05_alignment import verify_basis
         verify_basis(dst,plan)
