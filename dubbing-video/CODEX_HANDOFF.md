@@ -2,6 +2,17 @@
 
 ## 当前接力记录
 
+### 2026-10-19 实时：ROOT22全文已审但日记unknown守门，新ROOT23明确制作安排待部署
+
+- 1da0df4已push/Win明确pull+69targeted；ROOT21精确无付费文字树安全终止已实证EXACT_UNPAID_EDITORIAL_SUPERSEDED（System32conhost+codex+helper+coord），回执output/season-finish-20261019/ep05-supersession.private.json，原ROOT20全36付费测时缓存保留。
+- ROOT22 Task Codex-Carmilla-Paragraph-20261019两遍最终返回（中间CLI0.162.1/gpt-6.1-sol原网络WS tls-eof自动5retry→HTTPS，未更换模型/全局设置）；全36文本、三组、四锁独立实际放行，5条等义精简16/18/22/28/29，其它不动。建plan被Unknown readers...拦，没有plan/TTS。实际只有Mother23/16/17 sourceannotationunknown/各原unit不同，Laura两组knownLaura。
+- 用户final mapped E05完整英文连续引用Mother3确在，源为单一书面母亲日记，reader未知不能晋升Mother。数据独立审准新ROOT23 DIARY_ROOT output/carmilla-season-diary-20261019 /helper --diary-production：仅精确3原文/时码/order/oldunitIDs/Mother既有制作voice/annotationunknown+false/完整physicalfinalquote，明确安排一个NEW production reading，不断言原演员同人。runtime现MothervoiceID+bankSHA绑定inputs、approved_unknown_production_groups入payload/context/plan；defaultunknownguard不变，仅此已验证参数例外。源码speaker仍unknown、identity/humanfalse。
+- helper仍只22精确unknown错误+无plan/paid、旧20完整实测、21安全superseded、全23cache/root锁/1.2/0clone/全32通知门。额外参考实际ROOT22 reviewed SHA+内容物理核，重审后全36translation/emotion/groups必须等同原已审稿，只有来源解释/警告可变。Mac及独立87过、安全主审放行；小补强及私有待补审→push/明确pull/物理gate再启动。
+- 新私有ep05-diary-hints/coordinator、immutable actual-final-05-b8bb6186f565.private.md及ep05-paragraph-reference.private.json，真实数据全ignored。源完整审核output/season-resume-20261019/actual-remaining-audit/final-05-paragraph-audit.private.md。
+- 为查CLI断线已读OpenAI Docs技能并实际开官方configreference（supports_websockets/feature.apps等），仅Windows做同模型HTTPS临时probe（110s超时；未应用业务/全局config），proxy env现127.0.0.1:7892，TLS探针一失败一405。原CLI最终自行返回，故不误报模型替换或网络已彻底修好。probe会话52998已结束，无TTS/clone。
+- Review仍29/32（04/27新v2视频SRTlive核过）；08/29仍等用户明确选择，不能沉默当同意；第二剧暂停，全32通知未发。继续盯ROOT23至实际新成片/上传，再真实回报。
+
+
 ### 2026-10-19 实时：05全36已测，完整Laura意群ROOT22审准待安全切换
 
 - b04abf0已push/Windows明确pull+69targeted，Task Codex-Carmilla-ReconciledTiming-20261019已完整测完ROOT20全部36，paid receipts全保留；真正超长包含Mother23、Laura18/19、22、28。ROOT21正在editorial，不让它按旧分碎方案继续盲付费。

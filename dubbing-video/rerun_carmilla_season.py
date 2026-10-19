@@ -42,10 +42,11 @@ RECONCILED_ROOT = Path('output/carmilla-season-reconciled-20261019')
 RECONCILED2_ROOT = Path('output/carmilla-season-reconciled-v2-20261019')
 RECONCILED_TIMING_ROOT = Path('output/carmilla-season-reconciled-timing-20261019')
 PARAGRAPH_ROOT = Path('output/carmilla-season-paragraph-20261019')
+DIARY_ROOT = Path('output/carmilla-season-diary-20261019')
 
 
 def paid_cache_roots():
-    return [PARAGRAPH_ROOT,RECONCILED_TIMING_ROOT,RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [DIARY_ROOT,PARAGRAPH_ROOT,RECONCILED_TIMING_ROOT,RECONCILED2_ROOT,RECONCILED_ROOT,RECONSTRUCTION_TIMING_ROOT,SUBTITLE_TIMING_ROOT,RECONSTRUCTION_ROOT,SUBTITLE_MEANING_ROOT,NEIGHBOR_PAUSE_ROOT,NEIGHBOR_TIMING_ROOT,NEIGHBOR2_ROOT,FINISH12_ROOT,FINISH2_ROOT,NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT, TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -67,7 +68,9 @@ def response_schema(include_source=False):
             'required':['cues','groups','consistency_notes'],'additionalProperties':False}
 
 
-def validate_editorial(data, rows, old, annotations, glossary, max_gap=.6):
+def validate_editorial(data, rows, old, annotations, glossary, max_gap=.6,unknown_production_groups=()):
+    if unknown_production_groups and unknown_production_groups!=[['e05-23','e05-16','e05-17']]:
+        raise ValueError('Unexpected unknown-reader production exception')
     ids=[r['id'] for r in rows]
     if [r['id'] for r in data['cues']] != ids: raise ValueError('Editorial cue IDs/order changed')
     covered=[c for g in data['groups'] for c in g]
@@ -87,7 +90,7 @@ def validate_editorial(data, rows, old, annotations, glossary, max_gap=.6):
         speakers={annotations[c]['speaker'] for c in group}
         if len(speakers)!=1 or len({old[c]['production_voice'] for c in group})!=1:
             raise ValueError('Cannot group across speakers/production voices')
-        if 'unknown' in speakers and len({old[c]['id'] for c in group})>1:
+        if 'unknown' in speakers and len({old[c]['id'] for c in group})>1 and group not in unknown_production_groups:
             raise ValueError('Unknown readers cannot be inferred identical from voice casting')
         if any(b['start']<a['end'] or b['start']-a['end']>max_gap+1e-9 for a,b in zip(members,members[1:])):
             raise ValueError('Grouping crosses overlap/long pause')
@@ -373,6 +376,16 @@ def prepare(n,args,preceding):
             if old['e20-8']['cue_ids']!=['e20-8'] or annotations['e20-8']['speaker']!='unknown':
                 raise ValueError('Unexpected source reader scope; review before changing provisional casting')
             old=copy.deepcopy(old);old['e20-8']['production_voice']='Laura'
+    production_groupings=[]
+    if getattr(args,'ep05_diary',False):
+        if n!=5 or not ep05_paragraph:raise ValueError('Diary policy is restricted to this EP05 paragraph revision')
+        from carmilla_ep05_basis import diary_production_group
+        grouping=diary_production_group(rows,old,annotations,storyboard_reference(n,storyboard.read_text(encoding='utf-8-sig')))
+        bank_path=Path('output/drama-01/voice-bank.json');bank=read_json(bank_path)
+        inputs[str(bank_path)]=digest(bank_path)
+        grouping.update(existing_voice_id=bank['voices']['Mother']['voice_id'],production_voice_bank_sha256=inputs[str(bank_path)])
+        if not grouping['existing_voice_id'] or grouping['existing_voice_id'].startswith('cartesia:'):raise ValueError('Existing Mother MiniMax voice required')
+        production_groupings=[grouping]
     bible=read_json(bible_path);glossary=validate_bible(bible)
     payload={'episode':n,'locked_bible':bible,'reviewed_screenplay_context':context,
              'user_storyboard_sha256':inputs[str(storyboard)],
@@ -382,6 +395,7 @@ def prepare(n,args,preceding):
              'production_voice_per_cue':{c:u['production_voice'] for c,u in old.items()},
              'known_issue':'EP29 e29-8 source How many years. conflicts with screenplay minions; retain original text and flag for original-audio verification, never silently replace it.'}
     payload['grouping_max_gap_seconds']=max_gap
+    if production_groupings:payload['approved_unknown_production_groups']=production_groupings
     if editorial_readings:payload['editorial_source_reconstructions']=editorial_readings
     if audio_evidence:payload['source_audio_evidence']=audio_evidence
     if n==20 and 'e20-8' in audio_evidence:payload['provisional_casting_revision']='e20-8 uses Laura per user final storyboard voiceover; source evidence reader remains unknown, NOT audio-verified.'
@@ -405,7 +419,7 @@ def prepare(n,args,preceding):
             'Translate complete thoughts, distribute wording across their original cues, and propose adjacent same-speaker '
             f'groups for natural delivery; groups cover ALL cues once, including singleton groups. Gap <={max_gap}s. '
             'Keep changes of emotion/performance direction in separate groups. '
-            'Unknown readers may share a group only if already in the same original production unit. '
+            'Unknown readers may share a group only if already in the same original production unit, except an explicit approved_unknown_production_groups policy authorizes a NEW reading of a single written quote without identifying its original reader. Keep original source speaker unknown and all human/identity flags false. '
             'Do not mechanically add ellipses at subtitle boundaries. Use punctuation for actual performance. '
             'EP02 professional feedback: anos sounded European, não sounded English and lacked a fearful scream. '
             'Those are AUDIO issues: do not corrupt correct spelling or claim textual edits verify accent/emotion. '
@@ -452,7 +466,7 @@ def prepare(n,args,preceding):
         prompt+'\nPerform a second semantic and continuity review, correct the candidate, verify all grouping constraints.\n'+
         __import__('json').dumps(draft,ensure_ascii=False),schema,reviewed_path,folder/'review.private.log')
     readings=validate_source_readings(reviewed,rows,audio_evidence) if audio_evidence else {}
-    validate_editorial(reviewed,rows,old,annotations,glossary,max_gap)
+    validate_editorial(reviewed,rows,old,annotations,glossary,max_gap,[g['cue_ids'] for g in production_groupings])
     if n in (10,12):
         allowed_long_group=['e10-12','e10-13','e10-14'] if n==10 else ['e12-20','e12-21']
         for group in reviewed['groups']:
@@ -477,6 +491,7 @@ def prepare(n,args,preceding):
     if any(digest(Path(p))!=sha for p,sha in inputs.items()): raise ValueError('Editorial inputs changed')
     revised_context=copy.deepcopy(context)
     revised_context['revision_basis']={'original_context_sha256':inputs[str(context_path)],'policy':'EP02-feedback full-season rerun; no native listening approval'}
+    if production_groupings:revised_context['production_grouping_policies']=production_groupings
     if readings:revised_context['corroborated_source_audio_readings']=readings
     if editorial_readings:revised_context['editorial_source_reconstructions']=editorial_readings
     if n==20 and 'e20-8' in readings:
@@ -507,6 +522,7 @@ def prepare(n,args,preceding):
               'reviewed_context_sha256':digest(folder/'screenplay-context.json'),
               'reviewed_response_sha256':digest(reviewed_path),'translation_srt_sha256':digest(folder/f'Carmilla_EP{n:02}_pt-BR_revised.srt'),
               'blocking_issues':['Original audio verification required for e29-8 before complete new episode release'] if n==29 and 'e29-8' not in readings else []}
+    if production_groupings:new_plan['production_grouping_policies']=production_groupings
     bind(folder/'reviewed-plan-fingerprint.json',new_plan)
     save_json(folder/'plan.json',new_plan)
     return {'episode':n,'cues':reviewed['cues'],'consistency_notes':reviewed['consistency_notes']}

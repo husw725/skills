@@ -62,3 +62,39 @@ class NameBasisTests(TestCase):
         with self.assertRaises(ValueError):self.run_basis(rows,ev,board,mapping)
         rows,ev,board,mapping=self.fixture();rows[-1]['text']="I'll just take a rest"
         with self.assertRaises(ValueError):self.run_basis(rows,ev,board,mapping)
+
+
+class DiaryProductionTests(TestCase):
+    def fixture(self):
+        texts=["my daughter's blood is special",'It can purify darkness.','I sensed it the moment she was born']
+        ids=['e05-23','e05-16','e05-17'];windows=[(62.566,64.066),(64.066,66.033),(66.066,68.333)]
+        rows=[{'id':c,'text':t,'start':s,'end':e} for c,t,(s,e) in zip(ids,texts,windows)]
+        old={c:{'id':f'e05-utterance-{i:03}','production_voice':'Mother'} for c,i in zip(ids,[16,17,18])}
+        annotations={c:{'speaker':'unknown','speaker_audio_verified':False} for c in ids}
+        board={'entries':[{'storyboard':' '.join(texts)}]}
+        return rows,old,annotations,board
+
+    def test_new_reading_retains_unidentified_original_actor(self):
+        args=self.fixture();result=basis.diary_production_group(*args)
+        self.assertEqual(result['source_reader'],'unknown');self.assertFalse(result['source_same_reader_confirmed'])
+        self.assertEqual(result['production_voice'],'Mother');self.assertEqual(result['production_grouping_policy'],'single_written_diary_quote')
+        self.assertTrue(all(a['speaker']=='unknown' for a in args[2].values()))
+
+    def test_unknown_guard_still_blocks_unreviewed_group(self):
+        from rerun_carmilla_season import validate_editorial
+        rows,old,annotations,board=self.fixture();group=basis.diary_production_group(rows,old,annotations,board)
+        data={'cues':[{'id':r['id'],'translation':'Texto.','script_evidence':'written quote','emotion':'calm','issues':[]} for r in rows],
+              'groups':[[r['id'] for r in rows]]}
+        with self.assertRaises(ValueError):validate_editorial(data,rows,old,annotations,{})
+        validate_editorial(data,rows,old,annotations,{},unknown_production_groups=[group['cue_ids']])
+        with self.assertRaises(ValueError):validate_editorial(data,rows,old,annotations,{},unknown_production_groups=[['unrelated']])
+
+    def test_changed_quote_source_identity_or_casting_cannot_authorize(self):
+        for mode in ['source','board','identity','casting','unit']:
+            rows,old,annotations,board=self.fixture()
+            if mode=='source':rows[0]['text']='Someone else blood is special'
+            elif mode=='board':board['entries'][0]['storyboard']='different quote'
+            elif mode=='identity':annotations['e05-23']['speaker']='Mother'
+            elif mode=='casting':old['e05-23']['production_voice']='Laura'
+            else:old['e05-23']['id']='different unit'
+            with self.assertRaises(ValueError):basis.diary_production_group(rows,old,annotations,board)

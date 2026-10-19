@@ -78,3 +78,28 @@ def reconstruct(rows,evidence,reference,source_audio,review_sha):
         'human_listened':False,'source_speaker_verified':False,
         'note':'Full No answer belongs to next original cue36 and is retained there; ASR onset drift is not a negation in Laura question.'}
     return recons,{c:evidence[c] for c in ['e05-10','e05-20']},inputs
+
+
+def diary_production_group(rows,old,annotations,reference):
+    """Authorize a new reading of one written quote; never identify its original reader."""
+    ids=['e05-23','e05-16','e05-17'];by={r['id']:r for r in rows}
+    expected=[("my daughter's blood is special",62.566,64.066,'e05-utterance-016'),
+              ('It can purify darkness.',64.066,66.033,'e05-utterance-017'),
+              ('I sensed it the moment she was born',66.066,68.333,'e05-utterance-018')]
+    for cue,(text,start,end,unit_id) in zip(ids,expected):
+        row=by[cue];a=annotations[cue]
+        if ((row['text'],row['start'],row['end'],old[cue]['id'])!=(text,start,end,unit_id)
+                or old[cue]['production_voice']!='Mother' or a['speaker']!='unknown'
+                or a.get('speaker_audio_verified') is not False):raise ValueError('Exact diary production source changed')
+    if [r['id'] for r in rows[rows.index(by[ids[0]]):rows.index(by[ids[-1]])+1]]!=ids:
+        raise ValueError('Written quote source order changed')
+    wanted=reading_tokens(' '.join(by[c]['text'] for c in ids))
+    board=reading_tokens(' '.join(e['storyboard'] for e in reference['entries']))
+    if not any(board[i:i+len(wanted)]==wanted for i in range(len(board)-len(wanted)+1)):
+        raise ValueError('Current final storyboard does not contain the complete written quote')
+    return {'cue_ids':ids,'original_source_cues':[by[c] for c in ids],
+            'original_production_units':[old[c]['id'] for c in ids],
+            'production_grouping_policy':'single_written_diary_quote','production_voice':'Mother',
+            'source_reader':'unknown','source_speaker_verified':False,'human_listened':False,
+            'source_same_reader_confirmed':False,
+            'note':'One NEW production reading of a single written diary quote. Storyboard supports the text block, NOT original actor identity.'}
