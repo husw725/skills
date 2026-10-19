@@ -12,6 +12,21 @@ from resume_carmilla_remaining import selected
 
 
 class ResumeTests(TestCase):
+    def test_neighbor_retry_requires_exact_failure_and_no_existing_render(self):
+        from resume_carmilla_neighbor import retry_root
+        with TemporaryDirectory() as temp:
+            root=Path(temp)
+            record={'episodes':{'20':{'stage':'requires_review','detail':'Unknown readers cannot be inferred identical from voice casting'}}}
+            save_json(root/'season-progress.json',record)
+            self.assertEqual(retry_root(root),season.NEIGHBOR2_ROOT)
+            record['episodes']['20']['detail']='Unresolved source reading'
+            save_json(root/'season-progress.json',record)
+            with self.assertRaises(ValueError):retry_root(root)
+            record['episodes']['20']['detail']='Unknown readers cannot be inferred identical from voice casting'
+            save_json(root/'season-progress.json',record)
+            save_json(root/'episode-20/render-report.json',{})
+            with self.assertRaises(ValueError):retry_root(root)
+
     def neighbor_fixture(self):
         row={'id':'e20-9','episode':'20','start':19.966,'end':21.3,'text':'I will hurt you'}
         following={'id':'e20-10','episode':'20','start':21.3,'end':23.033,'text':'you will hate me.'}

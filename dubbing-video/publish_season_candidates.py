@@ -25,7 +25,8 @@ ROOTS = [Path('output/carmilla-season-revision-20261016'),
          Path('output/carmilla-season-finish-20261019'),
          Path('output/carmilla-season-neighbor-20261019'),
          Path('output/carmilla-season-finish-20261019-v2'),
-         Path('output/carmilla-season-finish-20261019-ep12')]
+         Path('output/carmilla-season-finish-20261019-ep12'),
+         Path('output/carmilla-season-neighbor-20261019-v2')]
 PUBLICATION = Path('output/review-publication/148/Carmilla/season-revision-20261017')
 
 

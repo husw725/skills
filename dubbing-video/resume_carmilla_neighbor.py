@@ -10,19 +10,32 @@ from translate import read_json,save_json
 EPISODES=(20,)
 
 
+def retry_root(prior):
+    state=read_json(prior/'season-progress.json')
+    row=state.get('episodes',{}).get('20',{})
+    if row.get('stage')!='requires_review' or row.get('detail')!='Unknown readers cannot be inferred identical from voice casting':
+        raise ValueError('Only the inspected EP20 unknown-reader grouping failure can resume')
+    if (prior/'episode-20/render-report.json').exists():
+        raise ValueError('Prior EP20 already rendered; inspect rather than regenerate')
+    return season.NEIGHBOR2_ROOT
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('codex-exe','mcp-config','ffmpeg','editorial-hints'):p.add_argument('--'+name,required=True,type=Path)
+    p.add_argument('--grouping-retry',action='store_true')
     args=p.parse_args()
     if sys.platform!='win32':p.error('Business execution stays on Windows')
     if any(not getattr(args,name).is_file() for name in ('codex_exe','mcp_config','ffmpeg','editorial_hints')):p.error('Existing executable/config required')
     if read_json('output/carmilla-source-verification-20261017/evidence-coordinator-progress.json')['stage']!='evidence_ready':
         p.error('Complete source evidence first')
-    root=season.NEIGHBOR_ROOT;root.mkdir(parents=True,exist_ok=True)
     args.prior_root=season.FINAL_ROOT;args.source_prior_root=season.RETRY_ROOT
     args.source_evidence=True;args.source_evidence_mode='raw-neighbor';args.finalize_pending=True
-    args.rubberband_fallback=True;args.cache_roots=[r for r in season.paid_cache_roots() if r!=root]
+    args.rubberband_fallback=True
     with process_lock(season.BASE_ROOT/'season.lock',timeout=14400):
+        root=retry_root(season.NEIGHBOR_ROOT) if args.grouping_retry else season.NEIGHBOR_ROOT
+        root.mkdir(parents=True,exist_ok=True)
+        args.cache_roots=[r for r in season.paid_cache_roots() if r!=root]
         state=read_json(root/'season-progress.json') if (root/'season-progress.json').exists() else {'episodes':{}}
         state.update(started_at=time.time(),native_acceptance_passed=False)
         preceding=[];season.ROOT=root

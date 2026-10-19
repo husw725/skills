@@ -2,9 +2,48 @@
 
 ## 当前接力记录
 
+### 2026-10-19 实时EP20分组挡停，准备独立新root续修
+
+- ROOT9 EP20于1792374481.4743855 requires_review，detail精确Unknown readers cannot be inferred identical from voice casting；未生成plan或TTS。实际reviewed把e20-13/14/15（原unknown，三个生产单元e20-utterance-011/012/013）合成一组，且证据误写同单元。不能放宽unknown身份门。新hints明确三singleton并纠正证据，其他忠实译文保留；NEIGHBOR2_ROOT output/carmilla-season-neighbor-20261019-v2仅新产物，旧稿和缓存不覆盖。
+- resume_carmilla_neighbor.py新增--grouping-retry：锁内只接受旧ROOT9该精确failure+无旧render，FINAL prior和RETRY源证据保持，独立新root接完整缓存白名单和publisher；70相关tests通过，安全独立审待放行。不得在未push/pull前说Windows在跑新版本。私有协调器neighbor-v2-coordinator.py沿用已审薄模板，仅root/事件键/hints/CLIflag改动。
+- 10/12最终实际文本独立放行：final-10-12-audit.private.md，45cue/34组。10第12–14组独立事故、12全部仪式五规则与条件式teria均完整。Review实际仍25，10发布中；全32未齐，不发完成通知。
+
+
+### 2026-10-19 实时续：26集成片、25集Review；20正在两遍文本审核
+
+- 现场持续跟进，ROOT8 18/32均真实成片且已发布：18 video2653/v2+SRT2654，32 video2655/v2+SRT2656。ROOT11 EP12四段精确分组17/17完成，video2657/v2+SRT2658。ROOT10 EP10三句组成功18/18，render-report存在，正等publisher/上传。实际26成片、25 publication-result；发布目录仍season-revision-20261017（不要误数空20261019日志目录）。
+- ROOT9 EP20已1792374284.7837074取得production锁，当前editorial，draft.json已出、review.private.log在写。ROOT10 production exit0 finished1792374284.7027652，ROOT11 production exit0 finished1792374116.2710092；两者coordinator publication，不代表整季完成。
+- 实际新增06/09/18/22/25/28/32共143cue/118group独立文本审通过：output/season-resume-20261019/new-seven.private.json SHA e3734a…6208及new-seven-audit.private.md，现全部24旧候选已有独立文本覆盖；10/12实际新稿已导出final-10-12.private.json SHA66aa4297c71c1c76949c08b5b67fbfe640908e0094c68a05752e77ea82fa6e5a，正交给audit_review_feedback独立审核。全是文本，不是巴葡母语/表演/混音听审。
+- 仍有04/05/08/27/29六处真实源疑问，原声核对异步问题已问、暂无答复，不要反复问或假定用户通过。全32完成钉钉未发送；有限协调器可能各发授权的子任务停止通知，其他任务仍在执行，不能以消息判全队停止。继续核20实际出片及10/20上传回执，并等待源确认。
+
+
+### 2026-10-19 后续实时：18新版成片，ROOT11 EP12完整段落接续已排队
+
+- 当前累计23集成片、22集已有Review回执；新增18 ROOT8实际render-report，32仍editorial。10/12在ROOT8仍时长失败，已各有针对性后继任务。另已启动一次只补发布的现有publisher（SSH活session33814；日志season-revision-20261019/publisher-18.private.log），在32文本审核期间并行发18；不可把23成片当23已发布，需读新publication-result。
+- ROOT11 output/carmilla-season-finish-20261019-ep12 / Task Codex-Carmilla-EP12-20261019 Running或等production锁，新增--ep12-continuity（与--ep10互斥），仅12、priorROOT8/独立新root。强制合法同声部段落12–15（Father/sad、.434/.4/.5）、17–18（Father/sad .134）、22–26（Father/calm0/.234/.3/0）；Laura/fearful20–21仅精确这对允许.8，actual.766；任何别的>.6或扩大group仍宿主拒绝。原cube时码/unknown/双模型tight/意思/词义/0clone/1.2/不明提交/cache强门保留。原指导整SHA+两遍审核仍必需。
+- 语义独立审明确12–15末“她想获救”指Camila、17“她试过”指母亲；22–26满月/双方同意/两血融合/成功破咒/失败两者死全部保留，20–21保留So/回来找我/because/I WOULD have同血，不改tenho。候选合读Então Camila voltou por mim porque eu teria o mesmo sangue。指导私有output/season-resume-20261019/ep12-continuity-hints.private.json，SCP Windows同路径；协调器ep12-coordinator.py经与此前已安全审核模板一致的有限薄编排。
+- 098ef8e已GitHub push并Windows明确pull，Mac69相关tests、Windows45targeted通过；独立代码安全审放行，独立数据审放行EP12四精确思路。所有11根都已加入明确cache及publisher候选白名单；不要把scope常量改名/突变丢失旧付款root。
+- 主线程仍在执行持续盯进度，不应结束说全部完成；异步原声确认问题仍待用户回复。5个真实源疑点集04/05/08/27/29共6短片段，20已通过实证neighbor门并排队，无需用户听20。
+
+
+### 2026-10-19 公司现场继续收尾：22集Review已齐，三条有限任务运行中，原声核对问题已问用户
+
+- 用户在公司明确要求完整跟进。Mac当前en0=10.20.2.30，无ppp0；ssh win默认已实测hostname husw成功，不再加-B ppp0。新临时helper /tmp/dub_company.py从旧helper去掉BindInterface；SCP也不加绑定。无需改全局代理/路由。
+- 实时旧队列结果：ROOT6新22/28成片并已Review2645/2647各v2+字幕；ROOT7新06成片但10/17发Review曾ProxyError。10/19现有publisher已真实补齐06 Review2651/v2+字幕2652（完整publication-result），所有22成片都已发布/SRT齐。现22集01/02/03/06/07/09/11/13/14/15/16/17/19/21/22/23/24/25/26/28/30/31，旧版本保留，0新clone。全32通知未发。补传run已exit2只是仍未全32，不是06未成功；日志output/review-publication/148/Carmilla/season-revision-20261019/publisher.private.log。
+- 剩余时长4集10/12/18/32，源疑点6集04/05/08/20/27/29。读全4集94cue/83组独立文本审（output/season-resume-20261019/timing-four-audit.private.md）修正后放行；32 e32-20让步/仍是我需更精确，不要夸大为剧情假设变事实（e32-15已明说不再人类）。12首句可Não! Não aceito nada；18猎杀吞噬圣血少女获取力量不可删；32圣血/保护灵魂/始终你自己不可删。
+- ROOT8 output/carmilla-season-finish-20261019，finish_carmilla_remaining.py：最新已审plan先measureall，新增private editorial_hints内容+整文件SHA进入editorial-input指纹，两遍文本审后强制指定group_together仍过全部原门。只精确时长失败/无候选/统一production锁；12仍tight、18context，原RETRY争议集合独立；新paid-cache/root/publisher白名单。前两集连续性已按[prior]+最新真实候选根找，旧reviewed-plan/SHA强核。Task Codex-Carmilla-Finish-20261019 Running，started1792372438.0503988。当前10合13/14后仍超时已记error；任务继续12，26/26实测完成，12 draft.json已出在第二遍审核。18/32待队列。
+- 10失败真因：cue13+14联合33.933–36.666后Laura36.833紧接，实际max3.36s，不能按end+.8错算容量；新候选仍Sua mãe veio nessa semana. Houve algo terrível。不能删成Foi terrível（易只评价来访可怕）。独立数据审批准把12(31.4–33,Father/sad)+13+14当完整三句连续Father/sad意群，.933/0gap，省可恢复Ela为Perdeu o controle e feriu alguém，原来访/同周/独立事故意思全保留，不暗示母亲就是受伤者/来访导致事故。
+- ROOT10 output/carmilla-season-finish-20261019-v2，finish helper --ep10-continuity仅priorROOT8/selected10，原目录常量不突变。n10 maxgap1.0但额外宿主门只精确[e10-12,e10-13,e10-14]可跨>.6；更大/其他组均挡，原role/voice/emotion/gap/nooverlap等不放松。私有hints绑定该三句，2pass，真实window/factor<=1.2仍须过。Task Codex-Carmilla-EP10-20261019 Running/等production锁，started1792373083.7621784。
+- ROOT9 output/carmilla-season-neighbor-20261019，resume_carmilla_neighbor.py仅20。新增raw-neighbor原整对双模型证据（非逐词拼）：先核raw/context及RETRY reviewSHA，e20-8完整raw两模型原门已过；e20-9 I will hurt you的next原SRT e20-10 You will hate me从21.3开始，next You/Will被旧cue core/edge误判。assigned_neighbor_words仅白名单这两cue/id/episode20/归一化原句完全指定/无source gap：同model必须连续完整current+完整next，next各词>=.65、firststart±.1、全词在next自身-.1/+ .35内，才将完整next词从当前core/omitted-edge重新归属。当前完整覆盖/原±.35/置信门及原raw否定/modal/数字Counter一行未放宽，原SRT/时码/角色不改。metadata保留next原cue，源SHA绑定。Windows实际ACTUAL_EP20_SOURCE_GATE_PASS e20-9/e20-8，newpaid0/human_listenedfalse。Task Codex-Carmilla-Neighbor-20261019 Running/等同一prod锁，started1792372968.2329195；两遍审核后才TTS并发布。
+- 21194ac/0239a0c/4a5429c全部GitHub push后Windows明确pull。最新HEAD4a5429c；Mac69相关测试全过、Windows45 targeted通过；audit_dubbing_estimate独立放行ROOT8、精准neighbor门、EP10例外；audit_review_feedback独立放行四集修订与EP10完整思路。新增所有root第8/9/10都入publisher和paid-cache白名单；旧不明提交/完整请求指纹/冻结音色0clone/1.2/不截断保持。协调器仍全32live门之后才能完成通知，requires_review按已授权停顿消息指纹防重发。
+- 目前未解的真词义六处短片段已SCP到Mac忽略output/season-resume-20261019/listen/{e04-16,e05-7,e05-26,e08-6,e27-12,e29-8}.wav。私有原声核对页同目录index.html，候选不是事实。已通过request_user_input_async请用户按1–6回复实际听到的英文/不确定（尚无答复），同时推进4集时长和20校验。不要冒称用户已听审/已批准猜译，别重发同样问题；新答复是steering继续此任务。原声不上传S3，只有完成视频S3约束保留。
+- 最新生产MCP tools/list有multimodalUnderstanding（描述视觉理解，仅图片/视频/PDF、dola-seed-2-1-turbo-260628），无显式ASR；不可拿视觉理解声称听清音轨，未提交任务。所有新音轨/源JSON/回执/密钥仍忽略input/output；本轮只复制少量只读诊断WAV到Mac供用户听，不在Mac跑业务。用户最新知道22Review齐/第20误挡已定位/第12已全测时/第10三句分组方案。
+- 下一步本轮必须持续盯ROOT8→ROOT9/ROOT10（同production锁不保证后两者谁先），遇具体新失败继续查实际paid WAV和句意，不盲重跑；每60s内有意义更新。真实新render-report存在才计候选、publication-result/live读回齐才计交付。不能以Running当完成，也不能再次不看状态就终止。原声5集04/05/08/27/29待用户或进一步可靠源证据；20已可证不需要人听。
+
+
 ### 2026-10-17 用户明确续跑：5集测时返修已运行，06/12新证据过门后续排队
 
-- 本次用户“那让它继续跑起来”已实际恢复，不是只看状态。Windows有限Task Codex-Carmilla-Resume-20261017 Running/State4，ROOT6 output/carmilla-season-resume-20261017，coordinator.started_at1792248036.612609；新resume_carmilla_remaining.py只选精确timing-error的10/18/22/28/32，同BASE production锁。当前10已补齐19/19测时、两遍文本审核通过，正在真实TTS/render，日志任务38421–38424；还没有新增render-report不能算完成。旧19已发布版本和付费断点均保留。
+- 本次用户“那让它继续跑起来”已实际恢复，不是只看状态。Windows有限Task Codex-Carmilla-Resume-20261017 Running/State4，ROOT6 output/carmilla-season-resume-20261017，coordinator.started_at1792248036.612609；新resume_carmilla_remaining.py只选精确timing-error的10/18/22/28/32，同BASE production锁。当前10已补齐19/19测时、两遍文本审核后实际TTS仍遇超时，已记requires_review；任务已继续到18 measuring，没有因单集失败停止整队列。日志任务38421–38424及后续，尚无新render-report不能算完成。旧19已发布版本和付费断点均保留。
 - 新TIMING2_ROOT/RESUME_ROOT及SOURCE_RESUME_ROOT进入明确paid-cache白名单；全部prior pending前检及完整request指纹、已接受taskId恢复、不明提交不重试、冻结音色0clone不变。revision_feedback新加入recommended85%及90%margin标记，靠近时长上限也要求审；EP28 Pai/Sua mão两个已知同Laura同surprised连续同意群，允许gap1.0（实际.967）但仍两遍审核和全部分组强门，原SRT/源时码不变。
 - 新root可atempo失败后使用rubberband tempo1.2作另一算法拟合，无atrim/无超1.2/不重新TTS；fitting_policy绑定新render-input。旧plan measure_only不开新policy，避免冲突旧断点。Windows FFmpeg确实支持rubberband，现有22 paid WAV独立诊断natural7.03s,target5.866,fitted5.858333333,factor1.2,newpaid0真实成功；32旧unit natural4.54,target3.766,factor1.2055仍失败，不能伪称恢复，要新两遍文本精简/合法分组。
 - 新verify_carmilla_source_tight.py保留旧raw/context不覆写，官方已验small.en+medium.en对原cue±.15s无prompt无VAD本机CPU识别。clip-input先绑定sourceSHA/start/end/解码参数，旧片无marker拒绝；9ea0826修后在全新ROOT output/carmilla-source-tight-20261017运行。Task Codex-Carmilla-Source-Tight-20261017已自然完成，16cue×2证据齐。06 Who is there与12两疑点现两模型全词/置信/±.35过原门，原validator未放宽。真实Windows ACTUAL_SOURCE_GATE_PASS6(e06-10)/12(e12-8,e12-21)，human_listenedfalse,newpaid0。
