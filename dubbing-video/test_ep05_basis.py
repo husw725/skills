@@ -98,3 +98,27 @@ class DiaryProductionTests(TestCase):
             elif mode=='casting':old['e05-23']['production_voice']='Laura'
             else:old['e05-23']['id']='different unit'
             with self.assertRaises(ValueError):basis.diary_production_group(rows,old,annotations,board)
+
+
+class SpeechRepairTests(TestCase):
+    def fixture(self):
+        from resume_carmilla_reconciled import SPEECH_TRANSLATIONS
+        prior={'cues':[{'id':c,'translation':'prior','emotion':'calm'} for c in [*SPEECH_TRANSLATIONS,'e05-7']],
+               'groups':[['e05-23','e05-16','e05-17'],['e05-18','e05-19'],['e05-7']]}
+        reviewed=copy.deepcopy(prior)
+        for c in reviewed['cues']:c['translation']=SPEECH_TRANSLATIONS.get(c['id'],c['translation'])
+        return prior,reviewed
+
+    def test_only_exact_approved_five_texts_may_change(self):
+        from resume_carmilla_reconciled import validate_retained_editorial,SPEECH_TRANSLATIONS
+        prior,reviewed=self.fixture()
+        validate_retained_editorial(reviewed,prior,SPEECH_TRANSLATIONS)
+        for mode in ['text','locked','emotion','groups','missing','duplicate']:
+            changed=copy.deepcopy(reviewed)
+            if mode=='text':changed['cues'][0]['translation']='Purifica trevas.'
+            elif mode=='locked':changed['cues'][-1]['translation']='Come here.'
+            elif mode=='emotion':changed['cues'][0]['emotion']='angry'
+            elif mode=='groups':changed['groups'][0].pop()
+            elif mode=='missing':changed['cues'].pop()
+            else:changed['cues'].append(copy.deepcopy(changed['cues'][0]))
+            with self.assertRaises(ValueError):validate_retained_editorial(changed,prior,SPEECH_TRANSLATIONS)

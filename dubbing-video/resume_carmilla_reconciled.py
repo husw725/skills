@@ -10,6 +10,22 @@ from translate import read_json,save_json
 from repair_carmilla_measured import TIMING_ERRORS
 
 
+SPEECH_TRANSLATIONS = {
+    'e05-23': 'O sangue da minha filha é especial,',
+    'e05-16': 'pode purificar trevas.',
+    'e05-17': 'Senti assim que ela nasceu.',
+    'e05-18': 'Devia temê-la, tudo em mim grita pra fugir,',
+    'e05-19': 'mas não consigo odiá-la, me sinto segura.',
+}
+
+
+def validate_retained_editorial(reviewed, prior, changes=None):
+    expected = [(c['id'], (changes or {}).get(c['id'], c['translation']), c['emotion']) for c in prior['cues']]
+    actual = [(c['id'], c['translation'], c['emotion']) for c in reviewed['cues']]
+    if reviewed['groups'] != prior['groups'] or actual != expected:
+        raise ValueError('Only independently approved text changes may differ; retain all groups/directions')
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('codex-exe','mcp-config','ffmpeg','editorial-hints'):p.add_argument('--'+name,required=True,type=Path)
@@ -17,13 +33,14 @@ def main():
     p.add_argument('--timing-repair',action='store_true')
     p.add_argument('--paragraph-repair',action='store_true')
     p.add_argument('--diary-production',action='store_true')
+    p.add_argument('--speech-repair',action='store_true')
     args=p.parse_args()
-    if sum([args.editorial_repair,args.timing_repair,args.paragraph_repair,args.diary_production])>1:p.error('Choose one versioned repair stage')
+    if sum([args.editorial_repair,args.timing_repair,args.paragraph_repair,args.diary_production,args.speech_repair])>1:p.error('Choose one versioned repair stage')
     if sys.platform!='win32':p.error('Business execution stays on Windows')
     if any(not getattr(args,n).is_file() for n in ('codex_exe','mcp_config','ffmpeg','editorial_hints')):p.error('Existing inputs required')
-    root=season.DIARY_ROOT if args.diary_production else season.PARAGRAPH_ROOT if args.paragraph_repair else (season.RECONCILED_TIMING_ROOT if args.timing_repair else (season.RECONCILED2_ROOT if args.editorial_repair else season.RECONCILED_ROOT));root.mkdir(parents=True,exist_ok=True)
-    args.prior_root=season.RECONCILED2_ROOT if args.timing_repair or args.paragraph_repair or args.diary_production else season.FINAL_ROOT;args.source_prior_root=season.RETRY_ROOT
-    args.reconcile_ep05=True;args.ep05_paragraph=args.paragraph_repair or args.diary_production;args.ep05_diary=args.diary_production;args.source_evidence=False;args.finalize_pending=True;args.rubberband_fallback=True
+    root=season.SPEECH_ROOT if args.speech_repair else season.DIARY_ROOT if args.diary_production else season.PARAGRAPH_ROOT if args.paragraph_repair else (season.RECONCILED_TIMING_ROOT if args.timing_repair else (season.RECONCILED2_ROOT if args.editorial_repair else season.RECONCILED_ROOT));root.mkdir(parents=True,exist_ok=True)
+    args.prior_root=season.DIARY_ROOT if args.speech_repair else season.RECONCILED2_ROOT if args.timing_repair or args.paragraph_repair or args.diary_production else season.FINAL_ROOT;args.source_prior_root=season.RETRY_ROOT
+    args.reconcile_ep05=True;args.ep05_paragraph=args.paragraph_repair or args.diary_production or args.speech_repair;args.ep05_diary=args.diary_production or args.speech_repair;args.source_evidence=False;args.finalize_pending=True;args.rubberband_fallback=True
     args.cache_roots=[r for r in season.paid_cache_roots() if r!=root]
     with process_lock(season.BASE_ROOT/'season.lock',timeout=14400):
         if any((r/'episode-05/render-report.json').exists() for r in season.paid_cache_roots()):
@@ -34,10 +51,10 @@ def main():
                 raise ValueError('Only the inspected editorial field-contract failure may use this repair')
             if any((season.RECONCILED_ROOT/'episode-05').glob('utterances/*/request-fingerprint.json')):
                 raise ValueError('Prior editorial version unexpectedly has paid requests')
-        if args.timing_repair or args.paragraph_repair or args.diary_production:
+        if args.timing_repair or args.paragraph_repair or args.diary_production or args.speech_repair:
             old=read_json(args.prior_root/'season-progress.json')['episodes']['5']
             if old.get('detail') not in TIMING_ERRORS:raise ValueError('Only inspected timing errors may be repaired')
-        if args.paragraph_repair or args.diary_production:
+        if args.paragraph_repair or args.diary_production or args.speech_repair:
             measured=read_json(args.prior_root/'episode-05/duration-measurements.json')
             if measured.get('complete') is not True or measured['plan_sha256']!=digest(args.prior_root/'episode-05/plan.json'):
                 raise ValueError('Complete measurements for the exact reviewed plan are required')
@@ -55,11 +72,13 @@ def main():
         hints=read_json(args.editorial_hints)
         if set(hints)!={'5'}:raise ValueError('Unexpected reconstruction episode')
         approval=hints['5']['source_basis'];audit=approval['audit_report'];original=approval['original_subtitle']
-        if args.diary_production:
+        if args.diary_production or args.speech_repair:
             reference=hints['5']['existing_reviewed_candidate']
-            prior_review=season.PARAGRAPH_ROOT/'episode-05/reviewed.json'
+            prior_review=(season.DIARY_ROOT if args.speech_repair else season.PARAGRAPH_ROOT)/'episode-05/reviewed.json'
             if (Path(reference['path'])!=prior_review or digest(prior_review)!=reference['sha256']
                     or read_json(prior_review)!=reference['data']):raise ValueError('Independently reviewed editorial reference changed')
+            if args.speech_repair and hints['5'].get('approved_timing_translation_changes') != SPEECH_TRANSLATIONS:
+                raise ValueError('Only five independently approved timing translations may change')
         if (approval['kind']!='editorial_name_and_subtitle_normalization' or approval['audio_listened'] is not False
                 or approval['speaker_verified'] is not False
                 or set(approval['approved_translations'])!={'e05-7','e05-26','e05-35','e05-36'}
@@ -78,11 +97,9 @@ def main():
             reviewed=read_json(root/'episode-05/reviewed.json');by={c['id']:c for c in reviewed['cues']}
             for cue,text in approval['approved_translations'].items():
                 if by[cue]['translation']!=text:raise ValueError('Independently reviewed source meaning was not retained')
-            if args.diary_production:
-                prior=reference['data']
-                if reviewed['groups']!=prior['groups'] or [(c['id'],c['translation'],c['emotion']) for c in reviewed['cues']]!=[(c['id'],c['translation'],c['emotion']) for c in prior['cues']]:
-                    raise ValueError('Diary production repair must retain all independently reviewed text/groups/directions')
-            if args.paragraph_repair or args.diary_production:
+            if args.diary_production or args.speech_repair:
+                validate_retained_editorial(reviewed, reference['data'], SPEECH_TRANSLATIONS if args.speech_repair else None)
+            if args.paragraph_repair or args.diary_production or args.speech_repair:
                 plan=read_json(root/'episode-05/plan.json')
                 unit=next(u for u in plan['units'] if 'e05-18' in u['cue_ids'])
                 if (unit['cue_ids']!=['e05-18','e05-19'] or unit['production_voice']!='Laura'
