@@ -2,6 +2,15 @@
 
 ## 当前接力记录
 
+### 2026-10-19 本轮最终实证：27/32视频+字幕Review齐，5集待真实源确认，停顿钉钉已发送
+
+- 用户在公司要求完整盯完，本轮实际持续跟到EP20出片、上传、全27重核及停顿通知，不是只启动即结束。新增EP20 Review video2661/version2+subtitle2662，旧版本保留；全27 publication-result集号01/02/03/06/07/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23/24/25/26/28/30/31/32。最终progress published27/requires_review{} /all_32_publishedfalse。
+- live独立回读27全部scope/name/video version+URL+tags/对应subtitle exactname含videoSHA+URL+DOCUMENT kind+完整SHA note/旧历史标记通过，mismatches[]；Windows证据output/season-resume-20261019/final-live-review-verification.private.json。未将没有新评论当母语通过。所有27最终译文独立审覆盖（14prefix+3timing+7new+10/12+20实际最终）。
+- ROOT14 coordinator已结束finished1792376443.2889297，production0/publication2/stagerequires_review；pub exit2只因32不齐，不是20上传失败。已授权停止通知事件season-neighbor-pause-20261019在output/notifications/delivery-state.private.json状态sent；全32 completion-notification.json不存在、未发全部完成通知。当前无必要生产工作在跑，不能再告诉用户后台仍继续。
+- 真正余下04/05/08/27/29，共6处原声疑点；本轮早已异步请用户按1–6核对，暂无回复。听原声页Mac ignored output/season-resume-20261019/listen/index.html（WAV只本机，未上传S3）。两套识别在词义/专名/截断上冲突且置信不足，不能凭旧script/分镜硬猜过门；得到可靠原声答复再做带版本/SHA/provenance的新审核，不伪称此前已听审或原声身份已验证。不要反复盲跑/重复clone/重复付费15。
+- 代码最终5e88565（ROOT14 fit例外）已push/Windows明确pull+48targeted；Mac72相关tests，独立48安全审通过。后续47da6f0及当前提交仅交接记录。根目录真实脚本与隔离worktree代码一致；只把代码/交接进Git，原素材/译稿/回执/听音文件全ignored input/output。第二部剧仍暂停。
+
+
 ### 2026-10-19 EP20 ROOT14真实出片成功，27成片/26Review，正在发布
 
 - 5e88565 GitHub push/Windows明确pull到同HEAD，Windows48targeted通过，Task Codex-Carmilla-NeighborPause-20261019 Running。ROOT14 started1792375811.200627；ROOT13全33旧policy实测完成，新16 Três dias? Explica音频2.60s在自然上限2.6004内。
