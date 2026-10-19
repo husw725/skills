@@ -14,13 +14,16 @@ PRIORS={10:season.RESUME_ROOT,12:season.SOURCE_RESUME_ROOT,18:season.RESUME_ROOT
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('codex-exe','mcp-config','ffmpeg','editorial-hints'):p.add_argument('--'+name,required=True,type=Path)
-    p.add_argument('--ep10-continuity',action='store_true')
+    scope=p.add_mutually_exclusive_group()
+    scope.add_argument('--ep10-continuity',action='store_true')
+    scope.add_argument('--ep12-continuity',action='store_true')
     args=p.parse_args()
     if sys.platform!='win32':p.error('Business execution stays on Windows')
     if any(not getattr(args,name).is_file() for name in ('codex_exe','mcp_config','ffmpeg','editorial_hints')):
         p.error('Existing executables, private config and targeted guidance required')
-    root=season.FINISH2_ROOT if args.ep10_continuity else season.FINISH_ROOT
-    priors={10:season.FINISH_ROOT} if args.ep10_continuity else PRIORS
+    if args.ep10_continuity:root=season.FINISH2_ROOT;priors={10:season.FINISH_ROOT}
+    elif args.ep12_continuity:root=season.FINISH12_ROOT;priors={12:season.FINISH_ROOT}
+    else:root=season.FINISH_ROOT;priors=PRIORS
     root.mkdir(parents=True,exist_ok=True)
     args.finalize_pending=True;args.rubberband_fallback=True
     args.source_prior_root=season.RETRY_ROOT
