@@ -27,10 +27,11 @@ TIMING_ROOT = Path('output/carmilla-season-timing-repair-20261017')
 TIMING2_ROOT = Path('output/carmilla-season-timing-repair2-20261017')
 RESUME_ROOT = Path('output/carmilla-season-resume-20261017')
 SOURCE_RESUME_ROOT = Path('output/carmilla-season-source-resume-20261017')
+FINISH_ROOT = Path('output/carmilla-season-finish-20261019')
 
 
 def paid_cache_roots():
-    return [SOURCE_RESUME_ROOT,RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -306,6 +307,12 @@ def prepare(n,args,preceding):
         payload['revision_feedback']=revision_feedback(n,args,preceding)
         payload['previous_episode_revisions']=payload['revision_feedback'].pop('previous_episode_revisions')
         inputs.update(payload['revision_feedback']['source_sha256'])
+    hints_path=getattr(args,'editorial_hints',None)
+    if hints_path is not None:
+        hints=read_json(hints_path)
+        if str(n) not in hints:raise ValueError('Missing targeted editorial guidance')
+        payload['targeted_revision_guidance']=hints[str(n)]
+        inputs[str(hints_path)]=digest(hints_path)
     bind(folder/'editorial-input.json',{'sha256':inputs,'context':payload,'policy_version':1})
     schema=folder/'schema.json';save_json(schema,response_schema(bool(audio_evidence)))
     prompt=('Revise this entire episode into natural spoken Brazilian Portuguese with screenplay context. '
@@ -353,6 +360,9 @@ def prepare(n,args,preceding):
         __import__('json').dumps(draft,ensure_ascii=False),schema,reviewed_path,folder/'review.private.log')
     readings=validate_source_readings(reviewed,rows,audio_evidence) if audio_evidence else {}
     validate_editorial(reviewed,rows,old,annotations,glossary,max_gap)
+    for group in payload.get('targeted_revision_guidance',{}).get('group_together',[]):
+        if not group or not any(set(group).issubset(g) for g in reviewed['groups']):
+            raise ValueError('Required reviewed thought grouping missing; no synthesis')
     if any(digest(Path(p))!=sha for p,sha in inputs.items()): raise ValueError('Editorial inputs changed')
     revised_context=copy.deepcopy(context)
     revised_context['revision_basis']={'original_context_sha256':inputs[str(context_path)],'policy':'EP02-feedback full-season rerun; no native listening approval'}
@@ -396,7 +406,7 @@ def revision_feedback(n,args,preceding=()):
     data={'source_root':str(prior),'source_sha256':{},'prior_editorial':None,'measured_groups':[]}
     for previous in range(max(1,n-2),n):
         if previous in continuity:continue
-        ep=next((root/f'episode-{previous:02}' for root in ((prior,FINAL_ROOT,RETRY_ROOT,BASE_ROOT) if prior.resolve()==TIMING_ROOT.resolve() else (prior,BASE_ROOT))
+        ep=next((root/f'episode-{previous:02}' for root in dict.fromkeys([prior]+paid_cache_roots())
                  if (root/f'episode-{previous:02}'/'render-report.json').exists()),None)
         if ep is None:continue
         p=read_json(ep/'plan.json');validate_reviewed_plan(ep,p)
