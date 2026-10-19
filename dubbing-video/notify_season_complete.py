@@ -32,7 +32,8 @@ def verify_delivery(progress,rows):
                 or subtitle.get('name')!=f'Carmilla | EP.{n:02} | pt-BR subtitles | {result["video_sha256"][:12]}'
                 or not result.get('subtitle_url') or subtitle.get('url')!=result['subtitle_url']
                 or subtitle.get('documentKind')!='DOCUMENT'
-                or not {'Carmilla','pt-BR'}.issubset(set(subtitle.get('tags') or []))
+                # Review drops DOCUMENT tags; bind subtitles through their exact
+                # episode/video-hash name, URL, kind, and full SHA256 note.
                 or result['subtitle_sha256'] not in subtitle.get('note','')
                 or not result.get('prior_versions_retained')):raise ValueError('Live Review delivery does not match this season')
     return published

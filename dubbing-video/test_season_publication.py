@@ -119,6 +119,18 @@ class SeasonPublicationTests(unittest.TestCase):
         p,rows=self.delivery();rows[1]['url']='https://example.test/wrong.srt'
         with self.assertRaises(ValueError):verify_delivery(p,rows)
 
+    def test_document_tags_may_be_dropped_but_content_binding_is_required(self):
+        p,rows=self.delivery()
+        for r in rows:
+            if r['gateType']=='DOCUMENT':r['tags']=[]
+        self.assertEqual(len(verify_delivery(p,rows)),32)
+        rows[1]['note']='unrelated document'
+        with self.assertRaises(ValueError):verify_delivery(p,rows)
+        p,rows=self.delivery();rows[1]['name']='different episode subtitle'
+        with self.assertRaises(ValueError):verify_delivery(p,rows)
+        p,rows=self.delivery();rows[0]['tags']=[]
+        with self.assertRaises(ValueError):verify_delivery(p,rows)
+
     def test_sender_error_is_redacted_and_network_timeout_is_bounded(self):
         old=socket.getdefaulttimeout();capture=io.StringIO()
         def fail(url,message):

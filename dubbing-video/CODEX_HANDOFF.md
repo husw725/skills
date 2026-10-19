@@ -2,6 +2,13 @@
 
 ## 当前接力记录
 
+### 2026-10-19 EP20新版本已在真实配音；26集live回读一致
+
+- dac7f0c安全独立放行后push并Windows明确pull，46targeted通过。Task Codex-Carmilla-NeighborV2-20261019已Running，ROOT12 output/carmilla-season-neighbor-20261019-v2；started1792374639.5787735，1792374844.0553627两遍审核过门进入rendering，共33组，已1/33。13/14/15三unknown原单元已各singleton，原组门未放宽。原ROOT9失败稿保留；新ROOT12已入全12root缓存/publisher，未新clone。实际final-20.private.json SHA a1d751090068fdcfb7624e9d48b946254863f21feb23f9bbb1de65e0f8dbbdbc交独立文本审核中。
+- Review26个实际回执现01/02/03/06/07/09/10/11/12/13/14/15/16/17/18/19/21/22/23/24/25/26/28/30/31/32；10 video2659/v2+SRT2660。真实26 live scope/name/version/URL/videoTags/字幕exactname+videoSHA+URL+kind+fullSHA note/旧历史保持全通过（Windows ignored output/season-resume-20261019/live-review-verification.private.json）。DOCUMENT服务端实际全部tags=[]，publisher原不依赖doctags，但notify原要求会误挡全32；最小修notify只移除DOCUMENT tags检查，视频tag/32整齐/ID唯一/精确字幕绑定等保持。新增空tags正例、错SHA/错name/视频缺tag拒绝，独立安全审放行11发布测试，Mac17targeted过。尚未发全完成消息。
+- 主线程继续盯EP20实际渲染及发布；5真实源疑点04/05/08/27/29（6处）仍待异步原声答复，不能宣称32完成。新确认10真实17/17（不是此前prior测时18），12真实17/17，视频payload同原/0clone。
+
+
 ### 2026-10-19 实时EP20分组挡停，准备独立新root续修
 
 - ROOT9 EP20于1792374481.4743855 requires_review，detail精确Unknown readers cannot be inferred identical from voice casting；未生成plan或TTS。实际reviewed把e20-13/14/15（原unknown，三个生产单元e20-utterance-011/012/013）合成一组，且证据误写同单元。不能放宽unknown身份门。新hints明确三singleton并纠正证据，其他忠实译文保留；NEIGHBOR2_ROOT output/carmilla-season-neighbor-20261019-v2仅新产物，旧稿和缓存不覆盖。
@@ -11,7 +18,7 @@
 
 ### 2026-10-19 实时续：26集成片、25集Review；20正在两遍文本审核
 
-- 现场持续跟进，ROOT8 18/32均真实成片且已发布：18 video2653/v2+SRT2654，32 video2655/v2+SRT2656。ROOT11 EP12四段精确分组17/17完成，video2657/v2+SRT2658。ROOT10 EP10三句组成功18/18，render-report存在，正等publisher/上传。实际26成片、25 publication-result；发布目录仍season-revision-20261017（不要误数空20261019日志目录）。
+- 现场持续跟进，ROOT8 18/32均真实成片且已发布：18 video2653/v2+SRT2654，32 video2655/v2+SRT2656。ROOT11 EP12四段精确分组17/17完成，video2657/v2+SRT2658。ROOT10 EP10三句组成功17/17，render-report存在，正等publisher/上传。当时26成片、25 publication-result；后续10也已发布video2659/v2+SRT2660，共26。发布目录仍season-revision-20261017（不要误数空20261019日志目录）。
 - ROOT9 EP20已1792374284.7837074取得production锁，当前editorial，draft.json已出、review.private.log在写。ROOT10 production exit0 finished1792374284.7027652，ROOT11 production exit0 finished1792374116.2710092；两者coordinator publication，不代表整季完成。
 - 实际新增06/09/18/22/25/28/32共143cue/118group独立文本审通过：output/season-resume-20261019/new-seven.private.json SHA e3734a…6208及new-seven-audit.private.md，现全部24旧候选已有独立文本覆盖；10/12实际新稿已导出final-10-12.private.json SHA66aa4297c71c1c76949c08b5b67fbfe640908e0094c68a05752e77ea82fa6e5a，正交给audit_review_feedback独立审核。全是文本，不是巴葡母语/表演/混音听审。
 - 仍有04/05/08/27/29六处真实源疑问，原声核对异步问题已问、暂无答复，不要反复问或假定用户通过。全32完成钉钉未发送；有限协调器可能各发授权的子任务停止通知，其他任务仍在执行，不能以消息判全队停止。继续核20实际出片及10/20上传回执，并等待源确认。
