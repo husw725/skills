@@ -213,6 +213,23 @@ def append_version(client,n,url,sha,duration,folder):
     return existing[0]
 
 
+def verify_remote_subtitle(url, expected):
+    """Retry only a public read; never repeat upload, synthesis or Review creation."""
+    import requests
+    for attempt in range(3):
+        try:
+            response=requests.get(url,timeout=60)
+            try:
+                response.raise_for_status();body=response.content
+            finally:response.close()
+        except requests.RequestException:
+            if attempt==2:raise RuntimeError('Remote subtitle read failed; existing upload and Review receipts retained') from None
+            time.sleep(2**attempt)
+        else:
+            if body!=expected:raise ValueError('Remote subtitle differs')
+            return
+
+
 def publish(n,folder,args):
     video,subtitle,report,duration=validate_candidate(n,folder,args.ffmpeg)
     sha=report['output_sha256'];out=PUBLICATION/f'episode-{n:02}'/sha
@@ -226,9 +243,7 @@ def publish(n,folder,args):
         if not sub.exists():save_json(sub,{'url':client.upload(subtitle),'sha256':digest(subtitle)})
         uploaded=read_json(sub)
         if uploaded['sha256']!=digest(subtitle):raise ValueError('Subtitle changed')
-        import requests
-        response=requests.get(uploaded['url'],timeout=60);response.raise_for_status()
-        if response.content!=subtitle.read_bytes():raise ValueError('Remote subtitle differs')
+        verify_remote_subtitle(uploaded['url'],subtitle.read_bytes())
         ledger=out/'subtitle-registration.private.json'
         spec={'projectId':148,'gateType':'DOCUMENT','documentKind':'DOCUMENT',
               'name':f'Carmilla | EP.{n:02} | pt-BR subtitles | {sha[:12]}',
