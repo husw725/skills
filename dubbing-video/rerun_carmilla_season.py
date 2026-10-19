@@ -28,10 +28,11 @@ TIMING2_ROOT = Path('output/carmilla-season-timing-repair2-20261017')
 RESUME_ROOT = Path('output/carmilla-season-resume-20261017')
 SOURCE_RESUME_ROOT = Path('output/carmilla-season-source-resume-20261017')
 FINISH_ROOT = Path('output/carmilla-season-finish-20261019')
+NEIGHBOR_ROOT = Path('output/carmilla-season-neighbor-20261019')
 
 
 def paid_cache_roots():
-    return [FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
+    return [NEIGHBOR_ROOT,FINISH_ROOT,SOURCE_RESUME_ROOT,RESUME_ROOT,TIMING2_ROOT,TIMING_ROOT,FINAL_ROOT,RETRY_ROOT,BASE_ROOT]
 ROLES = {'Laura','Carmilla','Father','Irina','Woodsman','Mother','Narrator_EP01','Narrator_EP03'}
 STORYBOARD_MAPPING_SHA256 = '6efd76bfd6d0227e0d8a00dea6ca0d3e4132d87d0042e91aa39f56128ad0bb38'
 
@@ -130,10 +131,12 @@ def reading_tokens(text):
 
 
 def source_audio_evidence(n,rows,source_audio,prior_root,mode='context'):
-    if mode not in ('context','tight'):raise ValueError('Unexpected source evidence mode')
+    if mode not in ('context','tight','raw-neighbor'):raise ValueError('Unexpected source evidence mode')
+    if mode=='raw-neighbor' and n!=20:raise ValueError('Neighbor alignment is limited to the verified EP20 case')
     review=read_json(Path(prior_root)/f'episode-{n:02}'/'reviewed.json')
     required={c['id'] for c in review['cues'] if any(i['severity']=='error' for i in c['issues'])}
     result={};source_sha=digest(source_audio);inputs={str(source_audio):source_sha}
+    if mode=='raw-neighbor':inputs[str(Path(prior_root)/f'episode-{n:02}'/'reviewed.json')]=digest(Path(prior_root)/f'episode-{n:02}'/'reviewed.json')
     for row in rows:
         if row['id'] not in required:continue
         folder=Path('output/carmilla-source-verification-20261017')/f'episode-{n:02}'/row['id']
@@ -155,6 +158,10 @@ def source_audio_evidence(n,rows,source_audio,prior_root,mode='context'):
                     or digest(clip)!=data['clip_sha256']):raise ValueError('Original-audio evidence does not match this cue')
             inputs[str(path)]=digest(path);inputs[str(clip)]=digest(clip)
             selected_record=record;selected_path=path
+            if mode=='raw-neighbor':
+                if baseline['input'].get('source_review_sha256')!=digest(Path(prior_root)/f'episode-{n:02}'/'reviewed.json'):
+                    raise ValueError('Original disputed-cue review provenance changed')
+                selected_record=baseline;selected_path=baseline_path
             if mode=='tight':
                 tight_folder=Path('output/carmilla-source-tight-20261017')/f'episode-{n:02}'/row['id']
                 selected_path=tight_folder/(model+'.json');selected_record=read_json(selected_path)
@@ -178,8 +185,35 @@ def source_audio_evidence(n,rows,source_audio,prior_root,mode='context'):
                             'human_listened':False}
             if mode!='context':records[model]['method']=mode
         result[row['id']]={'cue':row,'models':records,'source_speaker_verified':False}
+        if mode=='raw-neighbor' and row['id']=='e20-9':
+            index=rows.index(row)
+            if index+1>=len(rows):raise ValueError('Missing next source cue')
+            result[row['id']]['next_source_cue']=rows[index+1]
     if required!=set(result):raise ValueError('Missing disputed-cue audio evidence')
     return result,inputs
+
+
+def assigned_neighbor_words(row,reading,words,next_cue,mode):
+    """Narrow EP20 boundary repair; prove the entire next sentence, never trim a word."""
+    if (mode!='raw-neighbor' or row.get('id')!='e20-9' or str(row.get('episode'))!='20'
+            or next_cue is None or next_cue.get('id')!='e20-10'
+            or str(next_cue.get('episode'))!='20'
+            or reading_tokens(row['text'])!=['i','will','hurt','you']
+            or reading_tokens(reading)!=reading_tokens(row['text'])
+            or reading_tokens(next_cue['text'])!=['you','will','hate','me']
+            or next_cue['start']!=row['end']):return set()
+    current=reading_tokens(reading);following=reading_tokens(next_cue['text'])
+    for first in range(len(words)):
+        for split in range(first+1,len(words)):
+            if [t for w in words[first:split] for t in reading_tokens(w['word'])]!=current:continue
+            for last in range(split+1,len(words)+1):
+                neighbor=words[split:last]
+                if [t for w in neighbor for t in reading_tokens(w['word'])]!=following:continue
+                if (abs(neighbor[0]['start']-next_cue['start'])>.1
+                        or any(w['start']<next_cue['start']-.1 or w['end']>next_cue['end']+.35
+                               or w['probability']<.65 for w in neighbor)):continue
+                return set(range(split,last))
+    return set()
 
 
 def validate_source_readings(review,rows,evidence):
@@ -218,7 +252,8 @@ def validate_source_readings(review,rows,evidence):
             # Edge padding can contain adjacent dialogue. Every word whose
             # midpoint belongs to the original cue MUST be covered, including
             # low-confidence words (which block rather than silently disappear).
-            core=[i for i,w in enumerate(words) if row['start']<=(w['start']+w['end'])/2<=row['end']]
+            assigned=assigned_neighbor_words(row,reading,words,evidence[cue['id']].get('next_source_cue'),model.get('method'))
+            core=[i for i,w in enumerate(words) if i not in assigned and row['start']<=(w['start']+w['end'])/2<=row['end']]
             if not core:raise ValueError('No core-cue words support the reading')
             threshold=.65 if status=='transcription_corrected' else .5
             supported=False
@@ -230,7 +265,7 @@ def validate_source_readings(review,rows,evidence):
                     heard=[t for w in covered for t in reading_tokens(w['word'])]
                     if heard!=tokens:continue
                     # Do not clip a negation, number or modal from a cue edge.
-                    omitted=words[:first]+words[last+1:]
+                    omitted=[w for i,w in enumerate(words) if (i<first or i>last) and i not in assigned]
                     critical={'not','no','never','cannot','can','could','would','should','must','will','shall',
                               'zero','one','two','three','four','five','six','seven','eight','nine','ten',
                               'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty'}
@@ -241,6 +276,8 @@ def validate_source_readings(review,rows,evidence):
                 raise ValueError('Source reading must cover all core words in both models inside the original cue')
         readings[cue['id']]={'original_subtitle_text':row['text'],'corroborated_audio_reading':reading,
             'status':status,'evidence':cue['source_reading_evidence'],'human_listened':False}
+        if evidence[cue['id']].get('next_source_cue'):
+            readings[cue['id']]['adjacent_original_source_cue']=evidence[cue['id']]['next_source_cue']
     return readings
 
 
