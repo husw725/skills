@@ -2,6 +2,14 @@
 
 ## 当前接力记录
 
+### 2026-10-19 EP20 ROOT14真实出片成功，27成片/26Review，正在发布
+
+- 5e88565 GitHub push/Windows明确pull到同HEAD，Windows48targeted通过，Task Codex-Carmilla-NeighborPause-20261019 Running。ROOT14 started1792375811.200627；ROOT13全33旧policy实测完成，新16 Três dias? Explica音频2.60s在自然上限2.6004内。
+- ROOT14两遍审核+渲染成功，真实season selected_candidates_complete/20 rendered_candidate、progress33/33、render-report status rendered_season_revision_candidate/video_payload_identicaltrue/new_clone_count0。最新render复用33/33 prior paid音频，不是整轮无新TTS。15原3.66s→fit3.0805416667、atempo1.19203458，start32.633/end35.71354，距Laura36.033余.31946；16原2.6→fit2.1618333、atempo1.1998154，无剪词/未越1.2。
+- 最终新包final-20-rendered.private.json SHA21f0dfcf2b9a62567397e285ce6656f7dc99aafa4812b0a3a03fa14117b17610，独立final-20-rendered-audit.private.md放行35cue/33组。对旧已审包只有15/16/17译文改变：15省Ela，16Explica，17Seu sangue e minha maldição se fundem当前融合语境忠实；group/source/bible/mapped保持。说明文字部分改写不等于整个源证据字段逐字一致，核心读法/词时间/证据SHA/humanfalse与相邻归属不变。仍未母语/表演/混音听审。
+- 真实27成片；Review仍26回执，20待publisher。ROOT14 coordinator production0/stagepublication updated1792376039.5300007，当前全量重核到8集且无错误；旧ROOT9/12/13协调器均requires_review/production2+publication2已退出，不能再当它们在跑。继续等20 publication-result+最后发布核对及授权stopnotice回执；未全32不发完成通知。04/05/08/27/29仍六原声疑点待用户异步回复，无新来源不得猜译过门。
+
+
 ### 2026-10-19 EP20唯一尾隙例外ROOT14已审，待部署
 
 - ROOT13全部33原组测完：15自然3.64>max3.48、16自然2.97>max2.6004，其余合格。两遍新稿改15 Força a maldição a te matar em três dias（独立语义审准省Ela）；16 Três dias? Explica（独立审准澄清功能，保留surprised而非怒令）。ROOT13新15缓存3.66仍超旧max3.48、10/33后再次requires_review，不盲重发15。16新音频尚未生成。
