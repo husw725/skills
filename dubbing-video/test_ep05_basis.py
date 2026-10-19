@@ -23,11 +23,11 @@ class NameBasisTests(TestCase):
             r=copy.deepcopy(record);r['input'].update(clip_start=16.3-pad,clip_end=18.733+pad,method='unprompted-local-large-v3-'+label)
             mapping[f'output/carmilla-source-large-20261019/episode-05/e05-7/{label}/large-v3.json']=r
         mapping['output/carmilla-source-verification-20261017/episode-05/e05-7/medium.en.json']={'input':{'source_review_sha256':'review'},'segments':[{'words':words('Camilla come to my bedroom',16.2)}]}
-        return rows,evidence,board,mapping
+        return rows,evidence,board,{Path(k).as_posix():v for k,v in mapping.items()}
 
     def run_basis(self,rows,evidence,board,mapping):
         def sha(p):return '69f74147e3334731bc3a76048724833325d2ec74642fb52620eda87352e3d4f1' if Path(p).name=='model.bin' else 'sha'
-        with patch.object(basis,'read_json',side_effect=lambda p:mapping[str(p)]),patch.object(basis,'digest',side_effect=sha):
+        with patch.object(basis,'read_json',side_effect=lambda p:mapping[Path(p).as_posix()]),patch.object(basis,'digest',side_effect=sha):
             return basis.reconstruct(rows,evidence,board,Path('source.wav'),'review')
 
     def test_editorial_name_and_privacy_preserve_conflicting_source(self):
