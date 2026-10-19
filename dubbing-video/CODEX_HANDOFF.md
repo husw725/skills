@@ -2,6 +2,16 @@
 
 ## 当前接力记录
 
+### 2026-10-19 用户问基于原始字幕分析：六处重新分级，未启动重配
+
+- 已按用户问题实际取Windows原字幕：04/08/27/29 SRT及carmilla_Ep05.st（扩展名误写）。Mac忽略original-srt-five.private.json保留5文件完整CRLF文本与Windows原SHA，五份text.encodeUTF8均可重算SHA匹配；对照subtitle-context-review.private.json的source逐id/text/time全122条（16+36+28+23+19）零差异。27截断确在原件，无parser漏行；原文件序号错序按时间分析，未改原时码。
+- 私有分析subtitle-basis-analysis.private.json SHA ccfa2b3aee1e4457653120f7c4b87d61f0c6036ee62203e642defadc84c222cd，独立subtitle-basis-analysis-audit.private.md放行本轮分类：2语义可整理/2实质校订候选/2原字幕含义缺失不唯一。不能再把低p虚词直接当确定反证，要求每个语法整理都逐字听清；但可解释译法不是原声转写已确认。
+- 可按字幕语义整理：04 e04-16 I'll see you for tonight→Te vejo esta noite（保留you，不按分镜换her）；05 e05-26 leave us your privacy sir→Deixe-nos a sós, senhor（保留独处/隐私意图及sir）。两个为译义整理，不冒称原声介词已确认。
+- 有依据但需标推断的实质校订候选：05 e05-7 Connor→Camila, vem pro meu quarto（人物表/分镜/邻句与medium方向支持，非普通名字本地化）；29 e29-8 How many years→Os capangas dela（围城/How many/十来个低阶者/分镜支持来敌语义域，但her/复数/具体句式不声学确定）。两者保留原文和依据，未悄然写回源SRT/生产稿。
+- 仍缺唯一意思：08 e08-6 for her字面给她/为她 vs分镜和她有关，不能唯一选；27 e27-12原文件就停when you’，下一I don't care不承接，不可补最虚弱时或删when条件。27 e27-2封印仪式句也未完成，覆盖风险继续保留。
+- 本轮只是原字幕/剧本上下文只读分析与四修订候选，production_modifiedfalse/audio_listenedfalse/paid0；没有解除原声守门、没有新增clone/TTS/上传/钉钉通知，Review仍27/32。后续若用户要按编辑校订继续，应另有可追溯source-basis/version/SHA/context审核，不伪称human_listened或source_reading_status字幕逐词confirmed。原6处不是同等级，优先补证08/27；人名及爪牙候选也需明确编辑决策而非宣称事实。
+
+
 ### 2026-10-19 本轮最终实证：27/32视频+字幕Review齐，5集待真实源确认，停顿钉钉已发送
 
 - 用户在公司要求完整盯完，本轮实际持续跟到EP20出片、上传、全27重核及停顿通知，不是只启动即结束。新增EP20 Review video2661/version2+subtitle2662，旧版本保留；全27 publication-result集号01/02/03/06/07/09/10/11/12/13/14/15/16/17/18/19/20/21/22/23/24/25/26/28/30/31/32。最终progress published27/requires_review{} /all_32_publishedfalse。
