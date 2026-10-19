@@ -28,7 +28,8 @@ def delivery(n,folder,receipt,base,prefix,validated):
         raise ValueError('Only version-matched delivered video and subtitle may enter the page')
     url=urlsplit(receipt['url']);origin=urlsplit(base);key=unquote(url.path).lstrip('/')
     if (url.scheme!='https' or url.netloc!=origin.netloc or url.query or url.fragment
-            or not key.startswith(prefix+'videos/') or '..' in key.split('/')):
+            or key!=prefix+f'season-revisions/Carmilla_EP{n:02}_pt-BR_season-revision-{receipt["video_sha256"]}.mp4'
+            or '..' in key.split('/')):
         raise ValueError('Reuse only existing unsigned videos under the approved S3 destination')
     stat=video.stat();cache_key=(str(video),stat.st_size,stat.st_mtime_ns,report['output_sha256'],digest(folder/'plan.json'),digest(folder/'render-report.json'))
     if cache_key not in validated:

@@ -22,7 +22,7 @@ class RevisionDashboardTests(TestCase):
         save_json(folder/'render-report.json',report)
         receipt={'episode':5,'asset_id':2690,'subtitle_asset_id':2691,'prior_versions_retained':True,
                  'video_sha256':digest(video),'subtitle_sha256':digest(subtitle),
-                 'url':'https://starlitshorts.s3.amazonaws.com/aigc/drama/test/videos/ep05.mp4'}
+                 'url':'https://starlitshorts.s3.amazonaws.com/aigc/drama/test/season-revisions/Carmilla_EP05_pt-BR_season-revision-'+digest(video)+'.mp4'}
         return receipt,subtitle
 
     def test_only_matching_published_version_and_approved_unsigned_origin(self):
