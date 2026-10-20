@@ -23,6 +23,8 @@ def inventory():
         source_path=sources(n)[1];original=read_json(source_path)['segments']
         subtitle_path=folder/f'Carmilla_EP{n:02}_pt-BR_revised.srt';subtitles=load_segments(subtitle_path)
         receipt=read_json(PUBLICATION/f'episode-{n:02}'/report['output_sha256']/'publication-result.json')
+        from resume_season_publication import retained_delivery
+        retained_delivery(n,folder,receipt,receipt,PUBLICATION/f'episode-{n:02}'/report['output_sha256']/'candidate.json')
         if (plan['episode']!=n or plan['project_id']!=59 or plan['blocking_issues']
                 or digest(folder/'reviewed.json')!=plan['reviewed_response_sha256']
                 or digest(source_path)!=plan['input_sha256'][str(source_path)]
@@ -111,9 +113,15 @@ def build(episodes):
 def publish(path,manifest,config):
     import requests
     with process_lock(ROOT/'publication.lock',timeout=0):
+        if digest(path)!=manifest['document_sha256']:raise ValueError('Document changed after build')
         client=Mflix(config);ledger_path=ROOT/'review-ledger.private.json';ledger=read_json(ledger_path) if ledger_path.exists() else {'items':{}}
         from notify_season_complete import verify_delivery
         published={str(e['episode']):read_json(PUBLICATION/f'episode-{e["episode"]:02}'/e['video_sha256']/'publication-result.json') for e in manifest['episodes']}
+        for e in manifest['episodes']:
+            receipt=published[str(e['episode'])]
+            for key in ('video_sha256','subtitle_sha256','version','subtitle_asset_id'):
+                if receipt[key]!=e[key]:raise ValueError('Document delivery binding changed')
+            if receipt['asset_id']!=e['video_asset_id']:raise ValueError('Document video binding changed')
         verify_delivery({'all_32_published':True,'published':published},materials(client,148))
         sha=manifest['document_sha256'];upload=ROOT/'upload.private.json'
         if upload.exists():
@@ -124,8 +132,11 @@ def publish(path,manifest,config):
             if not isinstance(signed,str) or not signed.startswith('https://'):raise ValueError('Expected Review HTTPS upload URL')
             cached={'sha256':sha,'upload_url':signed,'url':signed.split('?')[0],'status':'uploading'};save_json(upload,cached)
         if cached['status']!='uploaded':
+            import hashlib
+            body=path.read_bytes()
+            if hashlib.sha256(body).hexdigest()!=sha:raise ValueError('Document changed before upload')
             try:
-                response=client.http.put(cached['upload_url'],data=path.read_bytes(),timeout=90);response.raise_for_status()
+                response=client.http.put(cached['upload_url'],data=body,timeout=90);response.raise_for_status()
             except requests.RequestException:raise RuntimeError('Document upload failed; signed object checkpoint retained') from None
             cached['status']='uploaded';save_json(upload,cached)
         spec={'projectId':148,'gateType':'DOCUMENT','documentKind':'DOCUMENT',
