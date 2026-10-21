@@ -11,8 +11,6 @@ def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--root',required=True,type=Path);a=p.parse_args()
  if sys.platform!='win32':p.error('Local audio screening runs on Windows')
  from faster_whisper import WhisperModel
- import soundfile
- import numpy as np
  local=Path('output/tools/source-asr-models/large-v3');verified=read_json(local/'verified.json');official=read_json(local/'official-source.json')
  if verified.get('repo')!='Systran/faster-whisper-large-v3' or verified.get('official_hashes_verified') is not True or verified.get('revision')!=official['revision']:raise ValueError('Pinned local ASR model required')
  expected=next(f['lfs']['sha256'] for f in official['siblings'] if f['rfilename']=='model.bin')
@@ -29,7 +27,6 @@ def main():
     result=read_json(target)
     if result['audio_sha256']!=state['audio_sha256'] or result['decoding']!=decoding:raise ValueError('Prior ASR binding changed')
    else:
-    data,sr=soundfile.read(audio,dtype='float32')
     # Whisper takes 16kHz floats; use its audio decoder to preserve correct resampling.
     from faster_whisper.audio import decode_audio
     data=decode_audio(str(audio),sampling_rate=16000)
