@@ -31,13 +31,28 @@ SPECS=[
  ('irina-context',32,['e32-7','e32-8','e32-9','e32-10','e32-11','e32-12'],[7823],None,.9,'auto','Diagnostic continuous same-speaker passage. Auto is not verified emotional transfer or a production regrouping.')]
 
 
-def validate(manifest):
+def expected_request(role,text,speed,emotion,bank):
+ return {'projectId':59,'model':'speech-2.8-hd','text':text,'voiceId':bank[role]['voice_id'],
+  'languageBoost':'Portuguese','emotion':emotion,'speed':speed,'vol':1,'pitch':0,'format':'wav',
+  'language':None,'outputFormat':None,'duration':None,'prompt':None,'referenceVideoList':[]}
+
+
+def validate(manifest,require_binding=True):
  if manifest['project_id']!=59 or manifest['review_project_id']!=148 or len(manifest['cases'])!=9:raise ValueError('Unexpected clone audition scope')
+ if require_binding and read_json(ROOT/'manifest-fingerprint.json')['fingerprint']!=fingerprint(manifest):raise ValueError('Audition manifest is not bound')
  for path,sha in manifest['input_sha256'].items():
   if digest(Path(path))!=sha:raise ValueError('Bound audition input changed')
  bank=read_json(BANK)['voices'];seen=set()
- for case in manifest['cases']:
+ for case,spec in zip(manifest['cases'],SPECS):
+  cid,n,cues,comment_ids,text,speed,emotion,hypothesis=spec
+  if (case['id'],case['episode'],case['cue_ids'],case['comment_ids'],case['hypothesis'])!=(cid,n,cues,comment_ids,hypothesis):raise ValueError('Only fixed audition cases are allowed')
+  units=case['source_units'];role=case['production_voice']
+  if role not in ('Laura','Father','Irina') or any(u['production_voice']!=role for u in units):raise ValueError('Unexpected clone role')
+  caption=' '.join(u['translation'] for u in units)
+  if case['caption']!=caption:raise ValueError('Source caption changed')
+  if text is None:text=(' <#0.35#> ' if len(units)>1 else ' ').join(u['translation'] for u in units)
   req=case['request']
+  if req!=expected_request(role,text,speed,emotion,bank):raise ValueError('Request differs from fixed audition specification')
   if case['id'] in seen or not re.fullmatch('[a-z-]+',case['id']):raise ValueError('Invalid case ID')
   seen.add(case['id'])
   if (req['voiceId']!=bank[case['production_voice']]['voice_id'] or req['model']!='speech-2.8-hd'
@@ -66,9 +81,7 @@ def prepare():
    if row['episode']!=n or row['material']['assetId']!=receipt['asset_id']:raise ValueError('Feedback version differs')
   role=units[0]['production_voice'];caption=' '.join(u['translation'] for u in units)
   if text is None:text=(' <#0.35#> ' if len(units)>1 else ' ').join(u['translation'] for u in units)
-  req={'projectId':59,'model':'speech-2.8-hd','text':text,'voiceId':bank[role]['voice_id'],
-   'languageBoost':'Portuguese','emotion':emotion,'speed':speed,'vol':1,'pitch':0,'format':'wav',
-   'language':None,'outputFormat':None,'duration':None,'prompt':None,'referenceVideoList':[]}
+  req=expected_request(role,text,speed,emotion,bank)
   baseline_units=[next(r for r in report['utterances'] if r['id']==u['id']) for u in units]
   if any(r['request']['voiceId']!=req['voiceId'] for r in baseline_units):raise ValueError('Do not substitute a different clone')
   baselines={r['fitted_path']:r['fitted_sha256'] for r in baseline_units}
@@ -82,13 +95,19 @@ def prepare():
  manifest={'project_id':59,'review_project_id':148,'cases':cases,'input_sha256':inputs,
   'new_clone_count':0,'native_listening_passed':False,'paid_request_limit':9,
   'policy':'A/B raw audition only. Correct existing clone IDs; no original SRT, plan, audio or picture replacement.'}
- validate(manifest);path=ROOT/'manifest.private.json'
+ validate(manifest,False);path=ROOT/'manifest.private.json'
  if path.exists() and fingerprint(read_json(path))!=fingerprint(manifest):raise ValueError('Existing manifest changed')
+ bind(ROOT/'manifest-fingerprint.json',manifest)
  save_json(path,manifest);print('CLONE_MANIFEST_READY',len(cases),flush=True)
 
 
 def synthesize(manifest,config,ffmpeg):
  validate(manifest);requests={};selected={};cache_report=[]
+ legacy_roots={Path(f'output/drama-01/episode-{case["episode"]:02}') for case in manifest['cases']}|{ROOT/'requests'}
+ for legacy in legacy_roots:
+  for pending in legacy.rglob('*.submission-pending.json'):
+   accepted=pending.with_name(pending.name.removesuffix('.submission-pending.json')+'.json')
+   if not accepted.exists() or not read_json(accepted).get('taskId'):raise ValueError('Unknown earlier payment; reconcile instead of creating a new request')
  # Inspect every previous episode receipt/pending marker before any paid call.
  for case in manifest['cases']:
   request=case['request'];key=fingerprint(request)
@@ -105,9 +124,11 @@ def synthesize(manifest,config,ffmpeg):
  client=None;results={}
  for key,request in requests.items():
   folder=selected[key];old=(folder/'submission.private.json').exists()
-  if folder!=ROOT/'requests'/key:
+  if folder!=ROOT/'requests'/key or (folder/'audio-receipt.json').exists():
    path=folder/'original.wav';receipt=read_json(folder/'audio-receipt.json')
-   if receipt['sha256']!=digest(path):raise ValueError('Existing paid audio changed')
+   accepted=read_json(folder/'submission.private.json')
+   if (read_json(folder/'request-fingerprint.json')['fingerprint']!=key or receipt['sha256']!=digest(path)
+    or receipt['task_id']!=accepted['taskId']):raise ValueError('Existing paid audio binding changed')
   else:
    if client is None:client=Mflix(config)
    path,receipt=generate(client,request,folder)
@@ -132,13 +153,14 @@ def render(manifest,ffmpeg):
    if original:original.append(np.zeros(round(.35*RATE),dtype='float32'))
    original.append(read_audio(path,ffmpeg))
   baseline=root/f'{index:02}-baseline.wav';write_audio(baseline,np.concatenate(original))
-  for label,audio in [('A - CURRENT',baseline),('B - CANDIDATE',Path(result['path']))]:
+  for label,audio in [('A - CURRENT FITTED',baseline),(f'B - NEW RAW (speed {case["request"]["speed"]})',Path(result['path']))]:
    suffix='a' if label.startswith('A') else 'b';name=f'{index:02}-{suffix}'
    duration=max(4,len(read_audio(audio,ffmpeg))/RATE+1)
    text=(f'{label} | {index:02}/{len(manifest["cases"])} | EP.{case["episode"]:02} | {case["production_voice"]}'
     f'\\N\\N{case["caption"]}\\N\\N{case["hypothesis"]}'
     '\\NExisting clone, unchanged voice ID | native review pending'
-    '\\NRaw dry-voice audition; no final timing or episode replacement')
+    '\\NA: current fitted dry voice | B: new raw dry voice'
+    '\\NNo episode replacement; B timing and performance need review')
    ass=root/f'{name}.ass';ass.write_text('[Script Info]\nScriptType: v4.00+\nPlayResX: 1280\nPlayResY: 720\n[V4+ Styles]\n'
     'Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n'
     'Style: Default,Arial,30,&H00FFFFFF,&H00FFFFFF,&H00151A25,&H00151A25,0,0,0,0,100,100,0,0,1,1,0,5,60,60,40,1\n[Events]\n'
@@ -156,6 +178,7 @@ def render(manifest,ffmpeg):
  report={'output_sha256':digest(output),'manifest_sha256':digest(ROOT/'manifest.private.json'),
   'generation_sha256':digest(ROOT/'generation-result.private.json'),'clips':clips,'case_count':len(manifest['cases']),
   'new_clone_count':0,'native_listening_passed':False,'episode_replaced':False,
+  'baseline_kind':'Existing production-fitted dry voice; not original raw TTS',
   'duration_seconds':float(probe(output,ffmpeg)['format']['duration'])}
  save_json(ROOT/'reel-report.private.json',report);print('CLONE_AB_REEL_READY',len(clips),report['duration_seconds'],flush=True)
 
