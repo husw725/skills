@@ -127,9 +127,19 @@ def main():
         for source,sha in item['input_sha256'].items():
             if digest(Path(source))!=sha:p.error('Reviewed audition source changed')
     import requests
+    reused={};aliases={}
     with requests.Session() as http:
         for item in items[:a.limit]:
+            key=fingerprint({'model':MODEL,'request':payload(item)})
+            if key in reused:
+                source=reused[key]
+                aliases[item['id']]={'source_item_id':source['item']['id'],
+                    'audio_sha256':source['audio_sha256'],'request_fingerprint':key}
+                save_json(a.output/'aliases.private.json',aliases)
+                print('GEMINI_SAMPLE_EXACT_REUSE',item['id'],source['item']['id'],flush=True)
+                continue
             result=generate(item,a.output,http)
+            reused[key]=result
             print('GEMINI_SAMPLE_READY',item['id'],round(result['duration_seconds'],3),flush=True)
 
 
