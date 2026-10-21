@@ -105,6 +105,9 @@ def annotate(root,config):
  from publish_review import materials
  import re,unicodedata
  result=read_json(root/'reel-publication-result.private.json');report=read_json(root/'audition-reel-report.private.json')
+ if (result['project_id']!=148 or result['asset_id']!=2728
+  or result['sha256']!=report['output_sha256'] or result['sha256']!=digest(root/'Carmilla_Gemini_pt-BR_feedback_audition_v1.mp4')
+  or result['name']!=f'Carmilla | Gemini pt-BR | Feedback audition v1 | {result["sha256"][:12]}'):raise ValueError('Only this newly created audition can be annotated')
  screened=read_json(root/'asr-screening.private.json')['results']
  if len(screened)!=report['unique_generated_audio'] or len({r['item_id'] for r in screened})!=len(screened):raise ValueError('Incomplete content screening')
  expected={e['source_item_id']:e for e in report['items']}
@@ -119,15 +122,19 @@ def annotate(root,config):
   if row['name']!=result['name'] or row['url']!=result['url'] or result['sha256'] not in row.get('note',''):raise ValueError('Candidate scope differs')
   return row
  before=current()
+ basis=fingerprint({'screening_sha256':digest(root/'asr-screening.private.json'),
+  'report_sha256':digest(root/'audition-reel-report.private.json'),'result_sha256':digest(root/'reel-publication-result.private.json'),
+  'asset_id':result['asset_id'],'name':result['name'],'url':result['url'],'version':before.get('version')})
  if marker.exists():
   record=read_json(marker)
+  if record['input_fingerprint']!=basis or any(before.get(k)!=record['before'].get(k) for k in ('name','url','version','tags','status')):raise ValueError('Earlier metadata basis changed')
   if before['note']==record['target_note']:
    record['status']='verified';save_json(marker,record);print('GEMINI_SCREENING_NOTE_VERIFIED',result['asset_id'],flush=True);return
   raise ValueError('Earlier note update unresolved; no automatic repeat')
  extra=('\n\n试听注意：31段已做本地ASR内容筛查，但不是母语听审。以下是转写分歧候选，不是已确认配音错误；pra/para可能只是缩写展开。'
-  '\n26/33段原始时长超过原字幕窗，尚未对时，不能直接替换原片。背景英语/窗帘音效未处理。')
+  f'\n{sum(not e["within_original_window"] for e in report["items"])}/{report["sample_cases"]}段原始时长超过原字幕窗，尚未对时，不能直接替换原片。背景英语/窗帘音效未处理。')
  extra+=''.join(f'\n{r["item_id"]}: 目标「{r["expected_text"]}」；ASR「{r["asr_transcript"]}」' for r in differences)
- record={'status':'submitting','asset_id':result['asset_id'],'before':before,'target_note':before['note']+extra,'started_at':time.time()}
+ record={'status':'submitting','input_fingerprint':basis,'asset_id':result['asset_id'],'before':before,'target_note':before['note']+extra,'started_at':time.time()}
  save_json(marker,record)
  client.call('updateReviewMaterial',{'material':{'projectId':148,'gateType':'FINAL_CUT','assetId':result['asset_id'],'note':record['target_note']}})
  after=current()
