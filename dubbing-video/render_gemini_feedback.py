@@ -100,14 +100,51 @@ def publish(root,path,report,config):
  print('GEMINI_REEL_REVIEW_VERIFIED',asset,flush=True)
 
 
+def annotate(root,config):
+ from mflix_client import Mflix
+ from publish_review import materials
+ import re,unicodedata
+ result=read_json(root/'reel-publication-result.private.json');report=read_json(root/'audition-reel-report.private.json')
+ screened=read_json(root/'asr-screening.private.json')['results']
+ if len(screened)!=report['unique_generated_audio'] or len({r['item_id'] for r in screened})!=len(screened):raise ValueError('Incomplete content screening')
+ expected={e['source_item_id']:e for e in report['items']}
+ for r in screened:
+  e=expected[r['item_id']]
+  if r['audio_sha256']!=e['audio_sha256'] or r['expected_text']!=e['item']['text']:raise ValueError('Content screening binding differs')
+ norm=lambda s:re.sub(r'[^\w]+','',unicodedata.normalize('NFC',s).casefold())
+ differences=[r for r in screened if norm(r['expected_text'])!=norm(r['asr_transcript'])]
+ marker=root/'reel-content-note.private.json';client=Mflix(config)
+ def current():
+  row=next(r for r in materials(client,148) if r['assetId']==result['asset_id'] and r['gateType']=='FINAL_CUT')
+  if row['name']!=result['name'] or row['url']!=result['url'] or result['sha256'] not in row.get('note',''):raise ValueError('Candidate scope differs')
+  return row
+ before=current()
+ if marker.exists():
+  record=read_json(marker)
+  if before['note']==record['target_note']:
+   record['status']='verified';save_json(marker,record);print('GEMINI_SCREENING_NOTE_VERIFIED',result['asset_id'],flush=True);return
+  raise ValueError('Earlier note update unresolved; no automatic repeat')
+ extra=('\n\n试听注意：31段已做本地ASR内容筛查，但不是母语听审。以下是转写分歧候选，不是已确认配音错误；pra/para可能只是缩写展开。'
+  '\n26/33段原始时长超过原字幕窗，尚未对时，不能直接替换原片。背景英语/窗帘音效未处理。')
+ extra+=''.join(f'\n{r["item_id"]}: 目标「{r["expected_text"]}」；ASR「{r["asr_transcript"]}」' for r in differences)
+ record={'status':'submitting','asset_id':result['asset_id'],'before':before,'target_note':before['note']+extra,'started_at':time.time()}
+ save_json(marker,record)
+ client.call('updateReviewMaterial',{'material':{'projectId':148,'gateType':'FINAL_CUT','assetId':result['asset_id'],'note':record['target_note']}})
+ after=current()
+ if after['note']!=record['target_note'] or any(after.get(k)!=before.get(k) for k in ('name','url','version','tags','status')):raise ValueError('Metadata-only readback differs')
+ record['status']='verified';record['verified_at']=time.time();save_json(marker,record)
+ print('GEMINI_SCREENING_NOTE_VERIFIED',result['asset_id'],flush=True)
+
+
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--root',required=True,type=Path);p.add_argument('--ffmpeg',required=True,type=Path)
- p.add_argument('--publish',action='store_true');p.add_argument('--mcp-config',type=Path);a=p.parse_args()
+ p.add_argument('--publish',action='store_true');p.add_argument('--annotate-content-check',action='store_true');p.add_argument('--mcp-config',type=Path);a=p.parse_args()
  if sys.platform!='win32':p.error('Render on Windows')
- if a.publish and not a.mcp_config:p.error('Review configuration required')
+ if (a.publish or a.annotate_content_check) and not a.mcp_config:p.error('Review configuration required')
  with process_lock(a.root/'reel.lock',timeout=0):
   path,report=render(a.root,a.ffmpeg);print('GEMINI_REEL_READY',report['sample_cases'],report['unique_generated_audio'],flush=True)
   if a.publish:publish(a.root,path,report,a.mcp_config)
+  if a.annotate_content_check:annotate(a.root,a.mcp_config)
 
 
 if __name__=='__main__':main()
