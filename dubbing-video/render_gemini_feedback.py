@@ -15,10 +15,16 @@ def render(root,ffmpeg):
  manifest=read_json(root/'manifest.private.json');aliases=read_json(root/'samples/aliases.private.json')
  entries=[]
  for item in manifest['items']:
+  from gemini_feedback_samples import payload,MODEL
+  for source,sha in item['input_sha256'].items():
+   if digest(Path(source))!=sha:raise ValueError('Audition source changed before render')
   sid=aliases.get(item['id'],{}).get('source_item_id',item['id'])
   folder=root/'samples'/sid;state=read_json(folder/'request-state.private.json');audio=folder/'gemini.wav'
   if state['status']!='completed' or digest(audio)!=state['audio_sha256']:raise ValueError('Audition audio incomplete')
-  if sid!=item['id'] and fingerprint(state['request'])!=fingerprint(__import__('gemini_feedback_samples').payload(item)):raise ValueError('Alias request differs')
+  if state['model']!=MODEL or fingerprint(state['request'])!=fingerprint(payload(item)):raise ValueError('Rendered request differs from current caption/voice')
+  if sid!=item['id']:
+   alias=aliases[item['id']]
+   if alias['request_fingerprint']!=fingerprint({'model':MODEL,'request':payload(item)}) or alias['audio_sha256']!=state['audio_sha256']:raise ValueError('Alias binding differs')
   with wave.open(str(audio),'rb') as wav:duration=wav.getnframes()/wav.getframerate()
   entries.append({'item':item,'source_item_id':sid,'audio_sha256':digest(audio),'duration_seconds':duration,
     'original_window_seconds':item['end']-item['start'],'within_original_window':duration<=item['end']-item['start'],
