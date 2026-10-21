@@ -8,7 +8,7 @@ from rerun_carmilla_season import validate_reviewed_plan
 from resume_season_publication import retained_delivery
 
 ROOT=Path('output/gemini-feedback-pilot-20261021')
-VOICES={'Laura':'Leda','Carmilla':'Kore','Father':'Charon','Mother':'Gacrux','Irina':'Zephyr'}
+VOICES={'Laura':'Leda','Carmilla':'Kore','Father':'Charon','Mother':'Gacrux','Irina':'Zephyr','Narrator_EP01':'Fenrir'}
 # IDs with repeated words remain explicit location candidates, not confirmed alignment.
 SELECTION=[
  (5,'e05-11',[7700]),
