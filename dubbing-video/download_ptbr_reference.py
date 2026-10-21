@@ -9,10 +9,28 @@ import requests
 import soundfile
 from process_lock import process_lock
 from translate import read_json,save_json
+from zipfile import ZipFile,ZipInfo,ZIP_DEFLATED
 
 ROOT=Path('input/pt-br-reference/fleurs-20261021')
 BASE='https://huggingface.co/datasets/google/fleurs/resolve/main/'
 LIMIT=64*1024*1024
+
+
+def export_pack(manifest):
+ path=ROOT/'FLEURS_pt-BR_reference_12.zip'
+ names=[s['filename'] for s in manifest['samples']]+['README.source.md','test.source.tsv','manifest.private.json']
+ if not path.exists():
+  temp=path.with_suffix('.tmp.zip')
+  with ZipFile(temp,'w',compression=ZIP_DEFLATED) as archive:
+   for name in names:
+    entry=ZipInfo(name,date_time=(2026,10,21,0,0,0));entry.compress_type=ZIP_DEFLATED
+    archive.writestr(entry,(ROOT/name).read_bytes())
+  temp.replace(path)
+ with ZipFile(path) as archive:
+  if archive.testzip() or sorted(archive.namelist())!=sorted(names):raise ValueError('Reference ZIP coverage differs')
+  for name in names:
+   if archive.read(name)!=(ROOT/name).read_bytes():raise ValueError('Reference ZIP content differs')
+ print('REFERENCE_PACK_READY',path.name,flush=True)
 
 
 class BoundedStream:
@@ -31,6 +49,9 @@ def main():
    m=read_json(manifest_path)
    for sample in m['samples']:
     if hashlib.sha256((ROOT/sample['filename']).read_bytes()).hexdigest()!=sample['sha256']:raise ValueError('Existing reference changed')
+   for name,sha in m['metadata_sha256'].items():
+    if hashlib.sha256((ROOT/name).read_bytes()).hexdigest()!=sha:raise ValueError('Existing reference metadata changed')
+   export_pack(m)
    print('REFERENCE_CACHE_VERIFIED',len(m['samples']),round(sum(s['duration_seconds'] for s in m['samples']),2),flush=True);return
   with requests.Session() as session:
    for name,relative in [('README.source.md','README.md'),('test.source.tsv','data/pt_br/test.tsv')]:
@@ -70,6 +91,7 @@ def main():
     'voice_cloning_authorized':False,'model_training_performed':False,'native_listening_performed':False,
     'metadata_sha256':{name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in ['README.source.md','test.source.tsv']}}
    save_json(manifest_path,manifest)
+   export_pack(manifest)
    print('REFERENCE_DOWNLOAD_VERIFIED',len(samples),round(sum(s['duration_seconds'] for s in samples),2),'SECONDS',limited.used,'COMPRESSED_BYTES',flush=True)
 
 
