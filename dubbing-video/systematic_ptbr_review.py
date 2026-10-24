@@ -150,6 +150,11 @@ def render(m,ffmpeg):
     if result.exists():
         r=read_json(result)
         if r['manifest_sha256']!=digest(ROOT/'manifest.private.json') or r['output_sha256']!=digest(out):raise ValueError('Existing baseline reel changed')
+        brief=ROOT/'brief-report.private.json'
+        if not brief.exists():write_brief(m,r)
+        else:
+            b=read_json(brief)
+            if digest(b['path'])!=b['sha256'] or b['render_report_sha256']!=digest(result):raise ValueError('Existing brief changed')
         print('SYSTEMATIC_REEL_REUSED',flush=True);return
     clips=ROOT/'chapters';clips.mkdir(exist_ok=True);rows=[];cursor=0.
     for c in m['chapters']:
@@ -194,7 +199,11 @@ def write_brief(m,r):
       'Text matches in inventory are orthographic inspection candidates, NOT proven pronunciation errors.',
       'EN below is the source text recorded in the reviewed production plan; current PT is exact reviewed unit text. Editorial annotations are retained, not silently resolved.',
       'Existing complete subtitle comparison: Review document 2714; current episode SRT files remain authoritative.',
-      f'Inventory: {m["whole_season_stats"]}', 'Limits: '+str(m['coverage_limits']), 'Checklist / 检查规则']
+      f'Corpus: {m["whole_season_stats"]["episode_count"]} episódios, '
+      f'{m["whole_season_stats"]["subtitle_cue_count"]} legendas, '
+      f'{m["whole_season_stats"]["unit_count"]} grupos de fala. '
+      f'{m["whole_season_stats"]["feedback_comment_count"]} comentários arquivados; comentários não equivalem a erros confirmados.',
+      'Limits: '+str(m['coverage_limits']), 'Checklist / 检查规则']
     paragraphs += [f'{key} | {name}: {text}' for key,name,text in RULES]
     paragraphs += ['Existing feedback register: reviewer statements, not confirmed causes. No comment is treated as acceptance.']
     paragraphs += [f'comment {c["comment_id"]} | EP {c["episode"]} | asset {c["asset_id"]} | {c["checklist_categories"]} | {c["content"]} | {c["location"]}' for c in m['feedback']]
@@ -211,7 +220,10 @@ def write_brief(m,r):
               f'Production: {u["production_voice"]} | source identity: {u.get("source_speaker","unknown")} | direction: {u["emotion"]}',
               'EN (reviewed plan): '+u['source_text'],'PT (current reviewed wording): '+u['translation']]
             notes={k:v for k,v in u.items() if k in ('issues','source_audio_readings','editorial_source_reconstructions') and v}
-            if notes:paragraphs.append('Source/editorial caveats: '+str(notes))
+            if notes:
+                paragraphs.append('Ressalva de origem/editorial: esta unidade possui anotações de fonte. '
+                  'Conferir legendas originais e documento 2714; o EN acima não é uma confirmação acústica. '
+                  'Identidade desconhecida permanece desconhecida. Evidência técnica detalhada fica no inventário privado.')
             paragraphs.append('Return: dimension / Aceitável-Ajustar-Não avaliado / description / suggested correction')
     paragraphs += ['Next step: validate changes in these complete contexts and transfer to other episodes only after explicit native acceptance.',
       'ASR checks words, not native accent quality. API success and Portuguese locale are not Brazilian pronunciation approval.',
