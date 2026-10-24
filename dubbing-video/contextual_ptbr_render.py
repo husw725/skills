@@ -78,7 +78,12 @@ def render(m,ffmpeg):
         report=read_json(report_path)
         for path,sha in report['artifact_sha256'].items():
             if digest(path)!=sha:raise ValueError('Previously rendered artifact changed')
-        if report['manifest_sha256']!=digest(ROOT/'manifest.private.json'):raise ValueError('Rendered manifest differs')
+        if (report['manifest_sha256']!=digest(ROOT/'manifest.private.json')
+          or report['generation_sha256']!=digest(ROOT/'generation-result.private.json')
+          or report['fit_report_sha256']!=digest(ROOT/'fit-report.private.json')
+          or report['screening_sha256']!=digest(ROOT/'content-screening.private.json')):raise ValueError('Rendered basis differs')
+        for c in report['chapters']:
+            if digest(c['path'])!=c['sha256']:raise ValueError('Previously rendered chapter changed')
         print('CONTEXT_REEL_REUSED',flush=True);return
     chapters=[];combined=[];cursor=0.
     for s in m['scenes']:

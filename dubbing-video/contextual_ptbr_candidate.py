@@ -252,7 +252,12 @@ def fit(m,ffmpeg):
             if natural>target*1.2+1e-6:
                 blocked.append({'unit_id':u['id'],'natural_seconds':natural,'target_seconds':target,'maximum_natural_seconds':target*1.2});continue
             out=ROOT/'fitted'/f'{u["id"]}.wav';out.parent.mkdir(exist_ok=True)
-            samples,factor=fit_speech(Path(r['path']),out,target,max(1.,natural/target),ffmpeg)
+            try:
+                samples,factor=fit_speech(Path(r['path']),out,target,max(1.,natural/target),ffmpeg)
+            except ValueError:
+                blocked.append({'unit_id':u['id'],'natural_seconds':natural,'target_seconds':target,
+                  'reason':'Actual fitted frames exceed the fixed timing/speed policy; raw audio retained, no paid retry'})
+                continue
             rows.append({'unit_id':u['id'],'path':str(out),'sha256':digest(out),'start':u['start'],
               'duration_seconds':len(samples)/RATE,'atempo_factor':factor,'raw_sha256':r['sha256'],
               'target_seconds':target,'audio_end_limit':u['audio_end_limit'],'unknown_retained':False})
