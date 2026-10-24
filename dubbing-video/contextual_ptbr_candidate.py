@@ -186,6 +186,7 @@ def preflight(m):
 
 
 def synthesize(m,config,ffmpeg):
+    import numpy as np
     validate(m);selected=preflight(m);requests={fingerprint(g['request']):g['request'] for g in known_groups(m)}
     results={};client=None;new=0
     for key,req in requests.items():
@@ -196,8 +197,11 @@ def synthesize(m,config,ffmpeg):
             if new>33:raise ValueError('Paid request bound exceeded')
             if client is None:client=Mflix(config)
             path,receipt=generate(client,req,folder)
+        samples=read_audio(path,ffmpeg)
+        if not len(samples) or not np.isfinite(samples).all() or float(np.max(np.abs(samples)))<1e-5:
+            raise ValueError('Paid audio is empty/nonfinite/silent; preserve receipt and inspect, never resubmit automatically')
         results[key]={'request':req,'path':str(path),'sha256':digest(path),'task_id':receipt['task_id'],
-          'duration_seconds':len(read_audio(path,ffmpeg))/RATE,'reused_completed_audio':reused}
+          'duration_seconds':len(samples)/RATE,'reused_completed_audio':reused}
         save_json(ROOT/'generation-progress.private.json',results)
         print('CONTEXT_AUDIO_READY',len(results),len(requests),'REUSED' if reused else 'NEW',flush=True)
     save_json(ROOT/'generation-result.private.json',{'results':results,'new_clone_count':0})
