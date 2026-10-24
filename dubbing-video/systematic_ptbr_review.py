@@ -139,6 +139,12 @@ def prepare(ffmpeg):
     validate(read_json(path));print('SYSTEMATIC_BASELINE_PREPARED',m['whole_season_stats']['unit_count'],flush=True)
 
 
+def audio_payload(path,ffmpeg):
+    p=subprocess.run([str(ffmpeg),'-v','error','-i',str(Path(path).resolve()),'-map','0:a:0',
+      '-c:a','copy','-f','hash','-hash','sha256','-'],check=True,capture_output=True,text=True)
+    return p.stdout.strip()
+
+
 def render(m,ffmpeg):
     validate(m);result=ROOT/'render-report.private.json';out=ROOT/'Carmilla_ptBR_systematic_CURRENT_BASELINE_v1.mp4'
     if result.exists():
@@ -157,11 +163,14 @@ def render(m,ffmpeg):
           f'drawbox=x=0:y=0:w=iw:h=55:color=black@0.8:t=fill,'
           f'drawtext=text=\'{label}\':fontcolor=white:fontsize=19:x=(w-tw)/2:y=18')
         subprocess.run([str(ffmpeg),'-v','error','-y','-i',str(Path(e['video']).resolve()),'-map','0:v:0','-map','0:a:0',
-          '-vf',vf,'-c:v','libx264','-preset','veryfast','-crf','23','-pix_fmt','yuv420p','-c:a','aac','-b:a','160k',
-          '-ar','48000','-ac','2','-movflags','+faststart',clip.name],cwd=clips,check=True,capture_output=True)
+          '-vf',vf,'-c:v','libx264','-preset','veryfast','-crf','23','-pix_fmt','yuv420p','-c:a','copy',
+          '-movflags','+faststart',clip.name],cwd=clips,check=True,capture_output=True)
+        original_audio=audio_payload(e['video'],ffmpeg)
+        if audio_payload(clip,ffmpeg)!=original_audio:raise ValueError('Baseline audio payload changed')
         duration=float(probe(clip,ffmpeg)['format']['duration'])
         rows.append({**c,'path':str(clip),'sha256':digest(clip),'subtitle_sha256':digest(srt),
-          'source_video_sha256':e['video_sha256'],'reel_start_seconds':cursor,'reel_end_seconds':cursor+duration,
+          'source_video_sha256':e['video_sha256'],'audio_payload_hash':original_audio,
+          'reel_start_seconds':cursor,'reel_end_seconds':cursor+duration,
           'rendered_duration_seconds':duration})
         cursor+=duration;print('SYSTEMATIC_CHAPTER_READY',c['id'],round(duration,3),flush=True)
     listing=clips/'concat.txt';listing.write_text(''.join(f"file '{Path(c['path']).name}'\n" for c in rows),encoding='utf-8')
