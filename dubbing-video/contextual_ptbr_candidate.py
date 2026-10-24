@@ -25,7 +25,7 @@ SCENES=((5,93.,tuple(f'e05-group-{i:03}' for i in range(24,33))),
         (24,0.,tuple(f'e24-group-{i:03}' for i in range(1,15))))
 GROUPS=(('e17-group-008','e17-group-009'),('e17-group-011','e17-group-012'),('e24-group-012','e24-group-013'))
 CHANGES={'e05-group-025','e05-group-028','e17-group-004','e17-group-009'}
-CAPS={'e24-group-003','e24-group-006','e24-group-011'}
+CAPS={'e24-group-002','e24-group-003','e24-group-006','e24-group-011'}
 ROLES={'Laura','Carmilla','Father','Irina'}
 
 
