@@ -106,7 +106,11 @@ def preflight(m):
                 if read_json(marker).get('fingerprint')==key:matches.append(marker.parent)
         folder=matches[0] if matches else target
         if c['reference'] and folder==target:raise ValueError('Reference must reuse completed prior audio')
-        if folder!=target or (folder/'audio-receipt.json').exists():completed(folder,req)
+        if folder!=target or (folder/'audio-receipt.json').exists():
+            _,receipt=completed(folder,req)
+            if c['reference'] and (receipt['sha256']!=c['source_audio']['sha256']
+              or receipt['task_id']!=c['source_audio']['task_id']):
+                raise ValueError('Reference must match the exact prior recording, not another synthesis')
         elif (folder/'submission.private.json').exists():
             accepted=read_json(folder/'submission.private.json')
             if not accepted.get('taskId'):raise ValueError('Existing task needs reconciliation')
@@ -143,7 +147,8 @@ def generated(m):
         r=g[fingerprint(c['request'])]
         if r['request']!=c['request'] or digest(r['path'])!=r['sha256']:raise ValueError('Audio changed')
         folder=Path(r['path']).parent;completed(folder,c['request'])
-        if c['reference'] and r['sha256']!=c['source_audio']['sha256']:raise ValueError('Reference changed')
+        if c['reference'] and (r['sha256']!=c['source_audio']['sha256']
+          or r['task_id']!=c['source_audio']['task_id']):raise ValueError('Reference changed')
     return g
 
 
