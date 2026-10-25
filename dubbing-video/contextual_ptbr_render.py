@@ -64,7 +64,7 @@ def verify_ready(m):
         if u['request'] is not None:
             a=audio[fingerprint(u['request'])]
             if (r['raw_sha256']!=a['sha256'] or digest(r['path'])!=r['sha256'] or not 1<=r['atempo_factor']<=1.2
-              or r['start']!=u['start'] or r['start']+r['duration_seconds']>u['audio_end_limit']+.000001):
+              or r['start']!=u.get('audio_start',u['start']) or r['start']+r['duration_seconds']>u['audio_end_limit']+.000001):
                 raise ValueError('Fitted candidate differs from approved policy')
         elif u.get('same_clone_original_retained'):
             if r.get('same_clone_original_retained') is not True:raise ValueError('Retained known audio must be explicit')
@@ -165,11 +165,18 @@ def render(m,ffmpeg):
       'Avaliar: naturalidade brasileira de toda a conversa, palavras não apontadas antes, sentido/negação/prazos, identidade vocal, interpretação, ritmo e mixagem.',
       'Comentar com D1/D2/D3 + A/B + tempo + frase. Escolher melhor/pior/sem diferença e explicar. Não é necessário enviar gravações pessoais.',
       'O rastreio textual da série inteira identifica candidatos para análise, não erros acústicos confirmados. Não transformar ausência de comentário em aprovação.']
-    if 'timing_revision_basis' in m:
+    if 'alignment_revision_basis' in m:
+        paragraphs += ['Alignment calibration:31 exact timing-parent recordings reused; one long sentence uses synthesis speed1.15. '
+          'The eyes question uses the same previously approved production onset111.041667s; original subtitle timing remains111.1s. '
+          'Postprocessing stays <=1.2, no word/pause cutting. Existing Father Corre! and source-unknown narration remain unchanged. '
+          'Total prior33+2 plus at most1 calibration request; zero new clones.']
+    elif 'timing_revision_basis' in m:
         paragraphs += ['Timing repair:30 exact parent recordings reused; only2 shortened-equivalent wordings newly generated. '
           'Father Corre! retains the existing published fitted recording with the same clone and complete words. '
           'One source-unknown narration also remains unchanged. Parent33 plus at most2 additional TTS; zero new clones.',
-          'Cache finding: five parent requests unnecessarily regenerated because numeric1/1.0 fingerprints differed. '
+          ]
+    if 'timing_revision_basis' in m:
+        paragraphs += ['Cache finding: five parent requests unnecessarily regenerated because numeric1/1.0 fingerprints differed. '
           'This was a cache defect, now corrected by numeric-equivalent lookup with original receipt/marker verification. Charges already incurred are retained in the record.']
     for c in chapters:paragraphs.append(f'{c["scene_id"]}{c["label"]}: reel {c["reel_start"]:.3f}–{c["reel_end"]:.3f}s; EP{c["episode"]:02} original {c["source_start"]:.3f}–{c["source_end"]:.3f}s')
     for s in m['scenes']:
@@ -239,8 +246,12 @@ def publish(m,config):
             try:response=client.http.put(upload['signed_url'],data=body,timeout=180);response.raise_for_status()
             except Exception:raise RuntimeError('Upload failed; checkpoint retained, URL omitted') from None
             upload['status']='uploaded';save_json(state,upload)
-        timing_note=('时长返修版复用30父录音、2短稿补录、同Father音色旧Corre!完整录音及1unknown旧录音保留；父33加补录最多2，总35新请求/0clone。'
-          if 'timing_revision_basis' in m else '')
+        if 'alignment_revision_basis' in m:
+            timing_note=('对时校准版复用31条已付录音，仅长句合成speed1.15补1次；眼睛问句沿用当前已批准起音111.041667s，字幕111.1s不变。'
+              '后处理仍<=1.2且不截词/不剪停顿；Father旧Corre!与unknown原录音保留。父33+短稿2+最多1语速校准，总<=36/0clone。')
+        else:
+            timing_note=('时长返修版复用30父录音、2短稿补录、同Father音色旧Corre!完整录音及1unknown旧录音保留；父33加补录最多2，总35新请求/0clone。'
+              if 'timing_revision_basis' in m else '')
         note=('实际新音轨完整场景候选，非旧基线重发：D1日常对白/EP05末场，D2较长剧情说明与条件句/EP17，D3多人冲突与情绪变化/EP24。'
           '每场A当前成片/B新候选。B沿用角色已有MiniMax克隆，Laura/Carmilla部分原为Cartesia，改用其已有MiniMax克隆，不冒音色相似度已通过。'
           f'0新clone；{len(m["translation_changes"])}处文本/标点调整、3处同角色同情绪意群连接、4处有分镜或专业评审喊叫方向的大写合成控制，无IPA/错误拼写。'

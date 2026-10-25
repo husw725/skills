@@ -23,6 +23,7 @@ import systematic_ptbr_review as baseline
 PARENT_ROOT=Path('output/contextual-ptbr-candidate-20261024')
 ROOT=PARENT_ROOT
 TIMING_REVISION=False
+ALIGNMENT_REVISION=False
 MAX_NEW_REQUESTS=33
 BANK=Path('output/drama-01/voice-bank.json')
 SCENES=((5,93.,tuple(f'e05-group-{i:03}' for i in range(24,33))),
@@ -36,9 +37,16 @@ REPAIR_IDS={'e05-group-031','e17-group-004'}
 
 
 def configure_timing_revision():
-    global ROOT,TIMING_REVISION,MAX_NEW_REQUESTS,CHANGES
+    global ROOT,TIMING_REVISION,ALIGNMENT_REVISION,MAX_NEW_REQUESTS,CHANGES
     ROOT=Path('output/contextual-ptbr-candidate-20261025-timing-v2')
-    TIMING_REVISION=True;MAX_NEW_REQUESTS=2;CHANGES=CHANGES|{'e05-group-031'}
+    TIMING_REVISION=True;ALIGNMENT_REVISION=False;MAX_NEW_REQUESTS=2;CHANGES=CHANGES|{'e05-group-031'}
+
+
+def configure_alignment_revision():
+    global ROOT,ALIGNMENT_REVISION,MAX_NEW_REQUESTS
+    configure_timing_revision()
+    ROOT=Path('output/contextual-ptbr-candidate-20261025-alignment-v3')
+    ALIGNMENT_REVISION=True;MAX_NEW_REQUESTS=1
 
 
 def numeric_request_variants(req):
@@ -107,10 +115,48 @@ def parent_basis(proposal):
       'parent_paid_request_count':33,'max_additional_requests':2,'total_request_cap':35}
 
 
+def alignment_basis(proposal,timing):
+    root=Path('output/contextual-ptbr-candidate-20261025-timing-v2')
+    old=read_json(root/'manifest.private.json');a=read_json(root/'editorial-approval.private.json')
+    if (fingerprint(old)!='24434ad61425b45b9b4bf4d6bf25f1b1da71d64aa1ecf0b8e80ec7fbdb50ad9b'
+      or a['manifest_fingerprint']!=fingerprint(old) or digest(a['report_path'])!=a['report_sha256']):raise ValueError('Exact approved timing parent required')
+    for p,sha in old['inputs'].items():
+        if digest(p)!=sha:raise ValueError('Timing parent input changed')
+    prior=read_json(root/'editorial-proposal.private.json')
+    if set(proposal)!=set(prior) or any(proposal[k]!=v for k,v in prior.items() if k!='paid_request_cap'):
+        raise ValueError('No further wording changes in alignment calibration')
+    f=read_json(root/'fit-report.private.json');g=read_json(root/'generation-result.private.json')['results']
+    if (f['ready'] or {x['unit_id'] for x in f['blocked']}!=REPAIR_IDS or len(g)!=32
+      or f['manifest_sha256']!=digest(root/'manifest.private.json') or f['generation_sha256']!=digest(root/'generation-result.private.json')):
+        raise ValueError('Exact two measured timing blockers required')
+    preferred={}
+    for u in known_groups(old):
+        key=fingerprint(u['request']);r=g[key];receipt_req=r.get('receipt_request',u['request'])
+        if (r['request']!=u['request'] or digest(r['path'])!=r['sha256']
+          or fingerprint(receipt_req) not in numeric_request_variants(u['request'])):raise ValueError('Timing parent audio changed')
+        _,receipt=completed(Path(r['path']).parent,receipt_req)
+        if receipt['task_id']!=r['task_id']:raise ValueError('Timing parent task changed')
+        if u['id']!='e17-group-004':preferred[key]=r
+    scene=next(s for s in old['scenes'] if s['episode']==5)
+    original=next(x for x in scene['source_report']['utterances'] if x['id']=='e05-group-031')
+    start=original.get('audio_start',original['start'])
+    if (abs(start-111.04166666666667)>1e-8 or original['start']!=111.1 or start<original['start']-.08
+      or digest(original['fitted_path'])!=original['fitted_sha256']):raise ValueError('Reuse only the already-delivered approved onset')
+    timing['preferred_parent_audio']=preferred
+    paths=[root/n for n in ('manifest.private.json','editorial-approval.private.json','editorial-proposal.private.json','generation-result.private.json','fit-report.private.json')]+[Path(a['report_path'])]
+    timing['parent_input_sha256'].update({str(p):digest(p) for p in paths})
+    timing.update(max_additional_requests=1,total_request_cap=36,prior_timing_requests=2)
+    return {'source_parent_root':str(root),'prior_generation_count':32,'prior_fit_sha256':digest(root/'fit-report.private.json'),
+      'existing_approved_onset':{'unit_id':'e05-group-031','audio_start':start,'original_fitted_sha256':original['fitted_sha256']},
+      'one_synthesis_speed_calibration':{'unit_id':'e17-group-004','speed':1.15,'new_request_cap':1},
+      'no_pause_or_word_cutting':True}
+
+
 def build_manifest():
     base=read_json(baseline.ROOT/'manifest.private.json');baseline.validate(base)
     proposal=read_json(ROOT/'editorial-proposal.private.json')
     timing=parent_basis(proposal) if TIMING_REVISION else None
+    alignment=alignment_basis(proposal,timing) if ALIGNMENT_REVISION else None
     packet=read_json(ROOT/'source-context-packet.private.json');bank=read_json(BANK)['voices']
     if (set(proposal['translation_changes'])!=CHANGES or tuple(tuple(x) for x in proposal['regroups'])!=GROUPS
       or set(proposal['uppercase_performance_units'])!=CAPS or proposal['paid_request_cap']!=MAX_NEW_REQUESTS
@@ -171,7 +217,8 @@ def build_manifest():
             if re.findall(r'\w+',clean.casefold())!=re.findall(r'\w+',caption.casefold()):raise ValueError('Changed speakable words')
             unknown=any(p.get('source_speaker','unknown')=='unknown' for p in parts)
             if unknown and (len(parts)!=1 or u['id'] in proposal['translation_changes']):raise ValueError('Keep unknown unchanged')
-            req=None if unknown else expected_request(u['production_voice'],text,1.,u['emotion'],bank)
+            speed=1.15 if ALIGNMENT_REVISION and u['id']=='e17-group-004' else 1.
+            req=None if unknown else expected_request(u['production_voice'],text,speed,u['emotion'],bank)
             retain_known=TIMING_REVISION and u['id']=='e24-group-008'
             if retain_known:req=None
             if not unknown and u['production_voice'] not in ROLES:raise ValueError('Unapproved voice role')
@@ -180,6 +227,7 @@ def build_manifest():
               'production_voice':u['production_voice'],'source_speaker':u['source_speaker'],
               'emotion_direction':u['emotion'],'unknown_retained':unknown})
             if retain_known:groups[-1]['same_clone_original_retained']=True
+            if ALIGNMENT_REVISION and u['id']=='e05-group-031':groups[-1]['audio_start']=alignment['existing_approved_onset']['audio_start']
         if used!=set(spec['unit_ids']):raise ValueError('Source coverage incomplete')
         for i,g in enumerate(groups):
             following=groups[i+1]['start'] if i+1<len(groups) else e['duration_seconds']
@@ -197,9 +245,13 @@ def build_manifest():
       'timing_policy':proposal['timing_policy'],'translation_changes':proposal['translation_changes']}
     if timing:
         active={fingerprint(g['request']) for g in all_groups if g['request'] is not None}
-        if len(timing['preferred_parent_audio'])!=30 or not set(timing['preferred_parent_audio']).issubset(active):
+        if len(timing['preferred_parent_audio'])!=(31 if ALIGNMENT_REVISION else 30) or not set(timing['preferred_parent_audio']).issubset(active):
             raise ValueError('Keep all exact thirty parent recordings')
         result['timing_revision_basis']=timing
+    if alignment:
+        result['alignment_revision_basis']=alignment
+        result['timing_policy']={**proposal['timing_policy'],
+          'existing_approved_onset_exception':alignment['existing_approved_onset']}
     return result
 
 
@@ -289,8 +341,8 @@ def synthesize(m,config,ffmpeg):
         generated(m);print('CONTEXT_GENERATION_COMPLETE_REUSED',flush=True);return
     selected=preflight(m);requests={fingerprint(g['request']):g['request'] for g in known_groups(m)}
     receipt_requests=read_json(ROOT/'cache-preflight.private.json')['receipt_requests']
-    if TIMING_REVISION and sum(not (p/'audio-receipt.json').exists() for p in selected.values())>2:
-        raise ValueError('Only two new timing requests may be submitted')
+    if TIMING_REVISION and sum(not (p/'audio-receipt.json').exists() for p in selected.values())>m['paid_request_cap']:
+        raise ValueError('Finite timing/alignment request cap exceeded')
     results={};client=None;new=0
     for key,req in requests.items():
         folder=selected[key];reused=(folder/'audio-receipt.json').exists()
@@ -359,7 +411,7 @@ def fit(m,ffmpeg):
             if u['request'] is None:
                 rows.append({'unit_id':u['id'],'unknown_retained':u['unknown_retained'],
                   'same_clone_original_retained':u.get('same_clone_original_retained',False),'source_unit_ids':u['source_unit_ids']});continue
-            r=g[fingerprint(u['request'])];target=u['audio_end_limit']-u['start'];natural=r['duration_seconds']
+            r=g[fingerprint(u['request'])];start=u.get('audio_start',u['start']);target=u['audio_end_limit']-start;natural=r['duration_seconds']
             if natural>target*1.2+1e-6:
                 blocked.append({'unit_id':u['id'],'natural_seconds':natural,'target_seconds':target,'maximum_natural_seconds':target*1.2});continue
             out=ROOT/'fitted'/f'{u["id"]}.wav';out.parent.mkdir(exist_ok=True)
@@ -369,7 +421,7 @@ def fit(m,ffmpeg):
                 blocked.append({'unit_id':u['id'],'natural_seconds':natural,'target_seconds':target,
                   'reason':'Actual fitted frames exceed the fixed timing/speed policy; raw audio retained, no paid retry'})
                 continue
-            rows.append({'unit_id':u['id'],'path':str(out),'sha256':digest(out),'start':u['start'],
+            rows.append({'unit_id':u['id'],'path':str(out),'sha256':digest(out),'start':start,
               'duration_seconds':len(samples)/RATE,'atempo_factor':factor,'raw_sha256':r['sha256'],
               'target_seconds':target,'audio_end_limit':u['audio_end_limit'],'unknown_retained':False})
     save_json(ROOT/'fit-report.private.json',{'units':rows,'blocked':blocked,'ready':not blocked,
