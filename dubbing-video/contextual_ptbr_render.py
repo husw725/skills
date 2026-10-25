@@ -168,7 +168,8 @@ def render(m,ffmpeg):
     if 'alignment_revision_basis' in m:
         paragraphs += ['Alignment calibration:31 exact timing-parent recordings reused; one long sentence uses synthesis speed1.15. '
           'The eyes question uses the same previously approved production onset111.041667s; original subtitle timing remains111.1s. '
-          'Postprocessing stays <=1.2, no word/pause cutting. Existing Father Corre! and source-unknown narration remain unchanged. '
+          'Postprocessing stays <=1.2, separately from synthesis speed1.15 (nominal combined ceiling1.38). '
+          'This is not an approved natural speech rate. No word/pause cutting. Existing Father Corre! and source-unknown narration remain unchanged. '
           'Total prior33+2 plus at most1 calibration request; zero new clones.']
     elif 'timing_revision_basis' in m:
         paragraphs += ['Timing repair:30 exact parent recordings reused; only2 shortened-equivalent wordings newly generated. '
@@ -186,7 +187,8 @@ def render(m,ffmpeg):
               f'EN (reviewed source plan): {src}',f'A: {old}',f'B: {g["caption"]}',
               f'Production role: {g["production_voice"]}; source identity: {g["source_speaker"]}; emotional direction: {g["emotion_direction"]}.']
             if g['request'] is not None:
-                f=fitted[g['id']];paragraphs.append(f'Natural audio: {audio[fingerprint(g["request"])]["duration_seconds"]:.3f}s; fitted {f["duration_seconds"]:.3f}s; factor {f["atempo_factor"]:.4f}; no speech cut.')
+                f=fitted[g['id']];paragraphs.append(f'Generated audio: {audio[fingerprint(g["request"])]["duration_seconds"]:.3f}s; fitted {f["duration_seconds"]:.3f}s; '
+                  f'synthesis speed {g["request"]["speed"]:.3f}; post atempo {f["atempo_factor"]:.4f}; nominal combined {g["request"]["speed"]*f["atempo_factor"]:.4f}; no speech cut.')
             elif g.get('same_clone_original_retained'):
                 paragraphs.append('Existing published same-clone Corre! recording retained in full; not the longer new raw take. Timing and identity are bound to its original delivery report.')
     paragraphs+=['Machine transcript differences — review leads only, not proven mispronunciation:']
@@ -248,7 +250,8 @@ def publish(m,config):
             upload['status']='uploaded';save_json(state,upload)
         if 'alignment_revision_basis' in m:
             timing_note=('对时校准版复用31条已付录音，仅长句合成speed1.15补1次；眼睛问句沿用当前已批准起音111.041667s，字幕111.1s不变。'
-              '后处理仍<=1.2且不截词/不剪停顿；Father旧Corre!与unknown原录音保留。父33+短稿2+最多1语速校准，总<=36/0clone。')
+              '后处理atempo仍<=1.2，与合成speed分开（名义组合上限1.38，非自然语速已验收），不截词/不剪停顿；'
+              'Father旧Corre!与unknown原录音保留。父33+短稿2+最多1语速校准，总<=36/0clone。')
         else:
             timing_note=('时长返修版复用30父录音、2短稿补录、同Father音色旧Corre!完整录音及1unknown旧录音保留；父33加补录最多2，总35新请求/0clone。'
               if 'timing_revision_basis' in m else '')
@@ -256,7 +259,7 @@ def publish(m,config):
           '每场A当前成片/B新候选。B沿用角色已有MiniMax克隆，Laura/Carmilla部分原为Cartesia，改用其已有MiniMax克隆，不冒音色相似度已通过。'
           f'0新clone；{len(m["translation_changes"])}处文本/标点调整、3处同角色同情绪意群连接、4处有分镜或专业评审喊叫方向的大写合成控制，无IPA/错误拼写。'
           '按剧本/成片匹配来源：EP24实际对应final EP25 WOUNDED；未知原声身份e17-16保持原制作录音，不新配。'
-          '原源字幕时间码保留；新候选字幕/改动说明另附。实际1.2语速上限/.8后空隙、无截词，情绪/巴葡口音/音色/混音仍待专业听审。'
+          '原源字幕时间码保留；新候选字幕/改动说明另附。后处理atempo上限1.2/.8后空隙、无截词，情绪/巴葡口音/音色/实际语速/混音仍待专业听审。'
           '请按D1/D2/D3+A/B+时间/具体句子评整体自然度和其他未报词。不能从API或ASR成功推母语通过；未评不算通过。'
           f'机器转写分歧{r["asr_difference_count"]}处只作听审线索，详见配套说明。原32集及此前样片/文档保留。'
           f'{timing_note}'
