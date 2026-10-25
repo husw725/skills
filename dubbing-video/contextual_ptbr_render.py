@@ -57,11 +57,18 @@ def verify_ready(m):
     for u in expected:
         r=fitted[u['id']]
         if r['unknown_retained']!=u['unknown_retained']:raise ValueError('Unknown identity policy changed')
-        if not u['unknown_retained']:
+        if u['request'] is not None:
             a=audio[fingerprint(u['request'])]
             if (r['raw_sha256']!=a['sha256'] or digest(r['path'])!=r['sha256'] or not 1<=r['atempo_factor']<=1.2
               or r['start']!=u['start'] or r['start']+r['duration_seconds']>u['audio_end_limit']+.000001):
                 raise ValueError('Fitted candidate differs from approved policy')
+        elif u.get('same_clone_original_retained'):
+            if r.get('same_clone_original_retained') is not True:raise ValueError('Retained known audio must be explicit')
+            scene=next(s for s in m['scenes'] if s['episode']==u['episode'])
+            original=next(x for x in scene['source_report']['utterances'] if x['id']==u['id'])
+            if (digest(original['fitted_path'])!=original['fitted_sha256'] or original['atempo_factor']>1.2
+              or original.get('audio_start',original['start'])+original['fitted_duration_seconds']>u['audio_end_limit']+.000001):
+                raise ValueError('Retained published recording changed')
     screening=read_json(ROOT/'content-screening.private.json')['results']
     if [r['unit_id'] for r in screening]!=[u['id'] for u in known_groups(m)]:raise ValueError('Content screening incomplete')
     for u,r in zip(known_groups(m),screening):
@@ -91,13 +98,13 @@ def render(m,ffmpeg):
         candidate_rows=subtitle_rows(s);candidate_srt=folder/'candidate.srt';write_srt(candidate_srt,candidate_rows)
         original_rows=[{**r,'episode':str(s['episode']),'translation':r['text']} for r in load_segments(s['base']['subtitle'])]
         duration=s['base']['duration_seconds'];dialogue=np.zeros(math.ceil(duration*RATE),dtype='float32')
-        replaced={uid for u in s['groups'] if not u['unknown_retained'] for uid in u['source_unit_ids']}
+        replaced={uid for u in s['groups'] if u['request'] is not None for uid in u['source_unit_ids']}
         placements=[]
         for u in s['source_report']['utterances']:
             if u['id'] in replaced:continue
             placements.append((u.get('audio_start',u['start']),u['fitted_path'],u['id'],'original-retained'))
         for u in s['groups']:
-            if u['unknown_retained']:continue
+            if u['request'] is None:continue
             f=fitted[u['id']];placements.append((f['start'],f['path'],u['id'],'candidate'))
         intervals=[]
         for start,path,uid,kind in placements:
@@ -146,7 +153,7 @@ def render(m,ffmpeg):
     paragraphs=['Carmilla — nova candidata contextual A/B / 实际改动的完整语境候选',
       'A = áudio atualmente entregue; B = nova candidata. Não é o baseline 2808 republicado.',
       'B usa clones MiniMax já existentes, um por personagem. Laura/Carmilla mudam de configuração Cartesia em algumas falas para clone MiniMax existente; timbre/semelhança ainda precisam de avaliação.',
-      'Sem clonagem nova, IPA ou grafia inventada. Três ligações de pensamentos completos; quatro ajustes de texto. Pausas hesitantes apoiadas pela fonte foram preservadas.',
+      f'Sem clonagem nova, IPA ou grafia inventada. Três ligações de pensamentos completos; {len(m["translation_changes"])} ajustes de texto. Pausas hesitantes apoiadas pela fonte foram preservadas.',
       'Amostra direcionada de três contextos, não aprovação da série inteira. Direção emocional e maiúsculas não comprovam interpretação executada.',
       'EP24 corresponde ao storyboard EP25 WOUNDED. Usado o trecho atualizado e a associação revisada; não importar falas do antigo roteiro EP24.',
       'A identidade original de e17-16 continua desconhecida. A gravação de produção anterior é mantida sem nova síntese.',
@@ -154,6 +161,12 @@ def render(m,ffmpeg):
       'Avaliar: naturalidade brasileira de toda a conversa, palavras não apontadas antes, sentido/negação/prazos, identidade vocal, interpretação, ritmo e mixagem.',
       'Comentar com D1/D2/D3 + A/B + tempo + frase. Escolher melhor/pior/sem diferença e explicar. Não é necessário enviar gravações pessoais.',
       'O rastreio textual da série inteira identifica candidatos para análise, não erros acústicos confirmados. Não transformar ausência de comentário em aprovação.']
+    if 'timing_revision_basis' in m:
+        paragraphs += ['Timing repair:30 exact parent recordings reused; only2 shortened-equivalent wordings newly generated. '
+          'Father Corre! retains the existing published fitted recording with the same clone and complete words. '
+          'One source-unknown narration also remains unchanged. Parent33 plus at most2 additional TTS; zero new clones.',
+          'Cache finding: five parent requests unnecessarily regenerated because numeric1/1.0 fingerprints differed. '
+          'This was a cache defect, now corrected by numeric-equivalent lookup with original receipt/marker verification. Charges already incurred are retained in the record.']
     for c in chapters:paragraphs.append(f'{c["scene_id"]}{c["label"]}: reel {c["reel_start"]:.3f}–{c["reel_end"]:.3f}s; EP{c["episode"]:02} original {c["source_start"]:.3f}–{c["source_end"]:.3f}s')
     for s in m['scenes']:
         for g in s['groups']:
@@ -161,8 +174,10 @@ def render(m,ffmpeg):
             paragraphs += [f'{s["id"]} | {g["id"]} | EP{g["episode"]:02} {g["start"]:.3f}–{g["end"]:.3f}s',
               f'EN (reviewed source plan): {src}',f'A: {old}',f'B: {g["caption"]}',
               f'Production role: {g["production_voice"]}; source identity: {g["source_speaker"]}; emotional direction: {g["emotion_direction"]}.']
-            if not g['unknown_retained']:
+            if g['request'] is not None:
                 f=fitted[g['id']];paragraphs.append(f'Natural audio: {audio[fingerprint(g["request"])]["duration_seconds"]:.3f}s; fitted {f["duration_seconds"]:.3f}s; factor {f["atempo_factor"]:.4f}; no speech cut.')
+            elif g.get('same_clone_original_retained'):
+                paragraphs.append('Existing published same-clone Corre! recording retained in full; not the longer new raw take. Timing and identity are bound to its original delivery report.')
     paragraphs+=['Machine transcript differences — review leads only, not proven mispronunciation:']
     paragraphs += [f'{r["unit_id"]}: intended {r["expected_text"]} / ASR {r["asr_transcript"]}' for r in differences]
     paragraphs += ['If whole-context native review still shows broad accent defects, evaluate a different voice-preserving route instead of extending unproven per-word controls.']
@@ -213,13 +228,17 @@ def publish(m,config):
             try:response=client.http.put(upload['signed_url'],data=body,timeout=180);response.raise_for_status()
             except Exception:raise RuntimeError('Upload failed; checkpoint retained, URL omitted') from None
             upload['status']='uploaded';save_json(state,upload)
+        timing_note=('时长返修版复用30父录音、2短稿补录、同Father音色旧Corre!完整录音及1unknown旧录音保留；父33加补录最多2，总35新请求/0clone。'
+          if 'timing_revision_basis' in m else '')
         note=('实际新音轨完整场景候选，非旧基线重发：D1日常对白/EP05末场，D2较长剧情说明与条件句/EP17，D3多人冲突与情绪变化/EP24。'
           '每场A当前成片/B新候选。B沿用角色已有MiniMax克隆，Laura/Carmilla部分原为Cartesia，改用其已有MiniMax克隆，不冒音色相似度已通过。'
-          '0新clone；4处等义口语调整、3处同角色同情绪意群连接、4处有分镜或专业评审喊叫方向的大写合成控制，无IPA/错误拼写。'
+          f'0新clone；{len(m["translation_changes"])}处等义口语调整、3处同角色同情绪意群连接、4处有分镜或专业评审喊叫方向的大写合成控制，无IPA/错误拼写。'
           '按剧本/成片匹配来源：EP24实际对应final EP25 WOUNDED；未知原声身份e17-16保持原制作录音，不新配。'
           '原源字幕时间码保留；新候选字幕/改动说明另附。实际1.2语速上限/.8后空隙、无截词，情绪/巴葡口音/音色/混音仍待专业听审。'
           '请按D1/D2/D3+A/B+时间/具体句子评整体自然度和其他未报词。不能从API或ASR成功推母语通过；未评不算通过。'
-          f'机器转写分歧{r["asr_difference_count"]}处只作听审线索，详见配套说明。原32集及此前样片/文档保留。 Reel SHA256: {r["output_sha256"]}; Artifact SHA256: {sha}')
+          f'机器转写分歧{r["asr_difference_count"]}处只作听审线索，详见配套说明。原32集及此前样片/文档保留。'
+          f'{timing_note}'
+          f' Reel SHA256: {r["output_sha256"]}; Artifact SHA256: {sha}')
         spec={'projectId':148,'gateType':gate,'name':name+' | '+sha[:12],'url':upload['url'],
           'tags':['Carmilla','pt-BR','contextual-candidate','MiniMax'],'durationSeconds':duration,'note':note}
         if gate=='DOCUMENT':spec['documentKind']='DOCUMENT'
