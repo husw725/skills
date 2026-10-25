@@ -284,7 +284,10 @@ def preflight(m):
 
 def synthesize(m,config,ffmpeg):
     import numpy as np
-    validate(m);selected=preflight(m);requests={fingerprint(g['request']):g['request'] for g in known_groups(m)}
+    validate(m)
+    if (ROOT/'generation-result.private.json').exists():
+        generated(m);print('CONTEXT_GENERATION_COMPLETE_REUSED',flush=True);return
+    selected=preflight(m);requests={fingerprint(g['request']):g['request'] for g in known_groups(m)}
     receipt_requests=read_json(ROOT/'cache-preflight.private.json')['receipt_requests']
     if TIMING_REVISION and sum(not (p/'audio-receipt.json').exists() for p in selected.values())>2:
         raise ValueError('Only two new timing requests may be submitted')
