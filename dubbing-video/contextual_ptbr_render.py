@@ -39,7 +39,11 @@ def subtitle_rows(s):
 
 def run(args,**kwargs):
     try:return subprocess.run([str(x) for x in args],check=True,capture_output=True,**kwargs)
-    except subprocess.CalledProcessError:raise RuntimeError('Contextual media operation failed; inspect saved stage, no paid retry') from None
+    except subprocess.CalledProcessError as exc:
+        error=exc.stderr.decode('utf-8',errors='replace') if isinstance(exc.stderr,bytes) else exc.stderr
+        save_json(ROOT/'media-error.private.json',{'command':[str(x) for x in args],
+          'exit_code':exc.returncode,'stderr':(error or '')[-5000:]})
+        raise RuntimeError('Contextual media operation failed; private diagnostic retained, no paid retry') from None
 
 
 def payload(path,ffmpeg,stream):
@@ -179,7 +183,13 @@ def render(m,ffmpeg):
             elif g.get('same_clone_original_retained'):
                 paragraphs.append('Existing published same-clone Corre! recording retained in full; not the longer new raw take. Timing and identity are bound to its original delivery report.')
     paragraphs+=['Machine transcript differences — review leads only, not proven mispronunciation:']
-    paragraphs += [f'{r["unit_id"]}: intended {r["expected_text"]} / ASR {r["asr_transcript"]}' for r in differences]
+    for difference in differences:
+        scene=next(s for s in m['scenes'] if any(u['id']==difference['unit_id'] for u in s['groups']))
+        unit=next(u for u in scene['groups'] if u['id']==difference['unit_id'])
+        chapter=next(c for c in chapters if c['scene_id']==scene['id'] and c['label']=='B')
+        at=chapter['reel_start']+unit['start']-scene['start']
+        paragraphs.append(f'{difference["unit_id"]} | {scene["id"]}B reel {at:.3f}s / EP{scene["episode"]:02} {unit["start"]:.3f}s: '
+          f'intended {difference["expected_text"]} / ASR {difference["asr_transcript"]}')
     paragraphs += ['If whole-context native review still shows broad accent defects, evaluate a different voice-preserving route instead of extending unproven per-word controls.']
     document(brief,paragraphs)
     artifacts={str(p):digest(p) for p in [output,subtitle,brief]}
@@ -188,6 +198,7 @@ def render(m,ffmpeg):
       'artifact_sha256':artifacts,'output':str(output),'output_sha256':digest(output),'subtitle':str(subtitle),'brief':str(brief),
       'chapters':chapters,'duration_seconds':float(probe(output,ffmpeg)['format']['duration']),
       'source_audio_in_output':False,'unknown_source_group_retained':True,'new_clone_count':0,
+      'same_clone_original_retained_units':[u['id'] for s in m['scenes'] for u in s['groups'] if u.get('same_clone_original_retained')],
       'native_listening_passed':False,'asr_difference_count':len(differences),'asr_differences':differences}
     save_json(report_path,report);print('CONTEXT_REEL_READY',report['duration_seconds'],flush=True)
 
@@ -232,13 +243,19 @@ def publish(m,config):
           if 'timing_revision_basis' in m else '')
         note=('实际新音轨完整场景候选，非旧基线重发：D1日常对白/EP05末场，D2较长剧情说明与条件句/EP17，D3多人冲突与情绪变化/EP24。'
           '每场A当前成片/B新候选。B沿用角色已有MiniMax克隆，Laura/Carmilla部分原为Cartesia，改用其已有MiniMax克隆，不冒音色相似度已通过。'
-          f'0新clone；{len(m["translation_changes"])}处等义口语调整、3处同角色同情绪意群连接、4处有分镜或专业评审喊叫方向的大写合成控制，无IPA/错误拼写。'
+          f'0新clone；{len(m["translation_changes"])}处文本/标点调整、3处同角色同情绪意群连接、4处有分镜或专业评审喊叫方向的大写合成控制，无IPA/错误拼写。'
           '按剧本/成片匹配来源：EP24实际对应final EP25 WOUNDED；未知原声身份e17-16保持原制作录音，不新配。'
           '原源字幕时间码保留；新候选字幕/改动说明另附。实际1.2语速上限/.8后空隙、无截词，情绪/巴葡口音/音色/混音仍待专业听审。'
           '请按D1/D2/D3+A/B+时间/具体句子评整体自然度和其他未报词。不能从API或ASR成功推母语通过；未评不算通过。'
           f'机器转写分歧{r["asr_difference_count"]}处只作听审线索，详见配套说明。原32集及此前样片/文档保留。'
           f'{timing_note}'
           f' Reel SHA256: {r["output_sha256"]}; Artifact SHA256: {sha}')
+        for difference in r['asr_differences']:
+            scene=next(s for s in m['scenes'] if any(u['id']==difference['unit_id'] for u in s['groups']))
+            unit=next(u for u in scene['groups'] if u['id']==difference['unit_id'])
+            chapter=next(c for c in r['chapters'] if c['scene_id']==scene['id'] and c['label']=='B')
+            at=chapter['reel_start']+unit['start']-scene['start']
+            note+=f'\n机器听审线索非确证: {scene["id"]}B 合集{at:.3f}s / EP{scene["episode"]:02}原{unit["start"]:.3f}s，目标「{difference["expected_text"]}」/ASR「{difference["asr_transcript"]}」'
         spec={'projectId':148,'gateType':gate,'name':name+' | '+sha[:12],'url':upload['url'],
           'tags':['Carmilla','pt-BR','contextual-candidate','MiniMax'],'durationSeconds':duration,'note':note}
         if gate=='DOCUMENT':spec['documentKind']='DOCUMENT'
