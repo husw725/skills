@@ -30,3 +30,13 @@ if __name__=='__main__':
       'policy':'Machine timing leads only; compare frames and source before editorial correction; not speaker verification.'}
     save_json(ROOT/'ep32-source-timing.private.json',report)
     print(json.dumps(report,ensure_ascii=False),flush=True)
+    checks=[]
+    for start,end in [(7,13.1),(13,17),(16,23)]:
+        raw=subprocess.run([ffmpeg,'-v','error','-ss',str(start),'-i',packet['32']['plan']['assets']['video'],
+          '-t',str(end-start),'-f','f32le','-ar','16000','-ac','1','pipe:1'],capture_output=True,check=True)
+        segments,_=model.transcribe(np.frombuffer(raw.stdout,dtype='<f4'),language='en',beam_size=5,
+          temperature=0,condition_on_previous_text=False,vad_filter=False,word_timestamps=True)
+        checks.append({'source_start':start,'source_end':end,'source':'original video audio',
+          'segments':[{'start':start+s.start,'end':start+s.end,'text':s.text} for s in segments]})
+    save_json(ROOT/'ep32-original-video-crosscheck.private.json',checks)
+    print(json.dumps(checks,ensure_ascii=False),flush=True)
