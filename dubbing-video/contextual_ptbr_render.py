@@ -117,7 +117,13 @@ def render(m,ffmpeg):
             intervals.append((pos,pos+len(samples),uid));dialogue[pos:pos+len(samples)]+=samples
         intervals.sort()
         if any(a[1]>b[0]+48 for a,b in zip(intervals,intervals[1:])):raise ValueError('Candidate speech overlaps another unit')
-        dialogue_path=folder/'dialogue.wav';mixed=folder/'mix.wav';write_audio(dialogue_path,dialogue)
+        dialogue_path=folder/'dialogue.wav';mixed=folder/'mix.wav'
+        if m.get('feedback_revision'):
+            # Preserve headroom before the final mix limiter, including the +3dB speech edit.
+            if not np.isfinite(dialogue).all():raise ValueError('Nonfinite candidate dialogue')
+            run([ffmpeg,'-v','error','-y','-f','f32le','-ar',RATE,'-ac','1','-i','pipe:0',
+              '-c:a','pcm_f32le',dialogue_path],input=dialogue.astype('<f4').tobytes())
+        else:write_audio(dialogue_path,dialogue)
         bgm_filter=s.get('bgm_filter','anull')
         run([ffmpeg,'-v','error','-y','-i',dialogue_path,'-i',s['assets']['bgm'],'-i',s['assets']['sfx'],
           '-filter_complex',f'[0:a]apad,atrim=duration={duration}[d];[1:a]{bgm_filter},apad,atrim=duration={duration}[b];[2:a]apad,atrim=duration={duration}[s];[d][b][s]amix=inputs=3:duration=first:normalize=0,alimiter=limit=0.95:level=false:latency=true[out]',
