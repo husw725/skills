@@ -14,22 +14,8 @@ import contextual_ptbr_candidate as pipeline
 import systematic_ptbr_review as baseline
 
 ROOT=Path('output/feedback-repair-20261028')
-SPECS={
- 'e05-group-011':('Como?',1.,'surprised'),
- 'e05-group-017':('Devia temer, tudo grita pra fugir, mas não dá pra odiar ela. Me sinto segura.',1.05,'surprised'),
- 'e26-group-002':('CAMILA!',1.,'fearful'),
- 'e26-group-003':('NÃO!',1.,'fearful'),
- 'e26-group-004':('Que patético.',.95,'calm'),
- 'e26-group-015':('Preciso de tempo mesmo, pra reunir meu exército.',.95,'calm'),
- 'e32-group-003':('Você vai virar vampira pra sempre.',1.,'calm'),
- 'e32-group-008':('IMPOSSÍVEL!',1.,'fearful'),
- 'e32-group-021':('Prometi proteger ela <#0.15#> há quinze anos. Falhei.',1.05,'sad'),
-}
-EDITS={
- 'e05-group-011':{'e05-11':'Como?'},
- 'e05-group-017':{'e05-18':'Devia temer, tudo grita pra fugir,','e05-19':'mas não dá pra odiar ela. Me sinto segura.'},
- 'e32-group-021':{'e32-25':'Prometi proteger ela há quinze anos.','e32-26':'Falhei.'},
-}
+# Dialogue and edited subtitles stay in ignored private output, not source code.
+PROPOSAL_FINGERPRINT='8727757b8977934f7b47d817887841a732865c40c9e765e48aaf1e1b24d0895c'
 POLICY={'max_atempo':1.2,'max_post_gap_seconds':.8,'no_speech_truncation':True,
  'no_paid_retry':True,'new_request_cap':8,'new_clone_count':0}
 
@@ -45,8 +31,9 @@ def build_manifest():
     if len(comments)!=13 or {x['commentId'] for x in comments}!=set(range(8298,8311)):
         raise ValueError('Exact feedback scope required')
     proposal=read_json(ROOT/'editorial-proposal.private.json')
-    if proposal!={'specs':{k:list(v) for k,v in SPECS.items()},'cue_edits':EDITS,'policy':POLICY}:
+    if fingerprint(proposal)!=PROPOSAL_FINGERPRINT or proposal['policy']!=POLICY:
         raise ValueError('Fixed finite reviewed repair scope changed')
+    specs=proposal['specs'];edits=proposal['cue_edits']
     inputs={str(p):digest(p) for p in [baseline.ROOT/'manifest.private.json',ROOT/'source-packet.private.json',
       ROOT/'editorial-proposal.private.json',pipeline.BANK,Path('output/review-feedback/2026-10-27/asset-2808-page-1.private.json')]}
     scenes=[]
@@ -65,13 +52,13 @@ def build_manifest():
             inputs[u['fitted_path']]=u['fitted_sha256']
         for i,source in enumerate(plan['units']):
             uid=source['id']
-            if uid not in SPECS:continue
+            if uid not in specs:continue
             if source.get('source_speaker') in (None,'unknown'):raise ValueError('Do not newly cast source unknown')
-            text,speed,emotion=SPECS[uid];role=source['production_voice']
+            text,speed,emotion=specs[uid];role=source['production_voice']
             if ['speech-2.8-hd',bank[role]['voice_id']] not in base['whole_season_stats']['voice_configuration_by_role'][role]:
                 raise ValueError('Only an already-delivered role clone may be used')
-            cue_changes.update(EDITS.get(uid,{}))
-            caption=' '.join(EDITS[uid][cid] for cid in source['cue_ids']) if uid in EDITS else source['translation']
+            cue_changes.update(edits.get(uid,{}))
+            caption=' '.join(edits[uid][cid] for cid in source['cue_ids']) if uid in edits else source['translation']
             if words(caption)!=words(text):raise ValueError('Speakable words and subtitles differ')
             start=old[uid].get('audio_start',source['start'])
             following=old[plan['units'][i+1]['id']].get('audio_start',plan['units'][i+1]['start']) if i+1<len(plan['units']) else e['duration_seconds']
@@ -94,7 +81,7 @@ def build_manifest():
       '尚未解决：EP01 para与EP05 trevas的原说话者unknown，保留现有录音；EP32开场对白与画面的错位正在核原声，不交换角色或猜测移动。'
       '这不是13条全部修复通过；所有巴葡发音、喊叫、节奏、音色仍须母语听审。未评论不算验收。')
     return {'feedback_revision':True,'project_id':59,'review_project_id':148,'scenes':scenes,'inputs':inputs,
-      'translation_changes':EDITS,'timing_policy':POLICY,'paid_request_cap':8,'new_clone_count':0,'native_listening_passed':False,
+      'translation_changes':edits,'timing_policy':POLICY,'paid_request_cap':8,'new_clone_count':0,'native_listening_passed':False,
       'comment_ids':list(range(8298,8311)),'publication_note':note,
       'unresolved':['EP01 para: source identity unknown; published recording retained',
         'EP05 trevas: source identity unknown; published recording retained',
