@@ -112,14 +112,15 @@ def render(m,ffmpeg):
             f=fitted[u['id']];placements.append((f['start'],f['path'],u['id'],'candidate'))
         intervals=[]
         for start,path,uid,kind in placements:
-            samples=read_audio(path,ffmpeg);pos=round(start*RATE)
+            samples=read_audio(path,ffmpeg)*s.get('dialogue_gains',{}).get(uid,1.);pos=round(start*RATE)
             if pos+len(samples)>len(dialogue):raise ValueError('Speech outside original episode')
             intervals.append((pos,pos+len(samples),uid));dialogue[pos:pos+len(samples)]+=samples
         intervals.sort()
         if any(a[1]>b[0]+48 for a,b in zip(intervals,intervals[1:])):raise ValueError('Candidate speech overlaps another unit')
         dialogue_path=folder/'dialogue.wav';mixed=folder/'mix.wav';write_audio(dialogue_path,dialogue)
+        bgm_filter=s.get('bgm_filter','anull')
         run([ffmpeg,'-v','error','-y','-i',dialogue_path,'-i',s['assets']['bgm'],'-i',s['assets']['sfx'],
-          '-filter_complex',f'[0:a]apad,atrim=duration={duration}[d];[1:a]apad,atrim=duration={duration}[b];[2:a]apad,atrim=duration={duration}[s];[d][b][s]amix=inputs=3:duration=first:normalize=0,alimiter=limit=0.95:level=false:latency=true[out]',
+          '-filter_complex',f'[0:a]apad,atrim=duration={duration}[d];[1:a]{bgm_filter},apad,atrim=duration={duration}[b];[2:a]apad,atrim=duration={duration}[s];[d][b][s]amix=inputs=3:duration=first:normalize=0,alimiter=limit=0.95:level=false:latency=true[out]',
           '-map','[out]','-ar','48000','-ac','2','-c:a','pcm_s16le',mixed])
         master=folder/'candidate-picture-copy.mp4'
         run([ffmpeg,'-v','error','-y','-i',s['assets']['video'],'-i',mixed,'-map','0:v:0','-map','1:a:0',
@@ -200,6 +201,9 @@ def render(m,ffmpeg):
         paragraphs.append(f'{difference["unit_id"]} | {scene["id"]}B reel {at:.3f}s / EP{scene["episode"]:02} {unit["start"]:.3f}s: '
           f'intended {difference["expected_text"]} / ASR {difference["asr_transcript"]}')
     paragraphs += ['If whole-context native review still shows broad accent defects, evaluate a different voice-preserving route instead of extending unproven per-word controls.']
+    if m.get('feedback_revision'):
+        from feedback_repair_oct28 import brief_paragraphs
+        paragraphs=brief_paragraphs(m,chapters,audio,fitted,differences)
     document(brief,paragraphs)
     artifacts={str(p):digest(p) for p in [output,subtitle,brief]}
     report={'manifest_sha256':digest(ROOT/'manifest.private.json'),'generation_sha256':digest(ROOT/'generation-result.private.json'),
@@ -216,7 +220,7 @@ def publish(m,config):
     validate(m);verify_ready(m);r=read_json(ROOT/'render-report.private.json')
     if (r['manifest_sha256']!=digest(ROOT/'manifest.private.json') or r['generation_sha256']!=digest(ROOT/'generation-result.private.json')
       or r['fit_report_sha256']!=digest(ROOT/'fit-report.private.json') or r['screening_sha256']!=digest(ROOT/'content-screening.private.json')
-      or r['new_clone_count']!=0 or r['source_audio_in_output'] or len(r['chapters'])!=6):raise ValueError('Unverified contextual render')
+      or r['new_clone_count']!=0 or r['source_audio_in_output'] or len(r['chapters'])!=2*len(m['scenes'])):raise ValueError('Unverified contextual render')
     if [(c['scene_id'],c['label']) for c in r['chapters']]!=[(s['id'],label) for s in m['scenes'] for label in ('A','B')]:raise ValueError('Comparison coverage changed')
     for path,sha in r['artifact_sha256'].items():
         if digest(path)!=sha:raise ValueError('Candidate output changed')
@@ -232,6 +236,8 @@ def publish(m,config):
     artifacts=[('reel',r['output'],'FINAL_CUT','Carmilla | pt-BR contextual NEW candidate A-B v1',round(r['duration_seconds'])),
       ('subtitles',r['subtitle'],'DOCUMENT','Carmilla | pt-BR contextual candidate A-B subtitles v1.srt',0),
       ('brief',r['brief'],'DOCUMENT','Carmilla | pt-BR contextual candidate changes v1.docx',0)]
+    if m.get('feedback_revision'):
+        artifacts=[(k,p,g,n.replace('contextual NEW candidate A-B v1','feedback 20261028 A-B v1').replace('contextual candidate','feedback 20261028'),d) for k,p,g,n,d in artifacts]
     results=[]
     for key,path,gate,name,duration in artifacts:
         sha=r['artifact_sha256'][path];state=ROOT/f'{key}-upload.private.json'
@@ -264,6 +270,8 @@ def publish(m,config):
           f'机器转写分歧{r["asr_difference_count"]}处只作听审线索，详见配套说明。原32集及此前样片/文档保留。'
           f'{timing_note}'
           f' Reel SHA256: {r["output_sha256"]}; Artifact SHA256: {sha}')
+        if m.get('feedback_revision'):
+            note=m['publication_note']+f' Reel SHA256: {r["output_sha256"]}; Artifact SHA256: {sha}'
         for difference in r['asr_differences']:
             scene=next(s for s in m['scenes'] if any(u['id']==difference['unit_id'] for u in s['groups']))
             unit=next(u for u in scene['groups'] if u['id']==difference['unit_id'])

@@ -14,9 +14,14 @@ import contextual_ptbr_candidate as pipeline
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--ffmpeg',type=Path,required=True)
-    p.add_argument('--mcp-config',type=Path,required=True);a=p.parse_args()
+    p.add_argument('--mcp-config',type=Path,required=True)
+    p.add_argument('--variant',choices=['alignment-v3','feedback-oct28'],default='alignment-v3');a=p.parse_args()
     if sys.platform!='win32':p.error('Launch on Windows only')
-    pipeline.configure_alignment_revision();root=pipeline.ROOT
+    if a.variant=='feedback-oct28':
+        from feedback_repair_oct28 import configure
+        configure()
+    else:pipeline.configure_alignment_revision()
+    root=pipeline.ROOT
     m=read_json(root/'manifest.private.json');pipeline.validate(m)
     with process_lock(root/'windows-job.lock',timeout=0):
         state_path=root/'windows-job-state.private.json'
@@ -28,13 +33,14 @@ def main():
                     if digest(path)!=sha:raise ValueError('Ready artifact changed')
                 print('WINDOWS_CONTEXT_JOB_ALREADY_READY',flush=True);return
         state={'manifest_fingerprint':fingerprint(m),'status':'running','started_at':time.time(),
-          'new_request_cap':1,'new_clone_count':0,'publication_attempted':False}
+          'new_request_cap':m['paid_request_cap'],'new_clone_count':0,'publication_attempted':False}
         save_json(state_path,state)
         env=os.environ.copy();env['PYTHONIOENCODING']='utf-8'
         for k in list(env):
             if k.lower() in ('http_proxy','https_proxy','all_proxy'):env.pop(k)
-        base=[sys.executable,'contextual_ptbr_alignment_v3.py']
-        asr=[str(Path('output/tools/asr-venv/Scripts/python.exe')),'contextual_ptbr_alignment_v3.py']
+        script='feedback_repair_oct28.py' if a.variant=='feedback-oct28' else 'contextual_ptbr_alignment_v3.py'
+        base=[sys.executable,script]
+        asr=[str(Path('output/tools/asr-venv/Scripts/python.exe')),script]
         steps=[('generate',base+['--stage','generate','--ffmpeg',str(a.ffmpeg),'--mcp-config',str(a.mcp_config)]),
           ('fit',base+['--stage','fit','--ffmpeg',str(a.ffmpeg)]),
           ('screen',asr+['--stage','screen','--ffmpeg',str(a.ffmpeg)]),
