@@ -133,9 +133,10 @@ def inspect(item,receipt,ffmpeg):
             doc=ET.fromstring(xml);ns={'w':'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
             text='\n'.join(''.join(t.text or '' for t in p.findall('.//w:t',ns)) for p in doc.findall('.//w:p',ns))
         elif path.suffix=='.pdf':
-            import fitz
-            with fitz.open(path) as doc:
-                details['pages']=len(doc);text='\n\n'.join(page.get_text() for page in doc)
+            from pypdf import PdfReader
+            with path.open('rb') as stream:
+                doc=PdfReader(stream);details['pages']=len(doc.pages)
+                text='\n\n'.join(page.extract_text() or '' for page in doc.pages)
         else:text=path.read_text(encoding='utf-8-sig')
         text_path=root/f'asset-{item["asset_id"]}-v{item["version"]}.txt';text_path.write_text(text,encoding='utf-8');derived.append(text_path)
         details.update(characters=len(text),episode_heading_candidates=re.findall(r'(?im)^\s*(?:EPISODE|EP)[ ._-]*(\d+)[^\n]*',text),
