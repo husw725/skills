@@ -1,4 +1,5 @@
 """Finite, isolated first-episode text preparation; never starts voice production."""
+import argparse
 import json
 import os
 import hashlib
@@ -14,6 +15,21 @@ from translate import fingerprint, read_json, save_json
 import prepare_review_translation_context as context_worker
 
 ROOT = Path('output/review-project-100/episode-01/editorial-candidate-20261030')
+EPISODE = 1
+EXPECTED_CUES = 44
+
+
+def configure_episode(episode):
+    global ROOT, EPISODE, EXPECTED_CUES
+    if type(episode) is not int or not 1<=episode<=32:
+        raise ValueError('Monte Cristo episode 1 through 32 required')
+    EPISODE=episode
+    ROOT=Path('output/review-project-100/episode-01/editorial-candidate-20261030') if episode==1 else Path(f'output/review-project-100/episode-{episode:02d}/editorial-candidate-20261031')
+    source=read_json('output/review-project-100/subtitles/dialogue.en.json')['segments']
+    rows=[r for r in source if int(r['episode'])==episode]
+    if len(source)!=854 or not rows or (episode==1 and len(rows)!=44):
+        raise ValueError('Original subtitle scope changed')
+    EXPECTED_CUES=len(rows)
 
 
 def schema():
@@ -31,7 +47,7 @@ def schema():
         'screenplay_dialogue_match': {'type': 'string',
             'enum': ['matched_main_dialogue', 'partial', 'uncertain']},
         'match_notes': {'type': 'array', 'items': {'type': 'string'}},
-        'cues': {'type': 'array', 'items': cue, 'minItems': 44, 'maxItems': 44}}
+        'cues': {'type': 'array', 'items': cue, 'minItems': EXPECTED_CUES, 'maxItems': EXPECTED_CUES}}
     return {'type': 'object', 'properties': fields, 'required': list(fields),
         'additionalProperties': False}
 
@@ -53,9 +69,9 @@ def validate_schema(value, spec):
 
 
 def validate_rows(rows):
-    if len(rows)!=44 or len({r['id'] for r in rows})!=44:raise ValueError('Exactly 44 unique original cues required')
+    if len(rows)!=EXPECTED_CUES or len({r['id'] for r in rows})!=EXPECTED_CUES:raise ValueError('Unique original episode cues required')
     for r in rows:
-        if int(r['episode'])!=1 or not re.fullmatch(r'e01-[0-9]+',r['id']):raise ValueError('Original episode cue identity differs')
+        if int(r['episode'])!=EPISODE or not re.fullmatch(fr'e{EPISODE:02d}-[0-9]+',r['id']):raise ValueError('Original episode cue identity differs')
         for t in (r['start'],r['end']):
             if (isinstance(t,bool) or not isinstance(t,(int,float)) or not math.isfinite(t)
               or t<0 or abs(t*1000-round(t*1000))>1e-6):raise ValueError('Original millisecond cue time required')
@@ -64,7 +80,7 @@ def validate_rows(rows):
 
 def validate(data, rows, context):
     validate_rows(rows);validate_schema(data,schema())
-    if data['project_id'] != 100 or data['episode'] != 1:
+    if data['project_id'] != 100 or data['episode'] != EPISODE:
         raise ValueError('Wrong project or episode')
     if [c['id'] for c in data['cues']] != [r['id'] for r in rows]:
         raise ValueError('Omitted or reordered timed source cues')
@@ -178,7 +194,7 @@ def finish_outputs(result,rows):
         if digest(path)!=sha:raise ValueError('Existing candidate SRT changed; preserve for reconciliation')
     else:path.write_bytes(body)
     save_json(ROOT/'progress.private.json',{'stage':'text_candidate_ready_independent_review_pending',
-      'episode':1,'source_cues':44,'voice_generation_started':False,'updated_at':time.time()})
+      'episode':EPISODE,'source_cues':EXPECTED_CUES,'voice_generation_started':False,'updated_at':time.time()})
 
 
 def main():
@@ -193,12 +209,12 @@ def main():
         bible_folder = Path('output/review-project-100/translation-context-candidate-20261030')
         bible = read_json(bible_folder / 'context-candidate.private.json')
         context_worker.validate_result(bible, context, fingerprint(context), bible_folder)
-        rows = [r for r in context['timed_source'] if int(r['episode']) == 1]
+        rows = [r for r in context['timed_source'] if int(r['episode']) == EPISODE]
         validate_rows(rows)
         context['series_context'] = bible['candidate']
         context['series_context_sha256'] = digest(bible_folder / 'context-candidate.private.json')
         context['timed_source'] = rows
-        context['episode'] = 1
+        context['episode'] = EPISODE
         policy=Path('ptbr_quality_policy.json')
         context['quality_policy']=read_json(policy)
         context['quality_policy_sha256']=digest(policy)
@@ -213,7 +229,7 @@ def main():
             result = read_json(result_path)
             validate_completed(result,rows,context,signature);finish_outputs(result,rows)
             return
-        save_json(ROOT / 'progress.private.json', {'stage': 'translating', 'episode': 1,
+        save_json(ROOT / 'progress.private.json', {'stage': 'translating', 'episode': EPISODE,
             'source_cues': len(rows), 'voice_generation_started': False, 'updated_at': time.time()})
         exe = Path(os.environ['USERPROFILE']) / ('AppData/Roaming/npm/node_modules/@openai/codex/'
             'node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe')
@@ -223,7 +239,7 @@ For each cue provide a literal 8–600 character quote from the supplied raw scr
 '''
         full_prompt = prompt + json.dumps(context, ensure_ascii=False)
         draft, draft_receipt = get_response(exe, full_prompt, ROOT / 'draft', rows, context)
-        save_json(ROOT / 'progress.private.json', {'stage': 'textual_second_pass', 'episode': 1,
+        save_json(ROOT / 'progress.private.json', {'stage': 'textual_second_pass', 'episode': EPISODE,
             'source_cues': len(rows), 'voice_generation_started': False, 'updated_at': time.time()})
         reviewed, review_receipt = get_response(exe, full_prompt +
             '\nNow review and correct the following draft against every original cue. Return a complete corrected response; retain unresolved issues.\n' +
@@ -239,7 +255,11 @@ For each cue provide a literal 8–600 character quote from the supplied raw scr
 
 
 if __name__ == '__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--episode',type=int,choices=range(1,33),default=1)
+    args=parser.parse_args()
     try:
+        configure_episode(args.episode)
         main()
     except Exception as exc:
         ROOT.mkdir(parents=True, exist_ok=True)

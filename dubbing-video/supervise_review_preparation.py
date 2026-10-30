@@ -11,11 +11,12 @@ from translate import read_json, save_json
 ROOT = Path('output/four-dramas-20261030/supervision')
 ASR_TASK = 'Codex-FourDramas-SeriesSourceEvidence-20261030'
 EDITORIAL_TASK = 'Codex-MonteCristo-Episode01-Editorial-20261030'
+QUEUE_TASK = 'Codex-MonteCristo-EditorialQueue-20261031'
 OFFLINE_WORKER_SHA = '520cb3f57aea18021a397ff74c299722758ea9319753e4dc042e272b711f355f'
 
 
 def task_state(name):
-    if name not in (ASR_TASK, EDITORIAL_TASK):
+    if name not in (ASR_TASK, EDITORIAL_TASK, QUEUE_TASK):
         raise ValueError('Unexpected scheduled task')
     command = ("$t=Get-ScheduledTask -TaskName '" + name + "'; "
         "$p=@(Get-CimInstance Win32_Process | Where-Object {$_.Name -eq 'python.exe' -and $_.CommandLine -like '*prepare_review_series_asr.py*'}); "
@@ -38,8 +39,13 @@ def inspect():
         'automatic_text_requests': False, 'alerts': []}
     paths = {'source_asr': Path('output/four-dramas-20261030/series-source-asr/progress.private.json'),
         'episode_text': Path('output/review-project-100/episode-01/editorial-candidate-20261030/progress.private.json')}
+    jobs=[('source_asr', ASR_TASK), ('episode_text', EDITORIAL_TASK)]
+    queue=Path('output/review-project-100/editorial-queue-20261031/progress.private.json')
+    if queue.exists():
+        paths['series_text']=queue
+        jobs.append(('series_text',QUEUE_TASK))
     states = {name: read_json(path) if path.exists() else {} for name, path in paths.items()}
-    for name, task in [('source_asr', ASR_TASK), ('episode_text', EDITORIAL_TASK)]:
+    for name, task in jobs:
         state = states[name]
         snapshot = task_state(task)
         live = snapshot['State']
@@ -87,8 +93,19 @@ def inspect():
                             health['alerts'].append('offline_recovery_requires_reconciliation')
                 else:
                     health['alerts'].append('source_asr_stopped_needs_review')
+        elif name=='series_text':
+            episodes=state.get('episodes',{})
+            ready=sum(e.get('status')=='text_candidate_ready' for e in episodes.values())
+            complete=(state.get('stage')=='text_candidates_ready_independent_review_pending'
+                and state.get('scope')==list(range(2,33))
+                and set(episodes)=={str(n) for n in range(2,33)} and ready==31)
+            health[name].update(ready=ready,total=31,current_episode=state.get('current_episode'))
+            if live!=4 and not complete:
+                health['alerts'].append('series_text_stopped_no_automatic_resubmission')
+            if any(e.get('status') not in ('text_candidate_ready','running_needs_reconciliation_if_interrupted') for e in episodes.values()):
+                health['alerts'].append('series_text_episode_errors_need_review')
         elif live != 4 and state.get('stage') != 'text_candidate_ready_independent_review_pending':
-            health['alerts'].append('editorial_stopped_no_automatic_resubmission')
+            health['alerts'].append(name+'_stopped_no_automatic_resubmission')
         if live == 4 and now - state.get('updated_at', now) > 2400:
             health['alerts'].append(name + '_progress_stale_needs_review_no_kill')
     save_json(ROOT / 'health.private.json', health)
