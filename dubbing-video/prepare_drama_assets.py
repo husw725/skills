@@ -32,7 +32,7 @@ def sha(path):
     return h.hexdigest()
 
 
-def download(item,url,dest,receipt=None):
+def download(item,url,dest,receipt=None,direct=False):
     dest.parent.mkdir(parents=True,exist_ok=True);expected=int(item['bytes'])
     if dest.exists():
         if dest.stat().st_size!=expected:raise ValueError('Existing source file size differs; preserved')
@@ -42,6 +42,7 @@ def download(item,url,dest,receipt=None):
     if not isinstance(url,str) or not url.startswith('https://'):raise ValueError('HTTPS source download required')
     part=dest.with_name(dest.name+'.download.part')
     session=requests.Session();failures=0
+    if direct:session.trust_env=False
     while not part.exists() or part.stat().st_size<expected:
         offset=part.stat().st_size if part.exists() else 0
         if offset>expected:raise ValueError('Partial download exceeds source size')
@@ -62,7 +63,9 @@ def download(item,url,dest,receipt=None):
                 else:raise ValueError('Source ignored resumed range; partial preserved')
                 with part.open(mode) as f:
                     for chunk in r.iter_content(1024*1024):
-                        if chunk:f.write(chunk)
+                        if chunk:
+                            if f.tell()+len(chunk)>range_end:raise ValueError('Downloaded body exceeds authorized range')
+                            f.write(chunk)
             if part.stat().st_size!=range_end:raise ValueError('Downloaded range size mismatch')
             failures=0
         except requests.RequestException:
