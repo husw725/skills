@@ -78,4 +78,9 @@ def main():
 
 if __name__=='__main__':
     log=ROOT/'source-asr.log';sys.stdout=log.open('a',encoding='utf-8',buffering=1);sys.stderr=sys.stdout
-    main()
+    try:main()
+    except Exception as exc:
+        path=ROOT/'source-asr-progress.private.json'
+        state=read_json(path) if path.exists() else {}
+        save_json(path,{**state,'stage':'failed_needs_review','error_type':type(exc).__name__,'updated_at':time.time()})
+        raise
