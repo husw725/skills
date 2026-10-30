@@ -74,7 +74,7 @@ def import_subtitles(assets):
     target=Path('output/review-project-100/subtitles')
     old=read_json(ledger_path) if ledger_path.exists() else None
     if old and old['source_fingerprint']!=key:raise ValueError('Subtitle import source changed')
-    def artifacts(folder):return {str(p.relative_to(folder)):digest(p) for p in folder.rglob('*') if p.is_file()}
+    def artifacts(folder):return {p.relative_to(folder).as_posix():digest(p) for p in folder.rglob('*') if p.is_file()}
     def verify(folder):
         if not old or old.get('status') not in ('prepared','complete') or artifacts(folder)!=old['artifact_sha256']:
             raise ValueError('Unknown or partial subtitle import preserved for reconciliation')
