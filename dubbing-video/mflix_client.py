@@ -1,5 +1,6 @@
 """Authenticated MCP access; private configuration stays outside the repository."""
 import json
+import os
 from pathlib import Path
 import time
 import urllib.error
@@ -15,6 +16,9 @@ class Mflix:
         self.headers={**cfg['headers'],'Content-Type':'application/json','Accept':'application/json, text/event-stream'}
         import requests
         self.http=requests.Session()
+        # Windows may inherit a broken registry proxy even after HTTP[S]_PROXY is removed.
+        # Opt-in applies only to this process/session; never change system proxy settings.
+        if os.environ.get('MFLIX_DIRECT_CONNECTION')=='1':self.http.trust_env=False
         self.counter=0
         self.rpc('initialize',{'protocolVersion':'2024-11-05','capabilities':{},
                  'clientInfo':{'name':'windows-drama-dubbing','version':'1'}})
