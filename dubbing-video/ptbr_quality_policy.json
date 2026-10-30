@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "target_locale": "pt-BR",
+  "feedback_application_default": "future_production_only",
+  "review_is_not_regeneration_authorization": true,
+  "paid_audio_regeneration_default": false,
+  "reuse_existing_role_voices_and_paid_audio": true,
+  "pre_generation_checks": [
+    "Match screenplay version to actual cut and timed dialogue; never import absent lines",
+    "Review Brazilian vocabulary, collocations, pronouns, register, names, relationships, negation and deadlines",
+    "Translate complete same-character sense units before distributing original subtitle windows",
+    "Resolve avoidable textual and continuity errors before voice generation",
+    "Estimate speaking duration before synthesis; preserve meaning before shortening; no forced excessive acceleration"
+  ],
+  "separate_acceptance_dimensions": [
+    "translation_fidelity",
+    "brazilian_text_localization",
+    "pronunciation",
+    "brazilian_accent",
+    "acting_and_urgency",
+    "role_voice_continuity",
+    "timing",
+    "mix_intelligibility"
+  ],
+  "feedback_lessons": [
+    {
+      "rule": "Correct pronunciation does not establish adequate emotional intensity; urgent calls require scene-supported urgency and projection",
+      "scope": "performance planning and independent listening"
+    },
+    {
+      "rule": "Natural full-thought phrasing and pauses are useful contextual examples; never replace every formal Portuguese construction globally",
+      "scope": "contextual text editing"
+    },
+    {
+      "rule": "Ensure quiet inner monologue remains intelligible over music; determine mix changes locally rather than applying uniform gain",
+      "scope": "mix quality"
+    },
+    {
+      "rule": "A quoted word alone cannot identify a take when multiple occurrences or A/B versions exist",
+      "scope": "feedback evidence mapping"
+    },
+    {
+      "rule": "Positive feedback supports only its stated dimension and identified excerpt; no comment is not acceptance",
+      "scope": "acceptance claims"
+    }
+  ],
+  "post_review_actions": {
+    "ordinary_improvement": "Record evidence and apply to future ungenerated material; retain delivered episode",
+    "critical_understanding_or_delivery_failure": "Prepare the smallest affected segment scope, cache reuse and estimated incremental cost for user decision; no automatic full-series rerun"
+  },
+  "review_sampling": {
+    "purpose": "Find reusable weaknesses to improve future output",
+    "coverage": [
+      "ordinary_conversation",
+      "long_sentences",
+      "inner_monologue",
+      "fear",
+      "urgent_calls",
+      "shouts",
+      "multiple_characters_and_relationships"
+    ],
+    "already_finished_drama_may_remain_unchanged": true,
+    "selected_samples_are_not_random_or_whole_series_acceptance": true
+  }
+}

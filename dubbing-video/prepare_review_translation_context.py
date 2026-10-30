@@ -3,6 +3,7 @@
 Text model routing is per invocation, with one capacity-only fallback. This stage
 does not create per-cue approved translations, clone voices, synthesize or publish.
 """
+import copy
 import json
 import os
 from pathlib import Path
@@ -73,6 +74,26 @@ def validate_candidate(data,context):
           or not q.strip() or q not in texts[e['asset_id']]):raise ValueError('Raw literal source quote requires editorial review')
 
 
+def canonical_quotes(data,context):
+    """Repair whitespace-only extraction differences without changing model evidence."""
+    candidate=copy.deepcopy(data);texts={s['asset_id']:s['text'] for s in context['scripts']};repairs=[]
+    for group in ('characters','terminology'):
+        for index,row in enumerate(candidate[group]):
+            e=row['evidence'];q=e['quote'];text=texts.get(e['asset_id'],'')
+            if q in text:continue
+            if not isinstance(q,str) or not 8<=len(q)<=600 or not q.split():
+                raise ValueError('Invalid quote; preserve raw response')
+            matches={m.group(0) for m in re.finditer(r'\s+'.join(re.escape(w) for w in q.split()),text)}
+            if len(matches)!=1:raise ValueError('Quote needs semantic reconciliation; do not regenerate')
+            exact=matches.pop()
+            if not 8<=len(exact)<=600:raise ValueError('Reconciled quote outside scope')
+            repairs.append({'group':group,'index':index,'asset_id':e['asset_id'],
+                'model_quote':q,'exact_source_quote':exact,'change':'whitespace_only'})
+            e['quote']=exact
+    validate_candidate(candidate,context)
+    return candidate,repairs
+
+
 def explicit_capacity(log_tail):
     """Only CLI JSON error events qualify, never source/assistant text echoes."""
     pattern=r'\bSelected mode(?:l)? is at capacity\b|\bserver_is_overloaded\b|\bmodel.{0,40}temporarily overloaded\b'
@@ -97,9 +118,40 @@ def validate_result(result,context,fp,folder):
     output=folder/f'{model}.response.private.json';state=read_json(folder/f'{model}.state.private.json')
     if (state['status']!='response_received' or state['model']!=model
       or Path(state['output'])!=output or digest(output)!=state['sha256']
-      or result['response_sha256']!=state['sha256'] or result['candidate']!=read_json(output)):
+      or result['response_sha256']!=state['sha256']):
         raise ValueError('Candidate differs from its immutable model response')
+    expected,repairs=canonical_quotes(read_json(output),context)
+    if result['candidate']!=expected or result.get('quote_reconciliation',[])!=repairs:
+        raise ValueError('Candidate differs from source-bound quote reconciliation')
     validate_candidate(result['candidate'],context)
+
+
+def pinned_models(folder,listed_models):
+    """A cache refresh cannot bypass unknown work or expand a two-model route."""
+    path=folder/'model-routing.private.json'
+    route=read_json(path)['models'] if path.exists() else listed_models[:2]
+    if (not 1<=len(route)<=2 or len(set(route))!=len(route)
+      or any(model not in MODEL_ORDER for model in route)):
+        raise ValueError('Invalid finite text model routing')
+    for state_path in folder.glob('*.state.private.json'):
+        model=state_path.name.removesuffix('.state.private.json');state=read_json(state_path)
+        output=folder/f'{model}.response.private.json'
+        if model not in route or state.get('model')!=model or Path(state['output'])!=output:
+            raise ValueError('Prior text model work outside pinned route')
+        if state['status']=='response_received':
+            if digest(output)!=state['sha256']:raise ValueError('Prior text response changed')
+        elif state['status']=='capacity_unavailable':
+            log=folder/f'{model}.private.log'
+            if (output.exists() or state.get('exit_code') in (None,0) or not log.exists()
+              or not explicit_capacity(log.read_text(encoding='utf-8',errors='replace')[-12000:])):
+                raise ValueError('Prior capacity status needs reconciliation')
+        else:raise ValueError('Unknown prior text model work blocks new requests')
+    for output in folder.glob('*.response.private.json'):
+        model=output.name.removesuffix('.response.private.json')
+        if model not in route or not (folder/f'{model}.state.private.json').exists():
+            raise ValueError('Unbound prior text response')
+    if not path.exists():save_json(path,{'models':route})
+    return route
 
 
 def call_model(exe,model,prompt,folder):
@@ -153,6 +205,7 @@ def main():
         for pid in PROJECTS:
             folder=Path('output')/f'review-project-{pid}'/'translation-context-candidate-20261030';folder.mkdir(parents=True,exist_ok=True)
             try:
+                route=pinned_models(folder,models)
                 context=inputs(pid,manifest);fp=fingerprint(context);binding=folder/'input-fingerprint.private.json'
                 if binding.exists() and read_json(binding)['fingerprint']!=fp:raise ValueError('New source version needs a separate context revision')
                 save_json(binding,{'fingerprint':fp});save_json(folder/'source-input.private.json',context);save_json(folder/'schema.private.json',schema())
@@ -173,13 +226,16 @@ def main():
                       'Text review, actor identity, Brazilian pronunciation, acting and mix acceptance are separate; none is native-audio approved here. '
                       'Return only the required JSON.\n'+json.dumps(context,ensure_ascii=False))
                     attempts=[]
-                    for model in models[:2]:
+                    for model in route:
+                        if model not in available and not (folder/f'{model}.state.private.json').exists():
+                            raise ValueError('Pinned model no longer listed; do not silently change routing')
                         outcome=call_model(exe,model,prompt,folder);attempts.append(outcome);save_json(folder/'model-attempts.private.json',attempts)
                         if outcome['status']=='capacity_unavailable':continue
                         if outcome['status']!='response_received':raise ValueError('Text model task needs review; no blind retry')
-                        data=read_json(outcome['output']);validate_candidate(data,context)
+                        data,repairs=canonical_quotes(read_json(outcome['output']),context)
                         result={'input_fingerprint':fp,'model':model,'candidate':data,'per_cue_reviewed':False,
                           'native_listening_passed':False,'tts_ready':False,'response_sha256':outcome['sha256'],
+                          'quote_reconciliation':repairs,
                           'evidence_check':'raw literal screenplay quotes checked; interpretation still requires review'}
                         validate_result(result,context,fp,folder);save_json(result_path,result)
                         break
