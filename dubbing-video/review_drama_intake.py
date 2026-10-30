@@ -161,10 +161,14 @@ def inspect(item,receipt,ffmpeg):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--manifest',type=Path,required=True)
-    p.add_argument('--ffmpeg',type=Path,required=True);p.add_argument('--workers',type=int,default=4);a=p.parse_args()
+    p.add_argument('--ffmpeg',type=Path,required=True);p.add_argument('--workers',type=int,default=4)
+    p.add_argument('--log-file',type=Path);a=p.parse_args()
     if sys.platform!='win32':p.error('Source materials are processed on Windows')
     if not 1<=a.workers<=4:p.error('Use one to four bounded read-only workers')
     root=a.manifest.parent;root.mkdir(parents=True,exist_ok=True)
+    if a.log_file:
+        if a.log_file.resolve()!=(root/'intake.log').resolve():p.error('Keep the job log in this isolated batch')
+        sys.stdout=a.log_file.open('a',encoding='utf-8',buffering=1);sys.stderr=sys.stdout
     with process_lock(root/'intake.lock',timeout=0):
         m=read_json(a.manifest);validate_manifest(m);bind(root/'intake-fingerprint.json',m);items=m['items']
         projects=m['project_ids']
