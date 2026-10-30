@@ -13,10 +13,10 @@ import numpy as np
 from translate import read_json,save_json,write_srt,fingerprint
 from dub_episode import digest
 from process_lock import process_lock
-from review_drama_intake import validate_manifest
 
 ROOT=Path('output/four-dramas-20261030')
 SOURCE_IDS={96:{622},110:{706,1667},102:{1255},100:{1456,1518}}
+MANIFEST_FINGERPRINT='cb592e57cbfdcc90b742a8a8004d08d4f5e56820d89a2e4b561d5ef039432a2a'
 
 
 def norm(text):return ' '.join(re.findall(r'\w+',unicodedata.normalize('NFKC',text).casefold()))
@@ -26,7 +26,8 @@ def main():
     if sys.platform!='win32':raise ValueError('Run source materials on Windows')
     from faster_whisper import WhisperModel
     with process_lock(ROOT/'source-asr.lock',timeout=0):
-        manifest=read_json(ROOT/'intake-manifest.private.json');validate_manifest(manifest)
+        manifest=read_json(ROOT/'intake-manifest.private.json')
+        if fingerprint(manifest)!=MANIFEST_FINGERPRINT:raise ValueError('Approved source batch required')
         local=Path('output/tools/source-asr-models/large-v3');official=read_json(local/'official-source.json');verified=read_json(local/'verified.json')
         model_sha=next(x['lfs']['sha256'] for x in official['siblings'] if x['rfilename']=='model.bin')
         if (verified.get('official_hashes_verified') is not True or verified['revision']!=official['revision']
