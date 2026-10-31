@@ -86,9 +86,16 @@ def validate(data, rows, context):
     scripts = {s['asset_id']: s['text'] for s in context['scripts']}
     roles = {r['stable_id'] for r in context['series_context']['characters']} | {'unknown'}
     for cue in data['cues']:
-        if (not cue['translation'].strip() or '\r' in cue['translation'] or '\x00' in cue['translation']
-          or re.search(r'\n\s*\n',cue['translation'])):
-            raise ValueError('Empty translation')
+        text = cue['translation']
+        if ('\r' in text or '\x00' in text or re.search(r'\n\s*\n', text)):
+            raise ValueError('Invalid subtitle text')
+        if not text.strip():
+            evidence = context.get('machine_source_evidence', {})
+            explicit_issue = any(issue['reason'].strip() for issue in cue['issues'])
+            if (PROJECT_ID == 100 or evidence.get('original_subtitle_available') is not False
+                or evidence.get('kind') != 'machine_asr_draft_not_original_subtitles' or not explicit_issue):
+                raise ValueError('Empty translation')
+            # A flagged ASR fragment may remain unresolved in a text candidate, never spoken as dialogue.
         if cue['script_role'] not in roles:
             raise ValueError('Unbound screenplay role')
         quote = cue['script_quote']
@@ -165,7 +172,15 @@ FALSE_FLAGS=('independent_editorial_approved','source_video_versions_matched',
              'audio_speaker_verified','native_listening_passed','tts_ready')
 
 
+def validate_unresolved_metadata(result):
+    unresolved = [c['id'] for c in result['candidate']['cues'] if not c['translation'].strip()]
+    if unresolved or 'unresolved_source_cue_ids' in result or 'unresolved_cues_are_not_tts_text' in result:
+        if result.get('unresolved_source_cue_ids') != unresolved or result.get('unresolved_cues_are_not_tts_text') is not True:
+            raise ValueError('Unresolved ASR candidate metadata differs')
+
+
 def validate_completed(result,rows,context,signature):
+    validate_unresolved_metadata(result)
     if (result['source_fingerprint']!=signature or result['textual_model_review_completed'] is not True
       or any(result[flag] is not False for flag in FALSE_FLAGS) or len(result['model_receipts'])!=2):
         raise ValueError('Completed editorial basis or approval flags differ')
@@ -187,9 +202,17 @@ def validate_completed(result,rows,context,signature):
     if result['candidate']!=responses[1]:raise ValueError('Candidate differs from reviewed model response')
 
 
+def subtitle_candidate_text(cue):
+    if cue['translation'].strip():
+        return cue['translation']
+    if PROJECT_ID == 100:
+        raise ValueError('Original subtitle translation cannot be blank')
+    return '[Trecho pendente de conferência]'
+
+
 def candidate_srt(rows,candidate):
     validate_rows(rows)
-    return ('\n\n'.join(f'{r["id"].split("-",1)[1] if PROJECT_ID==100 else i}\n{srt_time(r["start"])} --> {srt_time(r["end"])}\n{c["translation"]}'
+    return ('\n\n'.join(f'{r["id"].split("-",1)[1] if PROJECT_ID==100 else i}\n{srt_time(r["start"])} --> {srt_time(r["end"])}\n{subtitle_candidate_text(c)}'
       for i,(r,c) in enumerate(zip(rows,candidate['cues']),1))+'\n').encode('utf-8')
 
 
@@ -250,6 +273,15 @@ For each cue provide a literal 8–600 character quote from the supplied raw scr
 '''
         if PROJECT_ID!=100:
             prompt+='\nThe timed source for this drama is explicitly a machine ASR draft, not supplied original subtitles. Use the screenplay for context, flag possible transcription errors and cut mismatches, never silently import script dialogue or claim original-caption accuracy, source-speaker identity, or native listening. Output is a translation candidate only.\n'
+        if PROJECT_ID != 100:
+            setting_path = ROOT / 'prompt-setting.private.json'
+            if not setting_path.exists() and not (ROOT / 'draft/request-fingerprint.private.json').exists():
+                save_json(setting_path, {'setting': 'screenplay_actual', 'source_fingerprint': signature})
+            if setting_path.exists():
+                if read_json(setting_path) != {'setting': 'screenplay_actual', 'source_fingerprint': signature}:
+                    raise ValueError('Prompt setting basis changed')
+                prompt = prompt.replace('appropriate to the historical French setting and character register',
+                    'appropriate to the actual setting in the supplied screenplay and each character register')
         full_prompt = prompt + json.dumps(context, ensure_ascii=False)
         draft, draft_receipt = get_response(exe, full_prompt, ROOT / 'draft', rows, context)
         save_json(ROOT / 'progress.private.json', {'stage': 'textual_second_pass', 'episode': EPISODE,
@@ -262,6 +294,8 @@ For each cue provide a literal 8–600 character quote from the supplied raw scr
             'textual_model_review_completed': True, 'independent_editorial_approved': False,
             'source_video_versions_matched': False, 'audio_speaker_verified': False,
             'native_listening_passed': False, 'tts_ready': False}
+        result['unresolved_source_cue_ids'] = [c['id'] for c in reviewed['cues'] if not c['translation'].strip()]
+        result['unresolved_cues_are_not_tts_text'] = True
         validate_completed(result,rows,context,signature)
         result['subtitle_sha256']=hashlib.sha256(candidate_srt(rows,reviewed)).hexdigest()
         save_json(result_path,result);finish_outputs(result,rows)

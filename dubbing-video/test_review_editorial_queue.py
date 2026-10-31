@@ -106,6 +106,40 @@ class QueueResumeTests(unittest.TestCase):
         self.assertIn('20261031', str(queue.folder_for(96, 1)))
 
 
+class ASRCandidateTests(unittest.TestCase):
+    def test_unresolved_metadata_cannot_be_dropped(self):
+        import prepare_review_episode_editorial as worker
+        old = {'candidate':{'cues':[{'id':'1','translation':'Olá'}]}}
+        worker.validate_unresolved_metadata(old)
+        new = {'candidate':{'cues':[{'id':'1','translation':''}]}}
+        with self.assertRaises(ValueError):
+            worker.validate_unresolved_metadata(new)
+        new.update(unresolved_source_cue_ids=['1'],unresolved_cues_are_not_tts_text=True)
+        worker.validate_unresolved_metadata(new)
+        new['unresolved_source_cue_ids'] = []
+        with self.assertRaises(ValueError):
+            worker.validate_unresolved_metadata(new)
+
+    def test_blank_requires_machine_source_and_explicit_issue(self):
+        import prepare_review_episode_editorial as worker
+        cue = dict(id='a', translation='', script_asset_id=1, script_quote='SOURCE QUOTE',
+                   script_role='unknown', emotion_intent='unknown', issues=[dict(severity='warning',reason='source unclear')])
+        data = dict(project_id=96,episode=1,cues=[cue])
+        context = dict(scripts=[dict(asset_id=1,text='SOURCE QUOTE')],series_context=dict(characters=[]),
+                       machine_source_evidence=dict(kind='machine_asr_draft_not_original_subtitles',original_subtitle_available=False))
+        with patch.object(worker,'PROJECT_ID',96), patch.object(worker,'EPISODE',1), patch.object(worker,'validate_rows'), patch.object(worker,'validate_schema'):
+            worker.validate(data,[dict(id='a')],context)
+            self.assertEqual(worker.subtitle_candidate_text(cue), '[Trecho pendente de conferência]')
+            with self.assertRaises(ValueError):
+                worker.validate(data,[dict(id='a')],dict(context,machine_source_evidence={}))
+            cue['issues'] = []
+            with self.assertRaises(ValueError):
+                worker.validate(data,[dict(id='a')],context)
+        with patch.object(worker,'PROJECT_ID',100):
+            with self.assertRaises(ValueError):
+                worker.subtitle_candidate_text(cue)
+
+
 class EditorialFallbackTests(unittest.TestCase):
     def test_known_invalid_response_can_use_only_pinned_fallback(self):
         import prepare_review_episode_editorial as worker
