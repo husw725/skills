@@ -114,7 +114,7 @@ def main():
     args=parser.parse_args()
     if sys.platform!='win32':raise ValueError('Windows media preparation only')
     projects=[args.project] if args.project else [96,110,102,100]
-    state_path=Path('output/four-dramas-20261030/media-pipeline-progress.private.json')
+    state_path=Path('output/four-dramas-20261030/media-source-recovery-progress.private.json' if args.separate_source else 'output/four-dramas-20261030/media-pipeline-progress.private.json')
     with process_lock(state_path.with_suffix('.lock'),timeout=0):
         state={'episodes':{},'paid_calls':0}
         for episode in ([args.episode] if args.episode else range(1,38)):
@@ -129,6 +129,7 @@ def main():
                     state['episodes'][key]={'status':'needs_review','error_type':type(exc).__name__}
                     import traceback
                     revision = 'pipeline-media-20261031' if project == 100 else 'pipeline-media-20261031-v2'
+                    if args.separate_source:revision='pipeline-media-20261031-source-separated-v2'
                     folder=Path(f'output/review-project-{project}/episode-{episode:02d}/{revision}');folder.mkdir(parents=True,exist_ok=True)
                     with (folder/'error.private.log').open('a',encoding='utf-8') as log:traceback.print_exc(file=log)
                 save_json(state_path,state)
