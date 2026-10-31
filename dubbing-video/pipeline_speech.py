@@ -63,7 +63,12 @@ def voice_bank(project,roles,inputs):
         value=extra['voices'].get(role)
         if value is None:raise ValueError(f'Reusable role voice not yet ready: {role}')
         folder=root/role;receipt=folder/'clone.private.json';payload=folder/'clone-request.private.json'
-        if (digest(receipt)!=value['clone_receipt_sha256'] or digest(payload)!=value['request_sha256']
+        approval_path=Path(value['basis']['approval_path']);approval=read_json(approval_path)
+        if (digest(approval_path)!=value['basis']['approval_sha256']
+            or digest(approval['audit_report_path'])!=approval['audit_report_sha256']
+            or digest(approval['existing_voice_search_path'])!=approval['existing_voice_search_sha256']
+            or digest(folder/'reference-receipt.private.json')!=value['basis']['reference_receipt_sha256']
+            or digest(receipt)!=value['clone_receipt_sha256'] or digest(payload)!=value['request_sha256']
             or voice_result(read_json(receipt),project,role,value['platform'])!=value['voice_id']
             or read_json(folder/'clone-input.private.json')!=value['basis']
             or digest(folder/'reference.wav')!=value['basis']['reference_sha256']):
@@ -71,6 +76,7 @@ def voice_bank(project,roles,inputs):
         bank[role]={'voice_id':value['voice_id'],'platform':value['platform']}
         for item in (receipt,payload,folder/'clone-input.private.json',folder/'reference.wav'):
             inputs[str(item)]=digest(item)
+    if len({v['voice_id'] for v in bank.values()})!=len(bank):raise ValueError('Distinct production roles unexpectedly share a voice ID')
     return bank
 
 
@@ -102,6 +108,8 @@ def build(decision_path):
     if (media['source']['project_id']!=project or media['source']['episode']!=episode
         or digest(media['source']['video'])!=media['source']['video_sha256']
         or any(digest(p)!=h for p,h in media['output_sha256'].items())):raise ValueError('Media source changed')
+    if any(not 0<=u['start']<u['end']<=media['video_seconds']+.1 for u in units):
+        raise ValueError('Production unit exceeds the actual picture cut')
     inputs[str(media_path)]=digest(media_path)
     for p,sha in {media['source']['video']:media['source']['video_sha256'],**media['output_sha256']}.items():inputs[p]=sha
     bank=voice_bank(project,{u['role'] for u in units},inputs)
