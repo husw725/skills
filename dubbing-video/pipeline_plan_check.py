@@ -21,7 +21,20 @@ def main():
         raise ValueError('Actual frozen plan changed')
     if not 1<=plan['max_new_tts']<=policy['max_unique_requests_per_episode']:
         raise ValueError('Candidate speech exceeds project request bound')
-    audit={'mode':'automated_frozen_candidate_plan_checks','plan_sha256':digest(path),'policy_sha256':digest(args.policy),
+    revision=decision.get('production_revision',1)
+    if revision>1:
+        cache=Path(f"output/review-project-{plan['project_id']}/paid-speech-cache")
+        ledger=read_json(cache/'submission-attempts.private.json') if (cache/'submission-attempts.private.json').exists() else {'attempts':{}}
+        for prior in args.decision.parent.glob('pipeline-audio-20261031-v*'):
+            if prior==root or not prior.is_dir():continue
+            old_plan=prior/'speech-plan.private.json'
+            if not old_plan.exists():continue
+            old=read_json(old_plan);old_sha=digest(old_plan)
+            if ((prior/'generation-result.private.json').exists()
+                or any(a.get('origin_plan_sha256')==old_sha for a in ledger['attempts'].values())
+                or any((cache/group['cache_key']).exists() for group in old['groups'])):
+                raise ValueError('Prior revision has paid/reserved/cache evidence; automatic paid regeneration forbidden')
+    audit={'mode' :'automated_frozen_candidate_plan_checks','plan_sha256':digest(path),'policy_sha256':digest(args.policy),
            'project_id':plan['project_id'],'episode':plan['episode'],'groups':len(plan['groups']),
            'unique_requests':plan['max_new_tts'],'no_new_clones':True,'source_holds':plan['holds'],
            'text_and_casting_basis':'source-bound reviewed translation and explicit production casting candidates',
