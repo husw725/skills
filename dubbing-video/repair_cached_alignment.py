@@ -1,6 +1,7 @@
 """Render separately versioned alignment candidates from pinned, already paid speech."""
 import argparse
 import copy
+import re
 from pathlib import Path
 import sys
 import time
@@ -78,7 +79,7 @@ def joint_groups(groups, joins):
 def repair(entry, recipe_path, recipe_sha, ffmpeg):
     parent_root, old, generated = checked_parent(entry)
     root = Path(entry['output_root'])
-    if (root.is_symlink() or root.resolve() == parent_root.resolve() or root.name != 'alignment-candidate-20261101-v1'
+    if (root.is_symlink() or root.resolve() == parent_root.resolve() or not re.fullmatch(r'alignment-candidate-20261101-v[1-3]', root.name)
             or root.resolve().parent != parent_root.resolve().parent):
         raise ValueError('Separate immutable episode candidate directory required')
     root.mkdir(exist_ok=True)

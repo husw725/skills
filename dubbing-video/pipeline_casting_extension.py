@@ -162,12 +162,13 @@ def build(decision_path):
     return plan
 
 
-def generate(plan, decision_path, config):
+def generate(plan, decision_path, config, *, current_plan_builder=None, increment=None):
     root = pipeline.audio_root(decision_path)
     delta_root = root/'added-speech'; delta_root.mkdir(exist_ok=True)
-    added = set(plan['casting_extension']['added_ids'])
+    metadata = plan['casting_extension'] if increment is None else increment
+    added = set(metadata['added_ids'])
     delta = {**plan, 'groups': [g for g in plan['groups'] if g['id'] in added],
-             'max_new_tts': plan['casting_extension']['new_request_limit']}
+             'max_new_tts': metadata['new_request_limit']}
     path = delta_root/'speech-plan.private.json'
     if path.exists() and read_json(path) != delta:
         raise ValueError('Previously reserved additions changed')
@@ -182,9 +183,9 @@ def generate(plan, decision_path, config):
     if not target.exists(): save_json(target, approval)
     speech.ROOT = delta_root
     def current_delta():
-        actual = build(decision_path)
+        actual = build(decision_path) if current_plan_builder is None else current_plan_builder(decision_path)
         return {**actual, 'groups': [g for g in actual['groups'] if g['id'] in added],
-                'max_new_tts': actual['casting_extension']['new_request_limit']}
+                'max_new_tts': metadata['new_request_limit']}
     speech.generate(delta, config, expected_scope=(100, plan['episode']),
                     current_plan_builder=current_delta, max_groups=32)
     rows = []
