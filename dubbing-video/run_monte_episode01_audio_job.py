@@ -19,7 +19,9 @@ def main():
         finished=ROOT/'render-report.private.json'
         if finished.exists():
             report=read_json(finished)
-            if digest(report['output'])!=report['output_sha256']:raise ValueError('Prior output changed')
+            if (digest(report['output'])!=report['output_sha256']
+                or report['plan_sha256']!=digest(ROOT/'speech-plan.private.json')):
+                raise ValueError('Prior output or production plan changed')
             return
         for stage,command in [('generate',['generate_monte_episode01.py','--stage','generate','--mcp-config',str(args.mcp_config)]),
             ('fit_render',['fit_render_monte_episode01.py','--ffmpeg',str(args.ffmpeg)])]:
@@ -35,7 +37,7 @@ def main():
             if code:
                 save_json(ROOT/'job-state.private.json',{'stage':stage,'status':'needs_review',
                     'exit_code':code,'automatic_retry':False,'updated_at':time.time()})
-                return
+                raise ValueError('Audio stage failed; inspect saved state without a new paid retry')
         if not finished.exists():
             save_json(ROOT/'job-state.private.json',{'stage':'fit_render','status':'blocked_no_new_paid_retry',
                 'updated_at':time.time()});return
