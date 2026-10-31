@@ -28,7 +28,7 @@ class Mflix:
         payload=json.dumps({'jsonrpc':'2.0','id':self.counter,'method':method,'params':params}).encode()
         import requests
         safe = method == 'initialize' or (method == 'tools/call' and params.get('name') in
-                  ('getTaskById','getModels','getProjects','createFilePresignedUrl'))
+                  ('getTaskById','getModels','getProjects'))
         for attempt in range(3 if safe else 1):
             try:
                 response=self.http.post(self.url,data=payload,headers=self.headers,timeout=180)

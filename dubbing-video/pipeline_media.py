@@ -74,8 +74,10 @@ def prepare(project, episode, ffmpeg, device):
                 raise ValueError('Separation input changed')
             save_json(marker, proposed)
             destination = root/'separated'
+            import torch
+            actual_device = 'cuda' if device == 'cuda' and torch.cuda.is_available() else 'cpu'
             command = [sys.executable,'-m','demucs','-n','htdemucs','--two-stems','vocals',
-                       '--shifts','0','--overlap','0.25','--segment','7','-d',device,
+                       '--shifts','0','--overlap','0.25','--segment','7','-d',actual_device,
                        '--float32','-j','0','-o',str(destination),str(source)]
             save_json(root/'progress.private.json',{'stage':'separating_background_and_dialogue','updated_at':time.time()})
             with process_lock(Path('output/four-dramas-20261030/separation-resource.lock'),timeout=3600):
