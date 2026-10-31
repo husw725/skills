@@ -42,7 +42,8 @@ def source_media(project, episode):
 
 
 def prepare(project, episode, ffmpeg, device):
-    root = Path(f'output/review-project-{project}/episode-{episode:02d}/pipeline-media-20261031')
+    revision = 'pipeline-media-20261031' if project == 100 else 'pipeline-media-20261031-v2'
+    root = Path(f'output/review-project-{project}/episode-{episode:02d}/{revision}')
     root.mkdir(parents=True, exist_ok=True)
     with process_lock(root / 'media.lock', timeout=0):
         video, sha, tracks = source_media(project, episode)
@@ -65,7 +66,7 @@ def prepare(project, episode, ffmpeg, device):
                 raise ValueError('Cached htdemucs checksum differs from official filename')
             source = root / 'source-stereo.wav'
             run([ffmpeg,'-nostdin','-v','error','-y','-i',video,'-vn','-ar','44100','-ac','2','-c:a','pcm_s16le',source])
-            recipe = {'kind':'demucs_htdemucs_candidate','model_sha256':model_sha,'shifts':0,'segment':7.8,
+            recipe = {'kind':'demucs_htdemucs_candidate','model_sha256':model_sha,'shifts':0,'segment':7,
                       'overlap':0.25,'pure_background_verified':False,'source_speaker_verified':False}
             marker = root/'separation-input.private.json'
             proposed = {'source':binding,'recipe':recipe,'source_wav_sha256':digest(source)}
@@ -74,7 +75,7 @@ def prepare(project, episode, ffmpeg, device):
             save_json(marker, proposed)
             destination = root/'separated'
             command = [sys.executable,'-m','demucs','-n','htdemucs','--two-stems','vocals',
-                       '--shifts','0','--overlap','0.25','--segment','7.8','-d',device,
+                       '--shifts','0','--overlap','0.25','--segment','7','-d',device,
                        '--float32','-j','0','-o',str(destination),str(source)]
             save_json(root/'progress.private.json',{'stage':'separating_background_and_dialogue','updated_at':time.time()})
             with process_lock(Path('output/four-dramas-20261030/separation-resource.lock'),timeout=3600):
@@ -123,7 +124,8 @@ def main():
                 except Exception as exc:
                     state['episodes'][key]={'status':'needs_review','error_type':type(exc).__name__}
                     import traceback
-                    folder=Path(f'output/review-project-{project}/episode-{episode:02d}/pipeline-media-20261031');folder.mkdir(parents=True,exist_ok=True)
+                    revision = 'pipeline-media-20261031' if project == 100 else 'pipeline-media-20261031-v2'
+                    folder=Path(f'output/review-project-{project}/episode-{episode:02d}/{revision}');folder.mkdir(parents=True,exist_ok=True)
                     with (folder/'error.private.log').open('a',encoding='utf-8') as log:traceback.print_exc(file=log)
                 save_json(state_path,state)
         state.update(stage='media_preparation_finished',updated_at=time.time());save_json(state_path,state)

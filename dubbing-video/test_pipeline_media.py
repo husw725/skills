@@ -13,7 +13,7 @@ class MediaReuseTests(unittest.TestCase):
             original=os.getcwd()
             try:
                 os.chdir(directory)
-                root=Path('output/review-project-96/episode-01/pipeline-media-20261031');root.mkdir(parents=True)
+                root=Path('output/review-project-96/episode-01/pipeline-media-20261031-v2');root.mkdir(parents=True)
                 video=Path('original.mp4');video.write_bytes(b'original')
                 stem=root/'background.wav';stem.write_bytes(b'candidate stem')
                 binding=dict(project_id=96,episode=1,video=str(video),video_sha256=media.digest(video))
