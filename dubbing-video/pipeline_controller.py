@@ -168,6 +168,8 @@ def main():
                 if key in active:continue
                 old=state['jobs'].get(key,{})
                 if orphan_alive.get(key):continue
+                if job.get('execution_hold'):
+                    state['jobs'][key]={**old,'stage':'source_timeline_review','reason':job['execution_hold']};continue
                 decision_path=Path(job['decision_path'])
                 if not decision_path.exists():
                     state['jobs'][key]={**old,'stage':'production_decision_pending'};continue
