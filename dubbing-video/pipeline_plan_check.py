@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 import sys
 from dub_episode import digest
-from pipeline_speech import build
+from pipeline_speech import build,audio_root
 from translate import read_json,save_json
 
 
@@ -16,7 +16,7 @@ def main():
     if (policy.get('approve_frozen_candidate_speech') is not True or decision['project_id'] not in policy['projects']
         or policy.get('native_listening_approved') is not False or policy.get('allow_paid_regeneration') is not False):
         raise ValueError('Explicit bounded candidate production policy required')
-    root=args.decision.parent/'pipeline-audio-20261031-v1';path=root/'speech-plan.private.json';plan=read_json(path)
+    root=audio_root(args.decision);path=root/'speech-plan.private.json';plan=read_json(path)
     if build(args.decision)!=plan or plan['max_new_tts']!=len({g['cache_key'] for g in plan['groups']}):
         raise ValueError('Actual frozen plan changed')
     if not 1<=plan['max_new_tts']<=policy['max_unique_requests_per_episode']:

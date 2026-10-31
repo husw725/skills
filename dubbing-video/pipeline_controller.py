@@ -8,6 +8,7 @@ import json
 from datetime import datetime
 
 from dub_episode import digest
+from pipeline_speech import audio_root
 from process_lock import process_lock
 from translate import read_json,save_json,fingerprint
 
@@ -120,7 +121,7 @@ def main():
             speech_waiting=False
             for episode_job in registry.get('episodes',[]):
                 if episode_job.get('legacy_audio_root'):continue
-                audio=Path(episode_job['decision_path']).parent/'pipeline-audio-20261031-v1'
+                audio=audio_root(Path(episode_job['decision_path']))
                 key=f"episode:{episode_job['project_id']}:{episode_job['episode']}"
                 if (audio/'speech-approval.private.json').exists() and not (audio/'generation-result.private.json').exists() and state['jobs'].get(key,{}).get('stage')!='needs_reconciliation':
                     speech_waiting=True;break
@@ -174,7 +175,7 @@ def main():
                 decision=read_json(decision_path)
                 if not decision['units'] and not job.get('legacy_audio_root'):
                     state['jobs'][key]={**old,'stage':'source_holds'};continue
-                audio=decision_path.parent/'pipeline-audio-20261031-v1'
+                audio=audio_root(decision_path,decision)
                 if job.get('legacy_audio_root'):audio=Path(job['legacy_audio_root'])
                 delivery=decision_path.parent/'pipeline-publication-20261031/progress.private.json'
                 if delivery.exists():

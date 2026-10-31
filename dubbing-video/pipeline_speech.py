@@ -137,6 +137,13 @@ def build(decision_path):
             'subtitle_text':text.candidate_srt(context['timed_source'],candidate).decode('utf-8')}
 
 
+def audio_root(decision_path,decision=None):
+    decision=read_json(decision_path) if decision is None else decision
+    revision=decision.get('production_revision',1)
+    if type(revision) is not int or not 1<=revision<=9:raise ValueError('Invalid production revision')
+    return decision_path.parent/f'pipeline-audio-20261031-v{revision}'
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--decision',type=Path,required=True);parser.add_argument('--stage',choices=('prepare','generate','fit'),required=True)
@@ -144,7 +151,7 @@ def main():
     args=parser.parse_args()
     if sys.platform!='win32':raise ValueError('Windows pipeline production only')
     plan=build(args.decision);project,episode=plan['project_id'],plan['episode']
-    root=args.decision.parent/'pipeline-audio-20261031-v1';root.mkdir(exist_ok=True)
+    root=audio_root(args.decision);root.mkdir(exist_ok=True)
     speech.ROOT=root;speech.CACHE=Path(f'output/review-project-{project}/paid-speech-cache');fitting.ROOT=root
     with process_lock(root/'production.lock',timeout=0):
         path=root/'speech-plan.private.json';subtitle=root/'pt-BR-production-candidate.srt'
