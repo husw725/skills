@@ -139,7 +139,15 @@ def get_response(exe, prompt, stage, rows, context):
         if outcome['status'] != 'response_received':
             raise ValueError('Model completion needs reconciliation; do not resubmit')
         data = read_json(outcome['output'])
-        validate(data, rows, context)
+        try:
+            validate(data, rows, context)
+        except ValueError as exc:
+            # Known received but unusable output: preserve it and try only the pinned fallback.
+            # Unknown submissions still raise above and never reach this branch.
+            save_json(stage / f'{model}.validation.private.json', {'status': 'rejected',
+                'response_sha256': outcome['sha256'], 'request_fingerprint': signature,
+                'reason': str(exc), 'fallback_limited_to_existing_route': True})
+            continue
         return data, {'model': model, 'response_path': outcome['output'],
             'response_sha256': outcome['sha256'], 'request_fingerprint': signature}
     raise ValueError('Account-listed models unavailable')

@@ -106,13 +106,80 @@ def terminate_child(process):
         raise RuntimeError('Child termination uncertain; stop this queue') from exc
 
 
+def notify_blocker(state, persist, config=Path('output/dingtalk-notify.private.json'), sender=None):
+    # First unresolved episode per project; one durable notification intent avoids spam.
+    if state.get('notification', {}).get('status') in ('submitting', 'sent', 'delivery_failed_or_unknown'):
+        return
+    blocked = [key for key, row in state['episodes'].items() if row['status'] != 'text_candidate_ready'
+               and row['status'] not in ('running', 'submission_reserved')]
+    if not blocked or not config.exists():
+        return
+    state['notification'] = {'status': 'submitting', 'episode': blocked[0], 'attempted_at': time.time()}
+    persist()
+    try:
+        cfg = read_json(config)
+        names = {96: "Perfect Housewife's Deadly Secret", 110: 'Seduced by the Dark Lord I Swore To Kill',
+                 102: 'They Bullied the Wrong Heiress', 100: 'The Count of Monte Cristo'}
+        if state.get('stage') == 'blocked_child_termination_uncertain':
+            activity = '本剧队列已停止，需核查进程；其它剧以各自实际状态为准。'
+        elif state.get('stage') == 'translating_with_screenplay':
+            activity = '其它独立集数继续处理。'
+        else:
+            activity = '本批次已结束，待核查缺项；其它剧以各自实际状态为准。'
+        message = ('### 剧集翻译需要核查\n\n' + names[state['project_id']] + ' · 第' + blocked[0]
+                   + '集需核查；当前已完成' + str(state['ready']) + '/' + str(len(state['scope']))
+                   + '集译稿候选。\n\n已保留请求、响应及断点。' + activity + '不会盲目重发未知请求，也不会新增克隆。')
+        if cfg.get('keyword'):
+            message = cfg['keyword'] + '\n\n' + message
+        if sender is None:
+            from notification_watch import send
+            sender = send
+        sender(cfg, message)
+    except Exception as exc:
+        state['notification'].update(status='delivery_failed_or_unknown', error_type=type(exc).__name__)
+    else:
+        state['notification'].update(status='sent', sent_at=time.time())
+    persist()
+
+
+def notify_current_project(project):
+    root = Path(f'output/review-project-{project}/continuous-editorial-queue-20261031')
+    path = root / 'progress.private.json'
+    if not path.exists():
+        return
+    # Separate ledger: monitoring must never overwrite a running queue's progress.
+    with process_lock(root / 'notification.lock', timeout=0):
+        state = read_json(path)
+        if state['project_id'] != project or state['scope'] != list(range(1, COUNTS[project]+1)):
+            raise ValueError('Notification scope changed')
+        for key, row in state['episodes'].items():
+            if row['status'] in ('text_candidate_ready', 'running', 'submission_reserved'):
+                continue
+            folder = folder_for(project, int(key))
+            if (folder / 'editorial-result.private.json').exists():
+                try:
+                    state['episodes'][key] = validate_saved(project, int(key), folder)
+                except Exception:
+                    pass  # The unresolved episode still merits the existing alert.
+        state['ready'] = sum(row['status'] == 'text_candidate_ready' for row in state['episodes'].values())
+        receipt = root / 'notification.private.json'
+        state['notification'] = read_json(receipt) if receipt.exists() else {}
+        def persist():
+            save_json(receipt, state['notification'])
+        notify_blocker(state, persist)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--project', type=int, choices=tuple(COUNTS), required=True)
+    parser.add_argument('--notify-only', action='store_true')
     args = parser.parse_args()
     if sys.platform != 'win32':
         raise ValueError('Production text queue runs on Windows')
     project = args.project
+    if args.notify_only:
+        notify_current_project(project)
+        return
     root = Path(f'output/review-project-{project}/continuous-editorial-queue-20261031')
     root.mkdir(parents=True, exist_ok=True)
     with process_lock(root / 'queue.lock', timeout=0):
@@ -159,6 +226,7 @@ def main():
             try:
                 state['episodes'][key] = step(project, episode, prior, runner=run_child)
             except RuntimeError:
+                state['episodes'][key].update(status='child_termination_uncertain', automatic_retry=False)
                 state.update(stage='blocked_child_termination_uncertain');persist()
                 raise
             except Exception as exc:
