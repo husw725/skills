@@ -119,6 +119,7 @@ def main():
             if registry.get('schema_version')!=1:raise ValueError('Pipeline registry schema changed')
             orphan_alive={k:recorded_worker_alive(r) for k,r in state['jobs'].items() if k not in active}
             paid_busy,free_busy=occupied_slots(active,state['jobs'],orphan_alive)
+            paid_busy=paid_busy or Path('output/paid-production-paused.private.json').exists()
             speech_waiting=False
             for episode_job in registry.get('episodes',[]):
                 if episode_job.get('legacy_audio_root'):continue

@@ -300,6 +300,8 @@ def generate(plan,config,*,expected_scope=(100,1),current_plan_builder=None,max_
                     client=contexts.client
                     if task is None:
                         with submit_lock:
+                            if Path('output/paid-production-paused.private.json').exists():
+                                raise ValueError('Paid production paused; no new request submitted')
                             if stopped.is_set():raise ValueError('Held after another group failure; no new submission')
                             if attempts>=approval['max_new_tts']:raise ValueError('Paid request cap exhausted')
                             if key in ledger['attempts']:raise ValueError('Earlier attempt reservation exists; never resubmit')

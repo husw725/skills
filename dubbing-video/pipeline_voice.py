@@ -71,6 +71,8 @@ def clone(root,plan,reference,approval_path,config):
     project,role,platform=plan['project_id'],plan['role'],plan['platform']
     bank_path=root.parent/'voice-bank.private.json'
     with process_lock(Path('output/paid-production.lock'),timeout=0),process_lock(root.parent/'bank.lock',timeout=0),process_lock(root/'reference.lock',timeout=0):
+        if Path('output/paid-production-paused.private.json').exists():
+            raise ValueError('Paid production paused; no new voice submitted')
         binding=read_json(root/'plan-binding.private.json')
         if (binding['plan']!=plan or binding['plan_sha256']!=reference['plan_sha256']
             or read_json(root/'reference-receipt.private.json')!=reference
