@@ -21,6 +21,8 @@ def request_key(request):
     canonical=dict(request)
     for key in ('speed','vol','pitch'):
         value=canonical[key]
+        if value is None and key in ('vol','pitch') and request.get('model')=='sonic-3.6':
+            continue  # Explicit nullable Cartesia fields remain null.
         if type(value) not in (int,float) or not math.isfinite(value):
             raise ValueError('Finite numeric speech parameter required')
         if value==int(value):canonical[key]=int(value)
@@ -183,7 +185,13 @@ def read_cache(folder,key,request):
     return request,task,None
 
 
-def preflight_cache(requests):
+def has_project(data,project_id):
+    if isinstance(data,dict):
+        return any(str(data.get(key))==str(project_id) for key in ('project_id','projectId')) or any(has_project(v,project_id) for v in data.values())
+    return isinstance(data,list) and any(has_project(v,project_id) for v in data)
+
+
+def preflight_cache(requests,project_id=100):
     CACHE.mkdir(parents=True,exist_ok=True)
     markers=list(CACHE.rglob('request.private.json'));known={p.parent for p in markers}
     for name in ('submission.private.json','*.submission-pending.json','raw.wav','raw-receipt.private.json',
@@ -195,7 +203,7 @@ def preflight_cache(requests):
     ledger_path=CACHE/'submission-attempts.private.json'
     if ledger_path.exists():
         ledger=read_json(ledger_path)
-        if ledger['project_id']!=100:raise ValueError('Speech attempt ledger belongs to another project')
+        if ledger['project_id']!=project_id:raise ValueError('Speech attempt ledger belongs to another project')
         for key,attempt in ledger['attempts'].items():
             marker=CACHE/key/'request.private.json'
             if not marker.exists():raise ValueError('Prior paid attempt lost its cache binding')
@@ -209,7 +217,7 @@ def preflight_cache(requests):
         import itertools
         choices=[]
         for name in ('speed','vol','pitch'):
-            value=request[name];choices.append((int(value),float(value)) if value==int(value) else (value,))
+            value=request[name];choices.append((int(value),float(value)) if type(value) in (int,float) and value==int(value) else (value,))
         for values in itertools.product(*choices):
             variant=dict(request)
             for name,value in zip(('speed','vol','pitch'),values):variant[name]=value
@@ -219,37 +227,38 @@ def preflight_cache(requests):
         for p in Path('output').rglob(name):
             if cache_root in p.resolve().parents:continue
             value=read_json(p)
-            own_project=Path('output/review-project-100').resolve() in p.resolve().parents or voices.has_project(value)
+            own_project=Path(f'output/review-project-{project_id}').resolve() in p.resolve().parents or has_project(value,project_id)
             if p.name.endswith('.submission-pending.json'):
                 if own_project or (isinstance(value,dict) and value.get('argument_fingerprint') in aliases):
                     raise ValueError('External unknown project100 speech/clone work requires reconciliation')
             elif isinstance(value,dict):
                 req=value.get('request')
-                matching=(isinstance(req,dict) and req.get('projectId')==100 and all(k in req for k in ('speed','vol','pitch')) and request_key(req) in requests)
+                matching=(isinstance(req,dict) and req.get('projectId')==project_id and all(k in req for k in ('speed','vol','pitch')) and request_key(req) in requests)
                 if matching or value.get('fingerprint') in aliases:
                     raise ValueError('Matching external paid cache exists; do not duplicate synthesis')
     return {key:read_cache(CACHE/key,key,request) for key,request in requests.items()}
 
 
-def generate(plan,config):
+def generate(plan,config,*,expected_scope=(100,1),current_plan_builder=None,max_groups=44):
     approval=read_json(ROOT/'speech-approval.private.json')
     if (approval['plan_sha256']!=digest(ROOT/'speech-plan.private.json')
       or approval['max_new_tts']!=plan['max_new_tts'] or approval['new_clones']!=0
       or approval['speech_groups_approved'] is not True
       or digest(approval['audit_report_path'])!=approval['audit_report_sha256']):
         raise ValueError('Actual finite speech plan review required')
-    if plan!=read_json(ROOT/'speech-plan.private.json') or plan!=build_plan():raise ValueError('Current source or voice bank differs')
+    current=build_plan() if current_plan_builder is None else current_plan_builder()
+    if plan!=read_json(ROOT/'speech-plan.private.json') or plan!=current:raise ValueError('Current source or voice bank differs')
     requests={g['cache_key']:g['request'] for g in plan['groups']}
-    if (plan['project_id']!=100 or plan['episode']!=1 or plan['new_clone_count']!=0
-      or plan['max_new_tts']!=len(requests) or not 1<=len(requests)<=44
+    if ((plan['project_id'],plan['episode'])!=expected_scope or plan['new_clone_count']!=0
+      or plan['max_new_tts']!=len(requests) or not 1<=len(requests)<=max_groups
       or any(request_key(request)!=key for key,request in requests.items())):
         raise ValueError('Finite canonical speech request bound differs')
-    cached=preflight_cache(requests)
+    cached=preflight_cache(requests,plan['project_id'])
     if sum(task is None for _,task,_ in cached.values())>approval['max_new_tts']:
         raise ValueError('New synthesis bound exceeded before client initialization')
     plan_sha=digest(ROOT/'speech-plan.private.json')
     ledger_path=CACHE/'submission-attempts.private.json'
-    ledger=read_json(ledger_path) if ledger_path.exists() else {'project_id':100,'attempts':{}}
+    ledger=read_json(ledger_path) if ledger_path.exists() else {'project_id':plan['project_id'],'attempts':{}}
     prior_attempts=sum(a['origin_plan_sha256']==plan_sha for a in ledger['attempts'].values())
     finished=ROOT/'generation-result.private.json'
     if finished.exists():

@@ -31,12 +31,12 @@ def media_inputs():
     return video,background
 
 
-def fitted(plan,ffmpeg):
+def fitted(plan,ffmpeg,media=None):
     generated=read_json(ROOT/'generation-result.private.json')
     plan_sha=digest(ROOT/'speech-plan.private.json')
     if generated['plan_sha256']!=plan_sha or [g['group_id'] for g in generated['groups']]!=[g['id'] for g in plan['groups']]:
         raise ValueError('Generated speech coverage differs')
-    video,background=media_inputs();duration=float(probe(video,ffmpeg)['format']['duration'])
+    video,background=media_inputs() if media is None else media;duration=float(probe(video,ffmpeg)['format']['duration'])
     report={'plan_sha256':plan_sha,'generation_sha256':digest(ROOT/'generation-result.private.json'),
         'media_sha256':{str(video):digest(video),str(background):digest(background)},'groups':[],
         'blocked':[],'new_tts':0,'new_clones':0,'native_listening_passed':False}
@@ -80,7 +80,7 @@ def fitted(plan,ffmpeg):
                 'seconds':actual,'source_display_end':group['end'],'end_limit':end_limit,
                 'synthesis_speed':group['request']['speed'],'post_atempo':tempo,
                 'nominal_combined_rate':group['request']['speed']*tempo,
-                'edge_trim_samples':[left,right],'input_fingerprint':fingerprint(binding)}
+                ('edge_trim_samples' if media is None else 'edge_trim_seconds'):[left,right],'input_fingerprint':fingerprint(binding)}
             save_json(receipt,item)
         report['groups'].append(item)
     save_json(ROOT/'fit-report.private.json',report)
@@ -89,9 +89,9 @@ def fitted(plan,ffmpeg):
     return report
 
 
-def render(plan,fit,ffmpeg):
+def render(plan,fit,ffmpeg,media=None,filename=None):
     if fit['blocked'] or len(fit['groups'])!=len(plan['groups']):raise ValueError('Do not render unresolved timing')
-    video,background=media_inputs()
+    video,background=media_inputs() if media is None else media
     if fit['media_sha256']!={str(video):digest(video),str(background):digest(background)}:
         raise ValueError('Fitted source media changed')
     duration=float(probe(video,ffmpeg)['format']['duration']);samples=np.zeros(math.ceil(duration*RATE),np.float32)
@@ -106,7 +106,7 @@ def render(plan,fit,ffmpeg):
     run([ffmpeg,'-nostdin','-v','error','-y','-i',dialogue,'-i',background,
         '-filter_complex',f'[0:a]apad,atrim=duration={duration}[d];[1:a]apad,atrim=duration={duration}[b];[d][b]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95:level=false:latency=true[out]',
         '-map','[out]','-ar',str(RATE),'-ac','2','-c:a','pcm_s16le',mix])
-    final=ROOT/'The_Count_of_Monte_Cristo_EP01_pt-BR.mp4'
+    final=ROOT/(filename or 'The_Count_of_Monte_Cristo_EP01_pt-BR.mp4')
     run([ffmpeg,'-nostdin','-v','error','-y','-i',video,'-i',mix,'-map','0:v:0','-map','1:a:0',
         '-c:v','copy','-c:a','aac','-b:a','192k','-movflags','+faststart',final])
     run([ffmpeg,'-nostdin','-v','error','-xerror','-i',final,'-f','null','-'])
