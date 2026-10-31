@@ -124,8 +124,15 @@ def main():
                 key=f"episode:{episode_job['project_id']}:{episode_job['episode']}"
                 if (audio/'speech-approval.private.json').exists() and not (audio/'generation-result.private.json').exists() and state['jobs'].get(key,{}).get('stage')!='needs_reconciliation':
                     speech_waiting=True;break
+            urgency={}
+            for episode_job in registry.get('episodes',[]):
+                decision_path=Path(episode_job['decision_path'])
+                if not decision_path.exists():continue
+                for unit in read_json(decision_path)['units']:
+                    role_key=(episode_job['project_id'],unit['role'])
+                    urgency[role_key]=min(urgency.get(role_key,999),episode_job['episode'])
             # Role voices are shared for the whole drama, never created per episode.
-            for job in registry.get('voices',[]):
+            for job in sorted(registry.get('voices',[]),key=lambda j:(urgency.get((j['project_id'],j['role']),999),j['project_id'],j['role'])):
                 key=f"voice:{job['project_id']}:{job['role']}"
                 if key in active:continue
                 old=state['jobs'].get(key,{})
@@ -151,7 +158,7 @@ def main():
                             launch(key,'reference_check',['pipeline_reference_check.py','--ffmpeg',str(args.ffmpeg),'--role-folder',str(folder)],python=args.asr_python);free_busy+=1
                         elif screened.exists() and not checked.exists() and args.candidate_policy and free_busy<2:
                             launch(key,'reference_accept',['pipeline_reference_accept.py','--plan',str(plan_path),'--policy',str(args.candidate_policy),'--config',str(args.audio_config)]);free_busy+=1
-                        else:state['jobs'][key]={**old,'stage':'reference_review_pending'}
+                        else:state['jobs'][key]={**old,'stage':'reference_review_pending' if checked.exists() else 'reference_check_pending'}
                     elif not paid_busy and not speech_waiting:
                         launch(key,'clone',base+['--approval',str(approval),'--config',str(args.audio_config)],True);paid_busy=True
             for job in sorted(registry.get('episodes',[]),key=lambda j:(j['episode'],j['project_id'])):
