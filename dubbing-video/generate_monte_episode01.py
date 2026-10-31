@@ -318,6 +318,10 @@ def generate(plan,config,*,expected_scope=(100,1),current_plan_builder=None,max_
                     deadline=time.monotonic()+900
                     while True:
                         status=validate_status(client.task(task),task);save_json(status_path,{'task_id':task,'result':status})
+                        if status['taskStatus']==3 and 'insufficient balance' in str(status.get('taskMessage','')).lower():
+                            with submit_lock:
+                                pause=Path('output/paid-production-paused.private.json')
+                                if not pause.exists():save_json(pause,{'reason':'provider_insufficient_balance','task_id':task,'project_id':plan['project_id'],'created_at':time.time()})
                         if status['taskStatus'] in (2,3):break
                         if time.monotonic()>deadline:raise ValueError('Known task pending; only poll this ID, never resubmit')
                         time.sleep(10)

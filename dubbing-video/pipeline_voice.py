@@ -131,6 +131,8 @@ def clone(root,plan,reference,approval_path,config):
             fp_path=root/'request-fingerprint.private.json'
             if fp_path.exists() and read_json(fp_path)['fingerprint']!=fingerprint(request):raise ValueError('Clone payload fingerprint changed')
             save_json(fp_path,{'fingerprint':fingerprint(request)})
+            if Path('output/paid-production-paused.private.json').exists():
+                raise ValueError('Paid production paused after reference upload; no clone submitted')
             result=safe_submit(client,'uploadVoice',request,receipt)
         else:result=read_json(receipt)
         item={'voice_id':voice_result(result,project,role,platform),'platform':platform,'role':role,'basis':basis,
