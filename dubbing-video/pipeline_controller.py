@@ -177,6 +177,7 @@ def main():
                 if digest(decision_path)!=job['decision_sha256']:
                     state['jobs'][key]={**old,'stage':'needs_reconciliation','reason':'registered_decision_changed'};continue
                 decision=read_json(decision_path)
+                casting_extension=bool(decision.get('casting_extension'))
                 if not decision['units'] and not job.get('legacy_audio_root'):
                     state['jobs'][key]={**old,'stage':'source_holds'};continue
                 audio=audio_root(decision_path,decision)
@@ -192,17 +193,23 @@ def main():
                 fit_report=audio/'fit-report.private.json'
                 if phase=='fit' and fit_report.exists() and read_json(fit_report).get('blocked'):phase='timing_review'
                 if phase=='speech_review' and args.candidate_policy and free_busy<2:
-                    launch(key,'plan_check',['pipeline_plan_check.py','--decision',str(decision_path),'--policy',str(args.candidate_policy)])
+                    command=(['pipeline_casting_extension.py','--decision',str(decision_path),'--stage','plan_check']
+                             if casting_extension else ['pipeline_plan_check.py','--decision',str(decision_path),'--policy',str(args.candidate_policy)])
+                    launch(key,'plan_check',command)
                     free_busy+=1;continue
                 if phase in ('source_holds','speech_review','timing_review'):
                     state['jobs'][key]={**old,'stage':phase};continue
-                base=['pipeline_speech.py','--decision',str(decision_path)]
+                base=['pipeline_casting_extension.py' if casting_extension else 'pipeline_speech.py','--decision',str(decision_path)]
                 if phase=='prepare':
                     media=Path(decision['media_receipt_path'])
                     if not media.exists():state['jobs'][key]={**old,'stage':'media_pending'};continue
                     roles={u['role'] for u in decision['units']};available=set()
                     bank=Path(f"output/review-project-{job['project_id']}/pipeline-voices-20261031/voice-bank.private.json")
                     if bank.exists():available.update(read_json(bank)['voices'])
+                    if casting_extension:
+                        reused=read_json(decision['casting_extension']['voice_manifest_path'])
+                        if reused['project_id']!=job['project_id']:raise ValueError('Reused casting bank scope changed')
+                        available.update(reused['voices'])
                     if job['project_id']==100:available.update(read_json('output/review-project-100/voice-bank-minimax-20261031/voice-bank.private.json')['voices'])
                     if roles-available:state['jobs'][key]={**old,'stage':'voices_pending','missing_roles':sorted(roles-available)};continue
                     if free_busy<2:launch(key,'prepare',base+['--stage','prepare']);free_busy+=1
