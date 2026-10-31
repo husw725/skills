@@ -154,6 +154,27 @@ def pinned_models(folder,listed_models):
     return route
 
 
+def text_process_environment():
+    env = os.environ.copy()
+    config = ROOT / 'text-network.private.json'
+    if not config.exists():
+        return env
+    from urllib.parse import urlsplit
+    cfg = read_json(config)
+    if (set(cfg) != {'schema_version', 'proxy_url', 'expires_at'} or type(cfg['schema_version']) is not int or cfg['schema_version'] != 1
+        or type(cfg['expires_at']) not in (int, float) or not time.time() < cfg['expires_at'] <= time.time()+48*3600):
+        raise ValueError('Temporary text transport configuration invalid or expired')
+    parsed = urlsplit(cfg['proxy_url'])
+    if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', '::1')
+        or not parsed.port or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment):
+        raise ValueError('Temporary text proxy must be credential-free loopback HTTP')
+    for key in ('HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy'):
+        env[key] = cfg['proxy_url']
+    for key in ('ALL_PROXY', 'all_proxy'):
+        env.pop(key, None)
+    return env
+
+
 def call_model(exe,model,prompt,folder):
     output=folder/f'{model}.response.private.json';log=folder/f'{model}.private.log'
     state=folder/f'{model}.state.private.json'
@@ -167,6 +188,7 @@ def call_model(exe,model,prompt,folder):
                 raise ValueError('Ambiguous capacity failure; reconcile')
         return outcome
     if output.exists():raise ValueError('Unbound model output preserved for review')
+    child_env = text_process_environment()
     save_json(state,{'model':model,'status':'running_needs_reconciliation_if_interrupted','output':str(output),'started_at':time.time()})
     with tempfile.TemporaryDirectory(prefix='ptbr-context-') as isolated, log.open('a',encoding='utf-8') as stream:
         argv=[str(exe),'-a','never','-m',model]
@@ -178,7 +200,7 @@ def call_model(exe,model,prompt,folder):
           '--ephemeral','--skip-git-repo-check','-C',isolated,
           '--output-schema',str((folder/'schema.private.json').resolve()),
           '--output-last-message',str(output.resolve()),'-'])
-        process=subprocess.Popen(argv,cwd=isolated,
+        process=subprocess.Popen(argv,cwd=isolated,env=child_env,
           stdin=subprocess.PIPE,stdout=stream,stderr=stream,text=True,encoding='utf-8')
         try:process.communicate(prompt,timeout=300)
         except subprocess.TimeoutExpired:

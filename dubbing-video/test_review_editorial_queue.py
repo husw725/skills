@@ -1,6 +1,7 @@
 import tempfile
 import os
 import json
+import time
 from pathlib import Path
 import unittest
 from unittest.mock import patch, Mock
@@ -104,6 +105,24 @@ class QueueResumeTests(unittest.TestCase):
     def test_special_existing_first_episode_path(self):
         self.assertIn('20261030', str(queue.folder_for(100, 1)))
         self.assertIn('20261031', str(queue.folder_for(96, 1)))
+
+
+class TextTransportTests(unittest.TestCase):
+    def test_proxy_is_temporary_child_only_and_loopback(self):
+        import prepare_review_translation_context as context
+        with tempfile.TemporaryDirectory() as directory, patch.object(context,'ROOT',Path(directory)):
+            path=Path(directory)/'text-network.private.json'
+            original=os.environ.get('HTTPS_PROXY')
+            cfg=dict(schema_version=1,proxy_url='http://127.0.0.1:17890',expires_at=time.time()+3600)
+            path.write_text(json.dumps(cfg))
+            self.assertEqual(context.text_process_environment()['HTTPS_PROXY'],cfg['proxy_url'])
+            self.assertEqual(os.environ.get('HTTPS_PROXY'),original)
+            cfg['proxy_url']='http://example.org:17890'
+            path.write_text(json.dumps(cfg))
+            with self.assertRaises(ValueError):context.text_process_environment()
+            cfg.update(proxy_url='http://127.0.0.1:17890',expires_at=time.time()-1)
+            path.write_text(json.dumps(cfg))
+            with self.assertRaises(ValueError):context.text_process_environment()
 
 
 class ASRCandidateTests(unittest.TestCase):
