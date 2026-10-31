@@ -50,6 +50,21 @@ def main():
             samples=np.frombuffer(reader.readframes(reader.getnframes()),dtype='<i2').astype('float64')/32768
         rms=float(np.sqrt(np.mean(samples*samples)));clipped=float(np.mean(np.abs(samples)>=.999))
         issues=[]
+        source_rows={}
+        for source_path in plan['inputs_sha256']:
+            if Path(source_path).name=='source-input.private.json':
+                for row in read_json(source_path)['timed_source']:
+                    source_rows[row['id']]=row
+        for segment in plan['segments']:
+            for cue_id in segment['cue_ids']:
+                row=source_rows.get(cue_id)
+                if row is None or not row.get('words'):
+                    issues.append('Source word boundaries unavailable; individual edge review required');continue
+                if any(w['start']<segment['start']-.001 or w['end']>segment['end']+.001 for w in row['words']):
+                    issues.append('Reference window cuts into source word boundaries; never auto approve')
+        edge=min(3,len(expected),len(actual))
+        if not edge or expected[:edge]!=actual[:edge] or expected[-edge:]!=actual[-edge:]:
+            issues.append('Reference first/last words differ; individual edge review required')
         if ratio<policy['minimum_reference_word_match']:issues.append('Reference content requires individual review')
         if rms<.003 or clipped>.002:issues.append('Reference level/clipping requires individual review')
         minimum=10 if plan['platform']=='minimax' else 3
