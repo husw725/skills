@@ -57,6 +57,7 @@ def main():
     parser.add_argument('--candidate-policy',type=Path)
     parser.add_argument('--asr-python',type=Path)
     parser.add_argument('--notify-config',type=Path)
+    parser.add_argument('--defer-publication',action='store_true',help='Prepare all media locally for whole-season review delivery')
     args=parser.parse_args()
     if sys.platform!='win32' or not 1<=args.hours<=168:raise ValueError('Bounded Windows production only')
     ROOT.mkdir(parents=True,exist_ok=True)
@@ -206,6 +207,8 @@ def main():
                     launch(key,'generate',base+['--stage','generate','--config',str(args.audio_config)],True);paid_busy=True
                 elif phase=='fit' and free_busy<2:
                     launch(key,'fit',base+['--stage','fit','--ffmpeg',str(args.ffmpeg)]);free_busy+=1
+                elif phase=='publish' and args.defer_publication:
+                    state['jobs'][key]={**old,'stage':'media_ready_whole_season_delivery_pending'};continue
                 elif phase=='publish' and free_busy<2:
                     media_approval=audio/'publication-approval.private.json'
                     if not media_approval.exists():

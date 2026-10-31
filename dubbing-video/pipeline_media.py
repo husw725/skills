@@ -13,7 +13,7 @@ from review_drama_source_asr import MANIFEST_FINGERPRINT
 from prepare_review_editorial_queue import COUNTS
 
 
-def source_media(project, episode):
+def source_media(project, episode, *, use_supplied_tracks=True):
     manifest = read_json('output/four-dramas-20261030/intake-manifest.private.json')
     if fingerprint(manifest) != MANIFEST_FINGERPRINT:
         raise ValueError('Source batch changed')
@@ -31,7 +31,7 @@ def source_media(project, episode):
     if digest(video) != inspected['source_sha256']:
         raise ValueError('Original video changed')
     tracks = {}
-    if project == 100:
+    if project == 100 and use_supplied_tracks:
         assets = read_json('output/review-project-100/netdisk-source-preparation/progress.private.json')['assets']
         for kind in ('sfx', 'dialog'):
             matches = [a for a in assets.values() if a['kind'] == kind and a['episode'] == episode]
@@ -41,12 +41,13 @@ def source_media(project, episode):
     return video, inspected['source_sha256'], tracks
 
 
-def prepare(project, episode, ffmpeg, device):
+def prepare(project, episode, ffmpeg, device, *, separate_source=False):
     revision = 'pipeline-media-20261031' if project == 100 else 'pipeline-media-20261031-v2'
+    if separate_source:revision='pipeline-media-20261031-source-separated-v2'
     root = Path(f'output/review-project-{project}/episode-{episode:02d}/{revision}')
     root.mkdir(parents=True, exist_ok=True)
     with process_lock(root / 'media.lock', timeout=0):
-        video, sha, tracks = source_media(project, episode)
+        video, sha, tracks = source_media(project, episode, use_supplied_tracks=not separate_source)
         binding = {'project_id': project, 'episode': episode, 'video': str(video), 'video_sha256': sha}
         receipt = root / 'media.private.json'
         if receipt.exists():
@@ -108,6 +109,7 @@ def main():
     parser.add_argument('--project',type=int,choices=tuple(COUNTS))
     parser.add_argument('--episode',type=int)
     parser.add_argument('--ffmpeg',type=Path,required=True)
+    parser.add_argument('--separate-source',action='store_true',help='Explicit new separation from the pinned picture; preserve supplied tracks')
     parser.add_argument('--device',choices=('cpu','cuda'),default='cpu')
     args=parser.parse_args()
     if sys.platform!='win32':raise ValueError('Windows media preparation only')
@@ -121,7 +123,7 @@ def main():
                 key=f'{project}:{episode}'
                 state.update(current=key,stage='preparing_media',updated_at=time.time());save_json(state_path,state)
                 try:
-                    media=prepare(project,episode,args.ffmpeg,args.device)
+                    media=prepare(project,episode,args.ffmpeg,args.device,separate_source=args.separate_source)
                     state['episodes'][key]={'status':'media_candidates_ready','background_sha256':media['background']['sha256']}
                 except Exception as exc:
                     state['episodes'][key]={'status':'needs_review','error_type':type(exc).__name__}
