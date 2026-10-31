@@ -141,7 +141,7 @@ def validate_status(value,task):
     return value
 
 
-def read_cache(folder,key,request):
+def _read_cache_origin(folder,key,request):
     marker=folder/'request.private.json';submitted=folder/'submission.private.json'
     receipt=folder/'raw-receipt.private.json';wav=folder/'raw.wav';prepared=folder/'raw-receipt.prepared.private.json'
     pending=folder/'submission.private.submission-pending.json';status_path=folder/'task.private.json'
@@ -185,6 +185,34 @@ def read_cache(folder,key,request):
     return request,task,None
 
 
+def recovery_folder(folder,key,request):
+    link=folder/'balance-recovery-link.private.json'
+    if not link.exists():return folder
+    value=read_json(link)
+    expected=folder.parent.parent/'paid-speech-balance-recovery-01'/key
+    if value.get('target')!=str(expected) or value.get('key')!=key:raise ValueError('Recovery target differs')
+    required={'request.private.json','submission.private.json','task.private.json'}
+    if set(value['original_sha256'])!=required or any(digest(folder/name)!=sha for name,sha in value['original_sha256'].items()):
+        raise ValueError('Original failed evidence changed')
+    original,task,receipt=_read_cache_origin(folder,key,request)
+    status=read_json(folder/'task.private.json')['result']
+    if receipt is not None or status['taskStatus']!=3 or 'insufficient balance' not in str(status.get('taskMessage','')).lower():
+        raise ValueError('Only confirmed balance failures may use recovery audio')
+    permit=read_json(value['permit_path'])
+    if (digest(value['permit_path'])!=value['permit_sha256'] or permit['key']!=key
+        or permit['original_task_id']!=task or permit['max_new_submissions']!=1 or permit['approved_once'] is not True):
+        raise ValueError('Bounded recovery permit changed')
+    recovered,new_task,new_receipt=_read_cache_origin(expected,key,request)
+    if new_receipt is None or new_task==task or new_task!=value['recovery_task_id'] or digest(expected/'raw-receipt.private.json')!=value['recovery_receipt_sha256']:
+        raise ValueError('Recovery must be a verified completed different task')
+    return expected
+
+
+def read_cache(folder,key,request):
+    target=recovery_folder(folder,key,request)
+    return _read_cache_origin(target,key,request)
+
+
 def has_project(data,project_id):
     if isinstance(data,dict):
         return any(str(data.get(key))==str(project_id) for key in ('project_id','projectId')) or any(has_project(v,project_id) for v in data.values())
@@ -207,7 +235,7 @@ def preflight_cache(requests,project_id=100):
         for key,attempt in ledger['attempts'].items():
             marker=CACHE/key/'request.private.json'
             if not marker.exists():raise ValueError('Prior paid attempt lost its cache binding')
-            value=read_json(marker);req,task,_=read_cache(marker.parent,key,value['request'])
+            value=read_json(marker);req,task,_=_read_cache_origin(marker.parent,key,value['request'])
             if (task is None or attempt['request_fingerprint']!=fingerprint(req)
               or ('task_id' in attempt and attempt['task_id']!=task)):
                 raise ValueError('Unknown earlier paid attempt; reconcile before all new work')
@@ -223,9 +251,10 @@ def preflight_cache(requests,project_id=100):
             for name,value in zip(('speed','vol','pitch'),values):variant[name]=value
             aliases.update((fingerprint(variant),fingerprint({'request':variant})))
     cache_root=CACHE.resolve()
+    verified_recoveries={recovery_folder(p.parent,read_json(p)['key'],read_json(p)['request']).resolve() for p in markers if (p.parent/'balance-recovery-link.private.json').exists()}
     for name in ('request.private.json','request-fingerprint.json','request-fingerprint.private.json','*.submission-pending.json'):
         for p in Path('output').rglob(name):
-            if cache_root in p.resolve().parents:continue
+            if cache_root in p.resolve().parents or p.parent.resolve() in verified_recoveries:continue
             value=read_json(p)
             own_project=Path(f'output/review-project-{project_id}').resolve() in p.resolve().parents or has_project(value,project_id)
             if p.name.endswith('.submission-pending.json'):
@@ -269,7 +298,7 @@ def generate(plan,config,*,expected_scope=(100,1),current_plan_builder=None,max_
             raise ValueError('Completed speech result scope differs')
         for g,r in zip(plan['groups'],old['groups']):
             req,task,receipt=cached[g['cache_key']]
-            if (receipt is None or r['key']!=g['cache_key'] or Path(r['raw_path'])!=CACHE/g['cache_key']/'raw.wav'
+            if (receipt is None or r['key']!=g['cache_key'] or Path(r['raw_path'])!=recovery_folder(CACHE/g['cache_key'],g['cache_key'],g['request'])/'raw.wav'
               or r['task_id']!=task or r['raw_sha256']!=receipt['sha256']
               or r['request_fingerprint']!=fingerprint(req)):
                 raise ValueError('Completed speech result changed; preserve original costs')
@@ -351,9 +380,11 @@ def generate(plan,config,*,expected_scope=(100,1),current_plan_builder=None,max_
                       'status_sha256':digest(status_path),'bytes':size,'sha256':digest(part),'wave':wave_evidence(part)}
                     save_json(folder/'raw-receipt.prepared.private.json',receipt)
                     part.replace(folder/'raw.wav');(folder/'raw-receipt.prepared.private.json').replace(folder/'raw-receipt.private.json')
-                value={'key':key,'raw_path':str(folder/'raw.wav'),'raw_sha256':receipt['sha256'],
+                value={'key':key,'raw_path':str(recovery_folder(folder,key,request)/'raw.wav'),'raw_sha256':receipt['sha256'],
                   'task_id':receipt['task_id'],'request_fingerprint':receipt['request_fingerprint'],
                   'seconds':receipt['wave']['seconds'],'reused_completed_audio':reused}
+                if (folder/'balance-recovery-link.private.json').exists():
+                    value['balance_recovery_origin_task_id']=read_json(folder/'balance-recovery-link.private.json')['original_task_id']
             progress(key,'raw_ready',task_id=receipt['task_id'])
             return value
         except Exception as exc:
