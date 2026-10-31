@@ -16,19 +16,18 @@ import prepare_review_translation_context as context_worker
 
 ROOT = Path('output/review-project-100/episode-01/editorial-candidate-20261030')
 EPISODE = 1
+PROJECT_ID = 100
 EXPECTED_CUES = 44
 
 
-def configure_episode(episode):
-    global ROOT, EPISODE, EXPECTED_CUES
-    if type(episode) is not int or not 1<=episode<=32:
-        raise ValueError('Monte Cristo episode 1 through 32 required')
-    EPISODE=episode
-    ROOT=Path('output/review-project-100/episode-01/editorial-candidate-20261030') if episode==1 else Path(f'output/review-project-100/episode-{episode:02d}/editorial-candidate-20261031')
-    source=read_json('output/review-project-100/subtitles/dialogue.en.json')['segments']
-    rows=[r for r in source if int(r['episode'])==episode]
-    if len(source)!=854 or not rows or (episode==1 and len(rows)!=44):
-        raise ValueError('Original subtitle scope changed')
+def configure_episode(episode,project_id=100):
+    global ROOT, EPISODE, EXPECTED_CUES, PROJECT_ID
+    from review_episode_source import EPISODE_COUNTS, episode_rows
+    if type(project_id) is not int or project_id not in EPISODE_COUNTS or type(episode) is not int or not 1<=episode<=EPISODE_COUNTS[project_id]:
+        raise ValueError('Supported drama and episode required')
+    PROJECT_ID=project_id;EPISODE=episode
+    ROOT=Path('output/review-project-100/episode-01/editorial-candidate-20261030') if project_id==100 and episode==1 else Path(f'output/review-project-{project_id}/episode-{episode:02d}/editorial-candidate-20261031')
+    rows,_=episode_rows(project_id,episode)
     EXPECTED_CUES=len(rows)
 
 
@@ -71,7 +70,7 @@ def validate_schema(value, spec):
 def validate_rows(rows):
     if len(rows)!=EXPECTED_CUES or len({r['id'] for r in rows})!=EXPECTED_CUES:raise ValueError('Unique original episode cues required')
     for r in rows:
-        if int(r['episode'])!=EPISODE or not re.fullmatch(fr'e{EPISODE:02d}-[0-9]+',r['id']):raise ValueError('Original episode cue identity differs')
+        if int(r['episode'])!=EPISODE or not re.fullmatch(fr'e{EPISODE:02d}-[0-9]+' if PROJECT_ID==100 else fr'p{PROJECT_ID}-a[0-9]+-[0-9]+',r['id']):raise ValueError('Original episode cue identity differs')
         for t in (r['start'],r['end']):
             if (isinstance(t,bool) or not isinstance(t,(int,float)) or not math.isfinite(t)
               or t<0 or abs(t*1000-round(t*1000))>1e-6):raise ValueError('Original millisecond cue time required')
@@ -80,7 +79,7 @@ def validate_rows(rows):
 
 def validate(data, rows, context):
     validate_rows(rows);validate_schema(data,schema())
-    if data['project_id'] != 100 or data['episode'] != EPISODE:
+    if data['project_id'] != PROJECT_ID or data['episode'] != EPISODE:
         raise ValueError('Wrong project or episode')
     if [c['id'] for c in data['cues']] != [r['id'] for r in rows]:
         raise ValueError('Omitted or reordered timed source cues')
@@ -182,8 +181,8 @@ def validate_completed(result,rows,context,signature):
 
 def candidate_srt(rows,candidate):
     validate_rows(rows)
-    return ('\n\n'.join(f'{r["id"].split("-",1)[1]}\n{srt_time(r["start"])} --> {srt_time(r["end"])}\n{c["translation"]}'
-      for r,c in zip(rows,candidate['cues']))+'\n').encode('utf-8')
+    return ('\n\n'.join(f'{r["id"].split("-",1)[1] if PROJECT_ID==100 else i}\n{srt_time(r["start"])} --> {srt_time(r["end"])}\n{c["translation"]}'
+      for i,(r,c) in enumerate(zip(rows,candidate['cues']),1))+'\n').encode('utf-8')
 
 
 def finish_outputs(result,rows):
@@ -205,11 +204,15 @@ def main():
         manifest = read_json(context_worker.ROOT / 'intake-manifest.private.json')
         if fingerprint(manifest) != context_worker.MANIFEST_FINGERPRINT:
             raise ValueError('Source collection changed')
-        context = context_worker.inputs(100, manifest)
-        bible_folder = Path('output/review-project-100/translation-context-candidate-20261030')
+        context = context_worker.inputs(PROJECT_ID, manifest)
+        bible_folder = Path(f'output/review-project-{PROJECT_ID}/translation-context-candidate-20261030')
         bible = read_json(bible_folder / 'context-candidate.private.json')
         context_worker.validate_result(bible, context, fingerprint(context), bible_folder)
-        rows = [r for r in context['timed_source'] if int(r['episode']) == EPISODE]
+        from review_episode_source import episode_rows
+        rows,asr_evidence=episode_rows(PROJECT_ID,EPISODE)
+        if asr_evidence is not None:
+            context['machine_source_evidence']=asr_evidence
+            context['timed_source_kind']=asr_evidence['kind']
         validate_rows(rows)
         context['series_context'] = bible['candidate']
         context['series_context_sha256'] = digest(bible_folder / 'context-candidate.private.json')
@@ -237,6 +240,8 @@ def main():
 Preserve every timed source cue ID and order; translate only actual subtitle dialogue. Never import missing script dialogue. Understand whole same-character sentences across cue splits, then distribute natural translation across the original unchanged windows. Preserve negation, future/past, deadlines, relationships, threats, irony, and plot information. Prefer concise equivalent wording over omissions or exaggerated speed. Do not add an ellipsis at every subtitle boundary. Use Brazilian vocabulary, collocations and spoken pronouns appropriate to the historical French setting and character register. Context names are proposals: preserve recognizable source identities unless clearly justified by established Brazilian usage; make naming decisions explicit in match_notes.
 For each cue provide a literal 8–600 character quote from the supplied raw screenplay and the source asset ID. Quotes may include line breaks exactly as present. Use script_role stable IDs from the supplied characters or unknown; this is screenplay evidence, not verified audio speaker identity. Emotion_intent is a production direction only. Flag every unresolved text or source discrepancy; partial/uncertain matches are acceptable outputs and must not be pretended approved. Storyboard rough durations are not an authoritative picture timeline. Existing ASR is not native listening approval. Do not clone, synthesize, upload, read files or credentials, or change any files. Internally check every line for fidelity, pt-BR localization, continuity, and approximate speaking duration before returning.
 '''
+        if PROJECT_ID!=100:
+            prompt+='\nThe timed source for this drama is explicitly a machine ASR draft, not supplied original subtitles. Use the screenplay for context, flag possible transcription errors and cut mismatches, never silently import script dialogue or claim original-caption accuracy, source-speaker identity, or native listening. Output is a translation candidate only.\n'
         full_prompt = prompt + json.dumps(context, ensure_ascii=False)
         draft, draft_receipt = get_response(exe, full_prompt, ROOT / 'draft', rows, context)
         save_json(ROOT / 'progress.private.json', {'stage': 'textual_second_pass', 'episode': EPISODE,
@@ -256,10 +261,13 @@ For each cue provide a literal 8–600 character quote from the supplied raw scr
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--episode',type=int,choices=range(1,33),default=1)
+    parser.add_argument('--episode',type=int,choices=range(1,38),default=1)
+    parser.add_argument('--project',type=int,choices=(96,100,102,110),default=100)
     args=parser.parse_args()
+    from review_episode_source import EPISODE_COUNTS
+    if args.episode>EPISODE_COUNTS[args.project]:parser.error('Episode outside selected drama')
     try:
-        configure_episode(args.episode)
+        configure_episode(args.episode,args.project)
         main()
     except Exception as exc:
         ROOT.mkdir(parents=True, exist_ok=True)
