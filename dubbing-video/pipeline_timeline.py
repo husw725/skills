@@ -79,7 +79,8 @@ def apply(rows, candidate, context, decision, media, inputs):
     for source, mapped_cue, proved in zip(rows, timeline['cues'], proof):
         if (proved['id'] != source['id'] or proved['text'] != source['text']
                 or proved['original_start'] != source['start'] or proved['original_end'] != source['end']
-                or proved['start'] != mapped_cue['start'] or proved['end'] != mapped_cue['end']):
+                or round(proved['start'], 3) != mapped_cue['start']
+                or round(proved['end'], 3) != mapped_cue['end']):
             raise ValueError('Mapped cue differs from independent physical source proof')
     for p, sha in reviewed['inputs_sha256'].items():
         if digest(p) != sha: raise ValueError('Timeline acoustic or screenplay review evidence changed')

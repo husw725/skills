@@ -24,6 +24,13 @@ class TimelineTests(unittest.TestCase):
         s=subtitle(mapped,{'cues':[dict(id='e06-1',translation='Frase original.')]})
         self.assertIn('00:00:01,100 --> 00:00:02,100',s)
 
+    def test_sample_accurate_evidence_can_be_quantized_without_changing_original_window_width(self):
+        start=1.074625; end=2.074625
+        mapped=apply_mapping(self.rows,[dict(self.mapping[0],start=round(start,3),end=round(end,3))],5)
+        self.assertEqual(mapped[0]['start'],1.075)
+        self.assertAlmostEqual(mapped[0]['end']-mapped[0]['start'],1.)
+        self.assertLessEqual(abs(mapped[0]['start']-start),.0005)
+
     def test_source_tamper_duplicate_bool_and_overlap_are_rejected(self):
         for update in [dict(source_text='Different sentence.'),dict(start=True),dict(end=6.),dict(start=1.1001)]:
             with self.subTest(update=update),self.assertRaises(ValueError):
