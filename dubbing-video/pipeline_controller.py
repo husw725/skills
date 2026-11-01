@@ -210,6 +210,10 @@ def main():
                         reused=read_json(decision['casting_extension']['voice_manifest_path'])
                         if reused['project_id']!=job['project_id']:raise ValueError('Reused casting bank scope changed')
                         available.update(reused['voices'])
+                    if decision.get('reused_voice_manifest_path'):
+                        reused=read_json(decision['reused_voice_manifest_path'])
+                        if reused['project_id']!=job['project_id']:raise ValueError('Reused casting bank scope changed')
+                        available.update(reused['voices'])
                     if job['project_id']==100:available.update(read_json('output/review-project-100/voice-bank-minimax-20261031/voice-bank.private.json')['voices'])
                     if roles-available:state['jobs'][key]={**old,'stage':'voices_pending','missing_roles':sorted(roles-available)};continue
                     if free_busy<2:launch(key,'prepare',base+['--stage','prepare']);free_busy+=1

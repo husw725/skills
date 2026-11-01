@@ -47,7 +47,7 @@ def checked_units(rows,candidate,decision):
     return units,holds
 
 
-def voice_bank(project,roles,inputs):
+def voice_bank(project,roles,inputs,*,reused_manifest=None):
     bank={}
     if project==100:
         import create_monte_voice_bank as original
@@ -61,7 +61,11 @@ def voice_bank(project,roles,inputs):
     if extra['project_id']!=project:raise ValueError('Role bank scope changed')
     for role in roles-set(bank):
         value=extra['voices'].get(role)
-        if value is None:raise ValueError(f'Reusable role voice not yet ready: {role}')
+        if value is None:
+            if reused_manifest:
+                from pipeline_casting_extension import reused_voices
+                bank.update(reused_voices(Path(reused_manifest),project,{role},inputs));continue
+            raise ValueError(f'Reusable role voice not yet ready: {role}')
         folder=root/role;receipt=folder/'clone.private.json';payload=folder/'clone-request.private.json'
         approval_path=Path(value['basis']['approval_path']);approval=read_json(approval_path)
         if (digest(approval_path)!=value['basis']['approval_sha256']
@@ -103,16 +107,18 @@ def build(decision_path):
         candidate=expected
         inputs.update({production:digest(production),str(plan_path):digest(plan_path)})
     text.validate(candidate,context['timed_source'],context)
-    units,holds=checked_units(context['timed_source'],candidate,decision)
     media_path=Path(decision['media_receipt_path']);media=read_json(media_path)
     if (media['source']['project_id']!=project or media['source']['episode']!=episode
         or digest(media['source']['video'])!=media['source']['video_sha256']
         or any(digest(p)!=h for p,h in media['output_sha256'].items())):raise ValueError('Media source changed')
+    from pipeline_timeline import apply as apply_timeline,subtitle as timeline_subtitle
+    production_rows,candidate=apply_timeline(context['timed_source'],candidate,context,decision,media,inputs)
+    units,holds=checked_units(production_rows,candidate,decision)
     if any(not 0<=u['start']<u['end']<=media['video_seconds']+.1 for u in units):
         raise ValueError('Production unit exceeds the actual picture cut')
     inputs[str(media_path)]=digest(media_path)
     for p,sha in {media['source']['video']:media['source']['video_sha256'],**media['output_sha256']}.items():inputs[p]=sha
-    bank=voice_bank(project,{u['role'] for u in units},inputs)
+    bank=voice_bank(project,{u['role'] for u in units},inputs,reused_manifest=decision.get('reused_voice_manifest_path'))
     groups=[]
     by_id={u['id']:u for u in units};order=[]
     for index,ids in enumerate(decision.get('groups',[[u['id']] for u in units]),1):
@@ -129,12 +135,13 @@ def build(decision_path):
                        'request':request,'cache_key':speech.request_key(request)})
     if order!=[u['id'] for u in units]:raise ValueError('Group order or coverage changed')
     return {'project_id':project,'episode':episode,'groups':groups,'inputs_sha256':inputs,
-            'production_cues':[{'id':r['id'],'start':r['start'],'end':r['end'],'translation':c['translation']} for r,c in zip(context['timed_source'],candidate['cues'])],
+            'production_cues':[{'id':r['id'],'start':r['start'],'end':r['end'],'translation':c['translation']} for r,c in zip(production_rows,candidate['cues'])],
             'holds':[{'cue_id':key,'reason':value} for key,value in holds.items()],
             'media':{'video':media['source']['video'],'background':media['background']['path']},
             'max_new_tts':len({g['cache_key'] for g in groups}),'new_clone_count':0,
             'native_listening_passed':False,'speaker_audio_verified':False,
-            'subtitle_text':text.candidate_srt(context['timed_source'],candidate).decode('utf-8')}
+            'subtitle_text':(timeline_subtitle(production_rows,candidate) if decision.get('production_time_map_path')
+                             else text.candidate_srt(context['timed_source'],candidate).decode('utf-8'))}
 
 
 def audio_root(decision_path,decision=None):
