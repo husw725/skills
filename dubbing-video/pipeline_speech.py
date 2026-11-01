@@ -35,6 +35,7 @@ def checked_units(rows,candidate,decision):
             or unit['emotion'] not in ('happy','sad','angry','fearful','disgusted','surprised','calm','fluent','whisper','auto')
             or not unit['translation'].strip() or not unit['evidence'].strip()
             or unit['delivery_mode'] not in ('dialogue','narration')
+            or unit.get('language_boost','Portuguese') not in ('Portuguese','Italian')
             or not source[cue]['start']-.001<=start<end<=source[cue]['end']+.001 or start<previous-.001):
             raise ValueError('Unit identity, explicit casting, source window, or chronological coverage differs')
         previous=end;seen.add(unit['id']);covered[cue].append(unit['translation'])
@@ -113,6 +114,8 @@ def build(decision_path):
         or any(digest(p)!=h for p,h in media['output_sha256'].items())):raise ValueError('Media source changed')
     from pipeline_timeline import apply as apply_timeline,subtitle as timeline_subtitle
     production_rows,candidate=apply_timeline(context['timed_source'],candidate,context,decision,media,inputs)
+    from pipeline_source_additions import apply as apply_source_additions
+    production_rows,candidate=apply_source_additions(production_rows,candidate,context,decision,media,inputs)
     units,holds=checked_units(production_rows,candidate,decision)
     if any(not 0<=u['start']<u['end']<=media['video_seconds']+.1 for u in units):
         raise ValueError('Production unit exceeds the actual picture cut')
@@ -123,11 +126,13 @@ def build(decision_path):
     by_id={u['id']:u for u in units};order=[]
     for index,ids in enumerate(decision.get('groups',[[u['id']] for u in units]),1):
         rows=[by_id[i] for i in ids]
-        if (not rows or len({(r['role'],r['delivery_mode'],r['emotion']) for r in rows})!=1):raise ValueError('Mixed role/mode/acting group')
+        if (not rows or len({(r['role'],r['delivery_mode'],r['emotion'],r.get('language_boost','Portuguese')) for r in rows})!=1):raise ValueError('Mixed role/mode/acting/language group')
         order.extend(ids);voice=bank[rows[0]['role']];spoken=' '.join(r['translation'] for r in rows)
+        if voice['platform']=='cartesia' and rows[0].get('language_boost','Portuguese')!='Portuguese':
+            raise ValueError('Foreign-language Cartesia production has not been validated')
         request=(cartesia_request(spoken,voice['voice_id'],project) if voice['platform']=='cartesia' else
                  {'projectId':project,'model':'speech-2.8-hd','text':spoken,'voiceId':voice['voice_id'],
-                  'languageBoost':'Portuguese','format':'wav','speed':1.0,'vol':1.0,'pitch':0,
+                  'languageBoost':rows[0].get('language_boost','Portuguese'),'format':'wav','speed':1.0,'vol':1.0,'pitch':0,
                   'emotion':rows[0]['emotion'],'duration':None,'language':None,'outputFormat':None,'prompt':None,'referenceVideoList':[]})
         groups.append({'id':f'p{project}-e{episode:02d}-g{index:03d}','role':rows[0]['role'],
                        'delivery_mode':rows[0]['delivery_mode'],'cue_ids':list(dict.fromkeys(r['cue_id'] for r in rows)),
