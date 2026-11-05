@@ -37,7 +37,13 @@ def payload(item):
                       {'inlineData': {'mimeType': mime, 'data': base64.b64encode(data).decode('ascii')}}])
     request = {'contents': [{'role': 'user', 'parts': parts}],
                'generationConfig': {'temperature': 0, 'responseMimeType': 'application/json',
-                                    'maxOutputTokens': 6000}}
+                                    'maxOutputTokens': 6000,
+                                    'responseSchema': {'type': 'OBJECT', 'required': ['files'], 'properties': {
+                                        'files': {'type': 'ARRAY', 'minItems': len(labels), 'maxItems': len(labels),
+                                                  'items': {'type': 'OBJECT', 'required': ['label', 'observations', 'uncertainties'],
+                                                            'properties': {'label': {'type': 'STRING', 'enum': labels},
+                                                                           'observations': {'type': 'STRING'},
+                                                                           'uncertainties': {'type': 'ARRAY', 'items': {'type': 'STRING'}}}}}}}}}
     if len(json.dumps(request).encode('utf-8')) > 19_000_000:
         raise ValueError('Inline request too large; prepare smaller bound inputs')
     return request
