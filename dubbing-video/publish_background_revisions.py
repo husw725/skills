@@ -1,5 +1,6 @@
 """Append explicitly approved background candidates to existing Review histories."""
 import argparse
+import concurrent.futures
 import hashlib
 import json
 from pathlib import Path
@@ -90,6 +91,7 @@ def main():
     p.add_argument('--manifest', type=Path, required=True);p.add_argument('--approval', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True);p.add_argument('--config', type=Path, required=True)
     p.add_argument('--ffmpeg', type=Path, required=True)
+    p.add_argument('--aws-config', type=Path, help='Optional private credentials for reserved-object multipart transfer')
     a = p.parse_args()
     if sys.platform != 'win32':raise ValueError('Business publishing runs on Windows')
     data = a.manifest.read_bytes();signature = hashlib.sha256(data).hexdigest()
@@ -114,6 +116,7 @@ def main():
             verify_subtitle(client,row,initial)
             for old in history(client,row['old_video_asset_id'],row['episode']):
                 if old.get('url'):protected_keys.add(object_key(old['url']))
+        prepared=[]
         for row in manifest['episodes']:
             report = read_json(row['report_path']);video=Path(report['output']);subtitle=Path(report['subtitle'])
             if (digest(row['report_path']) != row['report_sha256'] or digest(video) != row['video_sha256']
@@ -123,8 +126,43 @@ def main():
                 raise ValueError('Approved candidate changed')
             folder = a.output/f'episode-{row["episode"]:02d}';folder.mkdir(exist_ok=True)
             ledger_path=folder/'upload-ledger.private.json';ledger=read_json(ledger_path) if ledger_path.exists() else {'uploads':{}}
-            url=upload(client,video,ledger,ledger_path,protected_keys)
-            protected_keys.add(object_key(url))
+            prepared.append((row,video,folder,ledger_path,ledger))
+        urls={}
+        if a.aws_config:
+            from scoped_s3_transfer import client as aws_client,reserve,upload_reserved
+            s3=aws_client(read_json(a.aws_config));reserved=[]
+            # All URLs are allocated and protected serially before concurrent data PUTs.
+            for row,video,folder,ledger_path,ledger in prepared:
+                item,key=reserve(client,video,ledger,ledger_path,protected_keys)
+                protected_keys.add(object_key(item['url']))
+                reserved.append((row,video,ledger_path,ledger,item,key))
+            failures=[]
+            def transfer(entry):
+                row,video,ledger_path,ledger,item,key=entry
+                return row['episode'],upload_reserved(s3,video,ledger,ledger_path,item,key)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+                futures={pool.submit(transfer,entry):entry[0]['episode'] for entry in reserved}
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        ep,url=future.result();urls[ep]=url
+                        print('BACKGROUND_OBJECT_VERIFIED',ep,flush=True)
+                    except Exception as error:
+                        failures.append({'episode':futures[future],'error_type':type(error).__name__})
+                    save_json(a.output/'upload-progress.private.json',{'verified':len(urls),'total':32,'failures':failures})
+            if failures:raise ValueError('Some multipart outcomes need reconciliation; no new versions appended')
+        else:
+            for row,video,folder,ledger_path,ledger in prepared:
+                urls[row['episode']]=upload(client,video,ledger,ledger_path,protected_keys)
+                protected_keys.add(object_key(urls[row['episode']]))
+        # Check anonymously, separate from authenticated checksum proof.
+        if a.aws_config:
+            from scoped_s3_transfer import verify_public
+            for row,video,folder,ledger_path,ledger in prepared:
+                verify_public(client.http,video,urls[row['episode']])
+                ledger['uploads'][row['video_sha256']]['public_read_verified']=True
+                save_json(ledger_path,ledger)
+        for row,video,folder,ledger_path,ledger in prepared:
+            url=urls[row['episode']]
             result=append_version(client,row,url,folder)
             save_json(folder/'delivered.private.json',{'episode':row['episode'],'video_asset_id':result['assetId'],
                 'version':result['version'],'url':url,'video_sha256':row['video_sha256'],
