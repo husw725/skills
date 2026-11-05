@@ -56,6 +56,14 @@ class AudioAnalysisTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Incomplete'): self.run_analysis()
         self.assertEqual(self.http.post.call_count,1)
 
+    def test_token_limit_retains_paid_response_without_retry(self):
+        self.http.post.return_value.json.return_value = {'candidates': [{'finishReason': 'MAX_TOKENS'}]}
+        for _ in range(2):
+            with self.assertRaisesRegex(ValueError, 'Incomplete'): self.run_analysis()
+        self.assertEqual(self.http.post.call_count, 1)
+        request = self.http.post.call_args.kwargs['json']
+        self.assertEqual(request['generationConfig']['thinkingConfig']['thinkingBudget'], 0)
+
     def test_response_tamper_rejected(self):
         self.run_analysis();(self.root/'out/one/response.private.json').write_text('{}')
         with self.assertRaisesRegex(ValueError,'response changed'): self.run_analysis()
