@@ -57,7 +57,7 @@ def check_bridge(group, chunk, original):
     if any(envelope.get(k)!=v for k,v in ADAPTER.items()):raise ValueError('Routing adapter differs from actual submission')
     if chunk['speaker']!=group['role'] or turn['speaker']!=group['role']:raise ValueError('Routing speaker differs from production role')
     # Scoped source SRT uses original production cue IDs, not renumbered positions.
-    if [r['cue_id'] for r in turn['source_refs']]!=original['cue_ids']:raise ValueError('Routing source cues differ from original speech group')
+    if [r['cue_id'] for r in turn['source_refs']]!=[cue.rsplit('-',1)[-1] for cue in original['cue_ids']]:raise ValueError('Routing source cues differ from original speech group')
     if speech.request_key(envelope['payload'])!=speech.request_key(group['request']):raise ValueError('Routed request differs from submitted speech')
 
 

@@ -36,13 +36,13 @@ class CommentSpeechTests(unittest.TestCase):
   self.plan['groups']=[dict(self.g,id=str(i),request=dict(self.g['request'],text=str(i)),text=str(i),cache_key=request_key(dict(self.g['request'],text=str(i)))) for i in range(3)];self.plan['max_new_tts']=3;self.save()
   with self.assertRaisesRegex(ValueError,'two-voice'):self.check()
  def test_bridge_rejects_self_consistent_wrong_speaker_or_endpoint(self):
-  original=dict(cue_ids=['e01-1']);chunk=dict(envelope=dict(ADAPTER,payload=self.req),speaker='a',turn=dict(speaker='a',source_refs=[dict(cue_id='e01-1')]))
+  original=dict(cue_ids=['e01-1']);chunk=dict(envelope=dict(ADAPTER,payload=self.req),speaker='a',turn=dict(speaker='a',source_refs=[dict(cue_id='1')]))
   check_bridge(self.g,chunk,original)
   for part,key,value in [(chunk,'speaker','b'),(chunk['turn'],'speaker','b'),(chunk['envelope'],'endpoint','different')]:
    prior=part[key];part[key]=value
    with self.assertRaises(ValueError):check_bridge(self.g,chunk,original)
    part[key]=prior
-  chunk['turn']['source_refs'][0]['cue_id']='e01-2'
+  chunk['turn']['source_refs'][0]['cue_id']='2'
   with self.assertRaisesRegex(ValueError,'source cues'):check_bridge(self.g,chunk,original)
  def test_actual_routing_is_required_by_default(self):
   with patch('generate_comment_repairs.routing',side_effect=ValueError('routing failed')):
