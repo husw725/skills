@@ -77,6 +77,15 @@ def check_safe_end(item, original, original_samples, adopted_samples):
         raise ValueError('Replacement exceeds original safe speech boundary')
 
 
+
+def reconcile_legacy_zero_tail(original,dialogue,duration):
+    if abs(len(original)/RATE-duration)<=.05:return original,dialogue,0
+    expected=round(duration*RATE);extra=len(original)-expected
+    if len(dialogue)!=len(original) or not 0<extra<=round(.1*RATE) or np.any(original[expected:]!=0) or np.any(dialogue[expected:]!=0):
+        raise ValueError('Dialogue and picture axes differ beyond a bounded all-zero legacy tail')
+    return original[:expected],dialogue[:expected],extra
+
+
 def copy_subtitle(source, target, expected_sha256):
     shutil.copyfile(source, target)
     if digest(target) != expected_sha256:raise ValueError('Copied subtitle differs from approved bytes')
@@ -132,9 +141,9 @@ def render(row, output, ffmpeg):
         overlap=max(0,first['start']+observed_lengths[(first['path'],first['sha256'])]/RATE-second['start'])
         if overlap>allowed+.005:raise ValueError('New speech overlaps neighboring group')
     if float(np.max(np.abs(dialogue)))>=1:raise ValueError('New dialogue would clip before final mixing')
-    dry=attempt/'dialogue-pt-BR.wav';write_audio(dry,dialogue)
     duration=float(probe(files['picture'],ffmpeg)['format']['duration'])
-    if abs(len(original)/RATE-duration)>.05:raise ValueError('Dialogue and picture axes differ')
+    original,dialogue,zero_tail_removed=reconcile_legacy_zero_tail(original,dialogue,duration)
+    dry=attempt/'dialogue-pt-BR.wav';write_audio(dry,dialogue)
     bg=stereo(files['background'],ffmpeg);pad=max(0,len(original)-len(bg))
     if pad>math.ceil(.05*RATE):raise ValueError('Background too short; no implicit long pad')
     if pad:bg=np.pad(bg,((0,pad),(0,0)))
@@ -157,14 +166,14 @@ def render(row, output, ffmpeg):
     report={'episode':row['episode'],'stage':'comment_repair_candidate','inputs':row,'output':str(final),'output_sha256':digest(final),
             'subtitle':str(subtitle),'subtitle_sha256':digest(subtitle),'picture_payload_identical':True,'full_decode_passed':True,
             'dialogue_reconstructed_from_existing_groups':True,'new_tts_in_renderer':0,'new_clones':0,'replacement_groups':sorted(seen),
-            'background_tail_pad_samples':pad,'ducking':row.get('ducking',[]),'dialogue':str(dry),'dialogue_sha256':digest(dry),
+            'legacy_zero_tail_removed_samples':zero_tail_removed,'background_tail_pad_samples':pad,'ducking':row.get('ducking',[]),'dialogue':str(dry),'dialogue_sha256':digest(dry),
             'background':str(bed),'background_sha256':digest(bed),'adopted_groups':adopted,'native_listening_passed':False,'mix_listening_passed':False,'published':False}
     rp=attempt/'render-report.private.json';save_json(rp,report);return {'report':str(rp),'report_sha256':digest(rp),'status':'candidate_rendered'}
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--manifest',type=Path,required=True);p.add_argument('--approval',type=Path,required=True)
-    p.add_argument('--output',type=Path,required=True);p.add_argument('--ffmpeg',type=Path,required=True);a=p.parse_args()
+    p.add_argument('--output',type=Path,required=True);p.add_argument('--ffmpeg',type=Path,required=True);p.add_argument('--continue-on-error',action='store_true');a=p.parse_args()
     if sys.platform!='win32':raise ValueError('Business media runs on Windows')
     data=a.manifest.read_bytes();m=json.loads(data.decode('utf-8-sig'));sig=hashlib.sha256(data).hexdigest();approval=read_json(a.approval)
     if approval.get('manifest_sha256')!=sig or approval.get('technical_repair_render_approved') is not True:raise ValueError('Source-bound repair review required')
@@ -174,12 +183,20 @@ def main():
     with process_lock(a.output/'render.lock',timeout=0):
         pp=a.output/'progress.private.json';state=read_json(pp) if pp.exists() else {'manifest_sha256':sig,'episodes':{}}
         if state['manifest_sha256']!=sig:raise ValueError('Keep prior scope; use a new candidate directory')
+        state.setdefault('errors',{})
         for row in m['episodes']:
             key=str(row['episode'])
             if key in state['episodes']:
                 old=state['episodes'][key];r=snapshot({'path':old['report'],'sha256':old['report_sha256']});binding({'path':r['output'],'sha256':r['output_sha256']});binding({'path':r['subtitle'],'sha256':r['subtitle_sha256']});continue
-            state['episodes'][key]=render(row,a.output/f'episode-{row["episode"]:02d}',a.ffmpeg);save_json(pp,state)
-            print('COMMENT_REPAIR_RENDERED',row['episode'],flush=True)
+            try:
+                state['episodes'][key]=render(row,a.output/f'episode-{row["episode"]:02d}',a.ffmpeg)
+                state['errors'].pop(key,None);save_json(pp,state)
+                print('COMMENT_REPAIR_RENDERED',row['episode'],flush=True)
+            except Exception as error:
+                state['errors'][key]={'error_type':type(error).__name__,'message':str(error)};save_json(pp,state)
+                print('COMMENT_REPAIR_HELD',row['episode'],type(error).__name__,flush=True)
+                if not a.continue_on_error:raise
+        if state['errors']:raise ValueError('Some private episode candidates held; successful episodes preserved')
 
 
 if __name__=='__main__':main()
