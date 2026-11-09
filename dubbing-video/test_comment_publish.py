@@ -27,6 +27,22 @@ class PublishTests(unittest.TestCase):
   c=FakeReview();c.unknown=True
   with self.assertRaises(RuntimeError):append(c,self.row,'https://new.example/sub.srt',self.p,'DOCUMENT')
   x=append(c,self.row,'https://new.example/sub.srt',self.p,'DOCUMENT');self.assertEqual(x['version'],2);self.assertEqual(c.updates,1)
+ def test_document_server_omission_reconciles_without_another_write(self):
+  c=FakeReview();c.unknown=True
+  with self.assertRaises(RuntimeError):append(c,self.row,'https://new.example/sub.srt',self.p,'DOCUMENT')
+  c.rows[-1]['tags']=[]
+  x=append(c,self.row,'https://new.example/sub.srt',self.p,'DOCUMENT');self.assertEqual(x['tags'],[]);self.assertEqual(c.updates,1)
+  c.rows[-1]['tags']=['unrelated']
+  with self.assertRaises(ValueError):append(c,self.row,'https://new.example/sub.srt',self.p,'DOCUMENT')
+  self.assertEqual(c.updates,1)
+ def test_video_tag_omission_is_rejected_without_repeat_write(self):
+  c=FakeReview();c.rows[0].update(gateType='FINAL_CUT',name=f'{FILM} | EP01 | pt-BR | V1')
+  row=dict(episode=1,old_video_asset_id=100,old_video_url='https://old.example/sub.srt',old_video_version=1,video_sha256='a'*64,delivery_note='Synthetic',duration=2)
+  sub=dict(assetId=200,name=f'{FILM} EP01 V2.srt');c.unknown=True
+  with self.assertRaises(RuntimeError):append(c,row,'https://new.example/video.mp4',self.p,'FINAL_CUT',sub)
+  c.rows[-1]['tags']=[]
+  with self.assertRaises(ValueError):append(c,row,'https://new.example/video.mp4',self.p,'FINAL_CUT',sub)
+  self.assertEqual(c.updates,1)
  def test_wrong_episode_history_and_changed_intent_are_rejected(self):
   c=FakeReview();c.rows[0]['name']=f'{FILM} EP02 V1.srt'
   with self.assertRaises(ValueError):append(c,self.row,'https://new.example/sub.srt',self.p,'DOCUMENT')

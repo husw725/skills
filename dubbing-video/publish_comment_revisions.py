@@ -56,7 +56,9 @@ def append(client,row,url,folder,gate,subtitle=None):
         if tuples(before)!=old:raise ValueError('Concurrent version change; no append issued')
         safe_submit(client,'updateReviewMaterialVersion',{'material':spec},folder/'version-submission.private.json')
     after=history(client,asset,row['episode'],gate);found=[x for x in after if x['url']==url]
-    if len(found)!=1 or found[0]['version']!=intent['expected_version'] or found[0].get('tags')!=[FILM] or found[0].get('name')!=spec['name'] or not old.issubset(tuples(after)):raise ValueError('Append/history preservation not confirmed')
+    # Review omits tags on document versions; video tags remain mandatory.
+    allowed_tags=[[],[FILM]] if gate=='DOCUMENT' else [[FILM]]
+    if len(found)!=1 or found[0]['version']!=intent['expected_version'] or found[0].get('tags') not in allowed_tags or found[0].get('name')!=spec['name'] or not old.issubset(tuples(after)):raise ValueError('Append/history preservation not confirmed')
     save_json(folder/'history-after.private.json',after);return found[0]
 
 
