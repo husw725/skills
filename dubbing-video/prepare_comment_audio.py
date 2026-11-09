@@ -56,11 +56,12 @@ def fit_repairs(planpath,ffmpeg):
             next_start=baseline['fit']['groups'][index+1]['start']
             old_overlap=max(0,old['start']+len(oldaudio)/RATE-next_start)
             end=min(end,next_start+old_overlap)
-        audio,left,right=trim_edges(read_audio(raw['raw_path'],ffmpeg));available=end-old['start'];tempo=max(1.0,len(audio)/RATE/available) if available>0 else math.inf
+        audio,left,right=trim_edges(read_audio(raw['raw_path'],ffmpeg));available=end-old['start'];headroom=min(.015,max(0,available)*.05);target_seconds=available-headroom
+        tempo=max(1.0,len(audio)/RATE/target_seconds) if target_seconds>0 else math.inf
         if tempo>1.2+1e-8:
             blocked.append(dict(group_id=g['source_group_id'],reason='Exceeds preserved neighbour boundary without natural fit; no automatic paid retry',post_atempo_required=tempo));continue
-        dest=folder/'fitted'/g['id'];dest.mkdir(parents=True,exist_ok=True);target=dest/'fitted.wav';rp=dest/'receipt.private.json'
-        inputs=dict(group_id=g['source_group_id'],repair_group_id=g['id'],raw_audio_sha256=raw['raw_sha256'],raw_task_id=raw['task_id'],paid_request_key=raw['key'],generation_sha256=digest(folder/'generation-result.private.json'),plan_sha256=digest(planpath),baseline_packet_sha256=plan['baseline_packet']['sha256'],start=old['start'],end_limit=end,edge_trim_seconds=[left,right],synthesis_speed=g['request']['speed'],post_atempo=tempo,nominal_combined_rate=g['request']['speed']*tempo)
+        dest=folder/'fitted-v2'/g['id'];dest.mkdir(parents=True,exist_ok=True);target=dest/'fitted.wav';rp=dest/'receipt.private.json'
+        inputs=dict(group_id=g['source_group_id'],repair_group_id=g['id'],raw_audio_sha256=raw['raw_sha256'],raw_task_id=raw['task_id'],paid_request_key=raw['key'],generation_sha256=digest(folder/'generation-result.private.json'),plan_sha256=digest(planpath),baseline_packet_sha256=plan['baseline_packet']['sha256'],start=old['start'],end_limit=end,edge_trim_seconds=[left,right],synthesis_speed=g['request']['speed'],post_atempo=tempo,nominal_combined_rate=g['request']['speed']*tempo,encoding_headroom_seconds=headroom)
         if rp.exists():
             receipt=read_json(rp)
             if receipt['inputs']!=inputs or digest(target)!=receipt['placed_audio_sha256']:raise ValueError('Existing repair audio changed')
