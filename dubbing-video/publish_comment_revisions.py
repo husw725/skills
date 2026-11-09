@@ -86,7 +86,7 @@ def freeze(source,target,expected_sha):
     if target.exists():
         if digest(target)!=expected_sha:raise ValueError('Frozen transfer copy changed')
         return target
-    target.parent.mkdir(parents=True,exist_ok=True);part=target.with_name(target.name+'.copying-'+uuid.uuid4().hex);h=hashlib.sha256()
+    target.parent.mkdir(parents=True,exist_ok=True);part=target.with_name('.copy-'+uuid.uuid4().hex+'.part');h=hashlib.sha256()
     with source.open('rb') as src,part.open('xb') as dst:
         for block in iter(lambda:src.read(1024*1024),b''):h.update(block);dst.write(block)
         dst.flush();os.fsync(dst.fileno())

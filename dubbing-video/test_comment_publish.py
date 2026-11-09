@@ -38,6 +38,8 @@ class PublishTests(unittest.TestCase):
   self.assertEqual(target.read_bytes(),b'approved');freeze(src,target,h)
   target.chmod(stat.S_IREAD|stat.S_IWRITE);target.write_bytes(b'bad')
   with self.assertRaises(ValueError):freeze(src,target,h)
+ def test_long_windows_delivery_name_uses_short_temporary_basename(self):
+  src=self.p/'source';src.write_bytes(b'approved long-path copy');h=hashlib.sha256(src.read_bytes()).hexdigest();target=self.p/('p'*140)/f'{FILM} EP01 V2.srt';freeze(src,target,h);self.assertEqual(target.read_bytes(),src.read_bytes())
  def test_wrong_source_never_becomes_transfer_copy(self):
   src=self.p/'source';src.write_bytes(b'unapproved');target=self.p/'frozen'
   with self.assertRaises(ValueError):freeze(src,target,'a'*64)
