@@ -27,6 +27,7 @@ def verify_object(client,url,path):
                 sha.update(block)
     except Exception:raise RuntimeError('Uploaded object readback failed; URL omitted') from None
     if total!=expected or sha.hexdigest()!=digest(path):raise ValueError('Uploaded object SHA or size differs')
+    return {k:response.headers.get(k) for k in ('Content-Type','Content-Disposition')}
 
 
 def object_key(url):
@@ -39,7 +40,8 @@ def object_key(url):
     return posixpath.normpath('/'+path.lstrip('/'))
 
 
-def upload(client,path,ledger,receipt,protected_keys=frozenset()):
+def upload(client,path,ledger,receipt,protected_keys=frozenset(),*,content_headers=None):
+    if content_headers is not None and (set(content_headers)-{'Content-Type','Content-Disposition'} or any(type(v) is not str or '\r' in v or '\n' in v for v in content_headers.values())):raise ValueError('Invalid delivery object headers')
     sha=digest(path);item=ledger['uploads'].get(sha)
     if item is None:
         ledger['uploads'][sha]={'status':'preparing_url','sha256':sha,'bytes':path.stat().st_size};save_json(receipt,ledger)
@@ -58,10 +60,11 @@ def upload(client,path,ledger,receipt,protected_keys=frozenset()):
         # Repeating a PUT of the same bytes to the same object is safe; never allocate a new key here.
         try:
             with path.open('rb') as stream:
-                response=client.http.put(item['signed_url'],data=stream,timeout=300,allow_redirects=False)
+                response=client.http.put(item['signed_url'],data=stream,timeout=300,allow_redirects=False,**({'headers':content_headers} if content_headers else {}))
             if response.status_code not in (200,201,204):raise ValueError('Upload rejected')
         except Exception:raise RuntimeError('Upload incomplete or uncertain; original object reservation retained') from None
-    verify_object(client,item['url'],path)
+    actual_headers=verify_object(client,item['url'],path)
+    if content_headers and any(actual_headers.get(k)!=v for k,v in content_headers.items()):raise ValueError('Uploaded delivery headers differ; reconcile same reserved object')
     item.update(status='verified',verified_at=time.time());save_json(receipt,ledger)
     return item['url']
 

@@ -1,4 +1,7 @@
-import copy,tempfile,unittest
+import copy,tempfile,unittest,hashlib
+from types import SimpleNamespace
+from unittest.mock import patch
+from pipeline_publish import upload
 from pathlib import Path
 from publish_comment_revisions import append,validate_manifest,FILM,PROJECT,freeze
 from translate import read_json,save_json
@@ -39,6 +42,18 @@ class PublishTests(unittest.TestCase):
   src=self.p/'source';src.write_bytes(b'unapproved');target=self.p/'frozen'
   with self.assertRaises(ValueError):freeze(src,target,'a'*64)
   self.assertFalse(target.exists())
+ def test_subtitle_download_name_is_sent_and_verified(self):
+  src=self.p/f'{FILM} EP01 V2.srt';src.write_bytes(b'synthetic subtitle');h=hashlib.sha256(src.read_bytes()).hexdigest();sent=[]
+  def put(url,**kw):sent.append(kw.get('headers'));return SimpleNamespace(status_code=200)
+  c=SimpleNamespace(http=SimpleNamespace(put=put));headers={'Content-Type':'application/x-subrip; charset=utf-8','Content-Disposition':f'attachment; filename="{src.name}"'}
+  def ledger():return {'uploads':{h:dict(status='upload_pending',sha256=h,bytes=src.stat().st_size,url='https://starlitshorts.s3.amazonaws.com/aigc/uploads/mcp/review/new.srt',signed_url='synthetic')}}
+  d=ledger()
+  with patch('pipeline_publish.verify_object',return_value=headers):upload(c,src,d,self.p/'upload.json',content_headers=headers)
+  self.assertEqual(sent[0],headers);self.assertEqual(d['uploads'][h]['status'],'verified')
+  d=ledger()
+  with patch('pipeline_publish.verify_object',return_value={}):
+   with self.assertRaisesRegex(ValueError,'headers differ'):upload(c,src,d,self.p/'bad-upload.json',content_headers=headers)
+  self.assertNotEqual(d['uploads'][h]['status'],'verified')
  def manifest(self):
   return dict(film=FILM,target_project=PROJECT,episodes=[dict(episode=i,duration=2.0,reuse_video=True,subtitle_changed=False,video_sha256='a'*64,old_video_sha256='a'*64,subtitle_sha256='b'*64,old_subtitle_sha256='b'*64,old_video_asset_id=1000+i,old_subtitle_asset_id=2000+i,old_video_version=2,old_subtitle_version=1,old_video_url=f'https://starlitshorts.s3.amazonaws.com/aigc/uploads/mcp/review/{i}.mp4',old_subtitle_url=f'https://starlitshorts.s3.amazonaws.com/aigc/uploads/mcp/review/{i}.srt') for i in range(1,33)])
  def test_complete_package_rejects_missing_duplicate_or_bool_episode(self):

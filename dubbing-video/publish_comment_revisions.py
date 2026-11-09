@@ -164,7 +164,7 @@ def main():
             elif s3:verify_public(client.http,video,urls[ep])
             if row['subtitle_changed']:
                 from scoped_s3_transfer import reserve
-                reserve(client,sub,ledger,lp,keys);suburl=upload(client,sub,ledger,lp,keys)
+                reserve(client,sub,ledger,lp,keys);suburl=upload(client,sub,ledger,lp,keys,content_headers={'Content-Type':'application/x-subrip; charset=utf-8','Content-Disposition':f'attachment; filename="{sub.name}"'})
             else:suburl=row['old_subtitle_url']
             keys.add(object_key(suburl))
             check_frozen(row)

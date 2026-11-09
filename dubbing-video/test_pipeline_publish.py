@@ -9,7 +9,7 @@ from mflix_client import Mflix
 
 class Response:
     status_code=200
-    def __init__(self,body):self.body=body
+    def __init__(self,body):self.body=body;self.headers={}
     def __enter__(self):return self
     def __exit__(self,*args):return False
     def iter_content(self,*args):yield self.body
