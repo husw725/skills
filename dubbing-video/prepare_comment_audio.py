@@ -21,6 +21,17 @@ def insert_pause(audio,cut,added):
     return np.concatenate([audio[:cut],np.zeros(added,dtype=audio.dtype),audio[cut:]])
 
 
+
+def remove_quiet_interval(audio,first,last):
+    audio=np.asarray(audio)
+    if audio.ndim!=1 or not len(audio) or not np.isfinite(audio).all():raise ValueError('Finite mono source required')
+    if type(first) is not int or type(last) is not int or not 0<first<last<len(audio):raise ValueError('Invalid quiet interval')
+    zone=audio[first:last].astype(np.float64)
+    # An average alone can hide a brief spoken onset or breath inside a long gap.
+    if np.max(np.abs(zone))>10**(-45/20):raise ValueError('Interval contains audible signal')
+    return np.concatenate([audio[:first],audio[last:]])
+
+
 def fit_repairs(planpath,ffmpeg):
     plan=validate(planpath);folder=planpath.parent;generation=read_json(folder/'generation-result.private.json')
     if generation['plan_sha256']!=digest(planpath) or [x['group_id'] for x in generation['groups']]!=[x['id'] for x in plan['groups']]:raise ValueError('Paid result differs from reviewed plan')
