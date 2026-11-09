@@ -108,6 +108,19 @@ def preserve(before,after):
     if observed!=before:raise ValueError('Protected existing assets changed')
 
 
+def verify_retained_video(client,s3,url,path,sha):
+    if s3 is None:
+        verify_object(client,url,path);return 'full_public_get_sha256'
+    from scoped_s3_transfer import BUCKET,verify_public
+    from publish_season_candidates import verify_s3_checksum
+    head=s3.head_object(Bucket=BUCKET,Key=object_key(url).lstrip('/'),ChecksumMode='ENABLED')
+    if not head.get('ChecksumSHA256'):
+        verify_object(client,url,path);return 'full_public_get_sha256'
+    if not verify_s3_checksum(path,sha,head):raise ValueError('Retained video server checksum differs')
+    verify_public(client.http,path,url)
+    return 'authenticated_s3_sha256_checksum_and_public_prefix'
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for n in ('manifest','approval','output','config'):p.add_argument('--'+n,type=Path,required=True)
@@ -162,7 +175,8 @@ def main():
         delivered=[]
         for row,folder,lp,ledger in prepared:
             check_frozen(row);ep=row['episode'];video=Path(row['video_path']);sub=Path(row['subtitle_path'])
-            if row['reuse_video']:verify_object(client,urls[ep],video)
+            retained_verification=None
+            if row['reuse_video']:retained_verification=verify_retained_video(client,s3,urls[ep],video,row['video_sha256'])
             elif s3:verify_public(client.http,video,urls[ep])
             if row['subtitle_changed']:
                 from scoped_s3_transfer import reserve
@@ -178,7 +192,7 @@ def main():
             check_frozen(row)
             if row['reuse_video']:vrow=max(history(client,row['old_video_asset_id'],ep,'FINAL_CUT'),key=lambda x:x['version'])
             else:vrow=append(client,row,urls[ep],folder/'video','FINAL_CUT',dict(assetId=subrow['assetId'],name=subrow['name']))
-            result=dict(episode=ep,video_asset_id=vrow['assetId'],video_version=vrow['version'],video_url=vrow['url'],video_sha256=row['video_sha256'],subtitle_asset_id=subrow['assetId'],subtitle_version=subrow['version'],subtitle_url=subrow['url'],subtitle_sha256=row['subtitle_sha256'],reused_video=row['reuse_video'],native_listening_passed=False,published_at=time.time());save_json(folder/'delivered.private.json',result);delivered.append(result);print('COMMENT_PACKAGE_EPISODE_VERIFIED',ep,flush=True)
+            result=dict(episode=ep,video_asset_id=vrow['assetId'],video_version=vrow['version'],video_url=vrow['url'],video_sha256=row['video_sha256'],subtitle_asset_id=subrow['assetId'],subtitle_version=subrow['version'],subtitle_url=subrow['url'],subtitle_sha256=row['subtitle_sha256'],reused_video=row['reuse_video'],retained_video_verification=retained_verification,native_listening_passed=False,published_at=time.time());save_json(folder/'delivered.private.json',result);delivered.append(result);print('COMMENT_PACKAGE_EPISODE_VERIFIED',ep,flush=True)
         after=materials(client,PROJECT);current={r['assetId']:r for r in after}
         for r in delivered:
             for kind,gate in [('video','FINAL_CUT'),('subtitle','DOCUMENT')]:

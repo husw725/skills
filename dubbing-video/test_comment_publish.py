@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 from pipeline_publish import upload
 from pathlib import Path
-from publish_comment_revisions import append,validate_manifest,FILM,PROJECT,freeze
+from publish_comment_revisions import append,validate_manifest,FILM,PROJECT,freeze,verify_retained_video
 from translate import read_json,save_json
 
 class FakeReview:
@@ -60,6 +60,20 @@ class PublishTests(unittest.TestCase):
   src=self.p/'source';src.write_bytes(b'unapproved');target=self.p/'frozen'
   with self.assertRaises(ValueError):freeze(src,target,'a'*64)
   self.assertFalse(target.exists())
+ def test_retained_video_uses_trusted_checksum_and_public_access(self):
+  src=self.p/'video.mp4';src.write_bytes(b'synthetic video');sha=hashlib.sha256(src.read_bytes()).hexdigest()
+  head={'ChecksumSHA256':'synthetic'};s3=SimpleNamespace(head_object=lambda **kw:head);c=SimpleNamespace(http=object())
+  with patch('publish_season_candidates.verify_s3_checksum',return_value=True) as check,patch('scoped_s3_transfer.verify_public') as public,patch('publish_comment_revisions.verify_object') as full:
+   method=verify_retained_video(c,s3,'https://starlitshorts.s3.amazonaws.com/aigc/uploads/mcp/review/retained.mp4',src,sha)
+   self.assertIn('authenticated',method);check.assert_called_once_with(src,sha,head);public.assert_called_once();full.assert_not_called()
+  with patch('publish_season_candidates.verify_s3_checksum',return_value=False),patch('scoped_s3_transfer.verify_public') as public,patch('publish_comment_revisions.verify_object') as full:
+   with self.assertRaises(ValueError):verify_retained_video(c,s3,'https://starlitshorts.s3.amazonaws.com/aigc/uploads/mcp/review/retained.mp4',src,sha)
+   public.assert_not_called();full.assert_not_called()
+ def test_retained_video_without_checksum_or_aws_keeps_full_get(self):
+  s3=SimpleNamespace(head_object=lambda **kw:{})
+  with patch('publish_comment_revisions.verify_object') as full:
+   for aws in [None,s3]:self.assertEqual(verify_retained_video(object(),aws,'https://example/video',self.p/'video','a'*64),'full_public_get_sha256')
+   self.assertEqual(full.call_count,2)
  def test_subtitle_download_name_is_sent_and_verified(self):
   src=self.p/f'{FILM} EP01 V2.srt';src.write_bytes(b'synthetic subtitle');h=hashlib.sha256(src.read_bytes()).hexdigest();sent=[]
   def put(url,**kw):sent.append(kw.get('headers'));return SimpleNamespace(status_code=200)
