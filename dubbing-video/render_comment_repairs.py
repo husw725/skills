@@ -69,6 +69,14 @@ def stereo(path, ffmpeg):
     return a
 
 
+def check_safe_end(item, original, original_samples, adopted_samples):
+    # Older fitted audio allowed decoder rounding beyond declared end_limit.
+    # Preserve those exact paid samples; never use a repair to exceed that baseline.
+    limit=max(original['end_limit'],original['start']+original_samples/RATE)
+    if item['start']+adopted_samples/RATE>limit+.005:
+        raise ValueError('Replacement exceeds original safe speech boundary')
+
+
 def copy_subtitle(source, target, expected_sha256):
     shutil.copyfile(source, target)
     if digest(target) != expected_sha256:raise ValueError('Copied subtitle differs from approved bytes')
@@ -115,9 +123,9 @@ def render(row, output, ffmpeg):
     for first,second in zip(adopted,adopted[1:]):
         if first['start']>second['start']:raise ValueError('Reordered dialogue groups')
     dialogue=assemble(adopted,len(original),load)
+    original_by_id={g['id']:g for g in fit['groups']}
     for item in adopted:
-        end=item['start']+observed_lengths[(item['path'],item['sha256'])]/RATE
-        if end>item['end_limit']+.005:raise ValueError('Replacement exceeds original safe speech boundary')
+        check_safe_end(item,original_by_id[item['id']],old_sizes[item['id']],observed_lengths[(item['path'],item['sha256'])])
     for i,(first,second) in enumerate(zip(adopted,adopted[1:])):
         original_first,original_second=fit['groups'][i:i+2]
         allowed=max(0,original_first['start']+old_sizes[original_first['id']]/RATE-original_second['start'])

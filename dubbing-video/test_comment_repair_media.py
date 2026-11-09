@@ -4,7 +4,7 @@ import tempfile
 from unittest.mock import patch
 from dub_episode import digest
 import numpy as np
-from render_comment_repairs import RATE,assemble,envelope,copy_subtitle
+from render_comment_repairs import RATE,assemble,envelope,copy_subtitle,check_safe_end
 
 class CommentRepairMediaTests(unittest.TestCase):
  def test_overlapping_ducks_use_lowest_gain_without_multiplication(self):
@@ -32,5 +32,11 @@ class CommentRepairMediaTests(unittest.TestCase):
    with patch('render_comment_repairs.shutil.copyfile',side_effect=lambda s,t:Path(t).write_bytes(b'wrong copy')):
     with self.assertRaisesRegex(ValueError,'Copied subtitle differs'):copy_subtitle(source,target,expected)
    self.assertEqual(digest(source),expected)
+
+ def test_legacy_fitter_rounding_is_preserved_without_allowing_new_overrun(self):
+  old=dict(start=1.0,end_limit=2.0);frames=round(1.008*RATE)
+  check_safe_end(old,old,frames,frames)
+  with self.assertRaisesRegex(ValueError,'safe speech boundary'):check_safe_end(old,old,frames,round(1.02*RATE))
+  with self.assertRaisesRegex(ValueError,'safe speech boundary'):check_safe_end(dict(start=1.1),old,frames,frames)
 
 if __name__=='__main__':unittest.main()
