@@ -59,6 +59,23 @@ def log(msg):
     print(f"[{datetime.datetime.now():%H:%M:%S}] {msg}", flush=True)
 
 
+def run_git(cmd, cwd=BASE):
+    """Keep normal Git settings; retry Windows network failures with verified TLS.
+
+    The installed OpenSSL backend avoids Windows revocation-server outages.
+    This is a per-command direct connection, never sslVerify=false or a change
+    to global proxy/TLS configuration.
+    """
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    if (os.name == 'nt' and result.returncode and len(cmd) > 1 and cmd[1] in ('pull', 'push', 'fetch')
+            and re.search(r'unable to access|schannel|Proxy CONNECT|Recv failure', result.stderr, re.I)):
+        log('Git 网络连接失败，使用 OpenSSL 证书校验和直连重试（仅本次命令）。')
+        return subprocess.run(['git', '-c', 'http.sslBackend=openssl', '-c', 'http.proxy=',
+                               '-c', 'http.lowSpeedLimit=1', '-c', 'http.lowSpeedTime=20', *cmd[1:]],
+                              cwd=cwd, capture_output=True, text=True)
+    return result
+
+
 # ---- 快照验收台账 --------------------------------------------------------
 # 老逻辑的跳过判定只看"这个数据日的文件在不在"，于是一份半刷新快照一旦入库就被永久
 # 冻住、后续每一轮都跳过（2026-08-18 实测因此漏掉 08-19 的单日切分）。现在每份快照都
@@ -332,7 +349,7 @@ def alert_clear_all():
 CONFLICT_CODES = ('DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU')
 
 
-def git_stuck():
+def git_stuck(base=BASE):
     """检测仓库是不是卡在冲突/rebase 中间态；正常返回 None，否则返回一句人话。
 
     autostash 落回冲突时 index 里留 UU 但**没有** MERGE_HEAD，`git rebase --abort` 救不了，
@@ -341,14 +358,14 @@ def git_stuck():
     所以一条告警都发不出来——2026-08-26 起就这样静默卡了 5 天 30 轮，两份已验收快照
     一直没推出去。因此这个检查必须放在每轮最开头，与本轮有没有采到新数据无关。
     """
-    gd = subprocess.run(['git', 'rev-parse', '--git-dir'], cwd=BASE,
+    gd = subprocess.run(['git', 'rev-parse', '--git-dir'], cwd=base,
                         capture_output=True, text=True)
     if gd.returncode != 0:
         return None                      # 不在 git 仓库里，交给调用方按普通 git 失败处理
-    gdir = os.path.join(BASE, gd.stdout.strip())
+    gdir = os.path.join(base, gd.stdout.strip())
     mid = [n for n in ('MERGE_HEAD', 'rebase-merge', 'rebase-apply', 'CHERRY_PICK_HEAD')
            if os.path.exists(os.path.join(gdir, n))]
-    st = subprocess.run(['git', 'status', '--porcelain'], cwd=BASE,
+    st = subprocess.run(['git', 'status', '--porcelain'], cwd=base,
                         capture_output=True, text=True)
     bad = [l for l in st.stdout.splitlines() if l[:2] in CONFLICT_CODES]
     if not mid and not bad:
@@ -425,30 +442,38 @@ def sync_pages_repo(today):
     未配置或目录不存在则跳过；失败不影响主流程。"""
     d = CFG.get('pages_repo_dir', '').strip()
     if not d:
-        return
+        return True
     if not os.path.isabs(d):
         d = os.path.normpath(os.path.join(BASE, d))
     if not os.path.isdir(os.path.join(d, '.git')):
         log(f'pages_repo_dir 不是 git 仓库，跳过分享页同步: {d}')
-        return
+        return False
+    if git_stuck(d):
+        log('分享页仓库已有冲突或进行中的操作，保留现场，停止本轮同步。')
+        return False
     import shutil
     # 先 pull：另一台机器可能刚推过，不拉直接推会被 non-fast-forward 拒掉
-    r = subprocess.run(['git', 'pull', '--rebase', '--autostash'],
-                       cwd=d, capture_output=True, text=True)
+    r = run_git(['git', 'pull', '--rebase', '--autostash'], cwd=d)
     if r.returncode != 0:
         subprocess.run(['git', 'rebase', '--abort'], cwd=d, capture_output=True)
+        log(f'分享页预同步失败：{r.stderr.strip()[:200]}')
+        return False
+    if git_stuck(d):
+        log('分享页仓库有未解决冲突，停止同步以保留现有修改。')
+        return False
     shutil.copyfile(os.path.join(BASE, 'report.html'), os.path.join(d, 'index.html'))
     for cmd in (['git', 'add', 'index.html'],
                 ['git', 'commit', '-m', f'daily report {today}'],
                 ['git', 'push']):
-        r = subprocess.run(cmd, cwd=d, capture_output=True, text=True)
+        r = run_git(cmd, cwd=d)
         if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
             log(f'分享页同步失败: {" ".join(cmd)} -> {r.stderr.strip()[:200]}')
             notify_once('pages_sync',
                         f'【TikTok短剧日报】分享页(tt-drama-report)同步失败（{cmd[1]}），'
                    'github.io 短链暂未更新，下次数据更新时自动重试。')
-            return
+            return False
     log('分享页(tt-drama-report)已同步。')
+    return True
 
 
 # 从剧目明细表（React 状态）提取合同级元信息：上线时间/集数/版本。表格分页，需配合翻页调用。
@@ -539,23 +564,32 @@ def sync_s3(today):
     或环境变量 S3_UPLOAD_AK/S3_UPLOAD_SK。未配置则跳过，失败不影响主流程。"""
     rel = CFG.get('s3_report_path', '').strip().strip('/')
     if not rel:
-        return
+        return True
     try:
         import boto3
         from botocore.config import Config as BotoConfig
         ak = CFG.get('s3_ak') or os.environ.get('S3_UPLOAD_AK')
         sk = CFG.get('s3_sk') or os.environ.get('S3_UPLOAD_SK')
         kw = {'aws_access_key_id': ak, 'aws_secret_access_key': sk} if ak and sk else {}
-        s3 = boto3.client('s3', region_name='us-east-1',
-                          config=BotoConfig(signature_version='s3v4'), **kw)
         key = f'aigc/drama/{rel}/report.html'
         # ContentType 不设会被当附件下载；no-cache 保证每天刷新后立即生效
-        s3.upload_file(os.path.join(BASE, 'report.html'), 'starlitshorts', key,
-                       ExtraArgs={'ContentType': 'text/html; charset=utf-8',
-                                  'CacheControl': 'no-cache'})
+        extra = {'ContentType': 'text/html; charset=utf-8', 'CacheControl': 'no-cache'}
+        for direct in (False, True):
+            try:
+                config = BotoConfig(signature_version='s3v4', connect_timeout=10, read_timeout=30,
+                                    retries={'max_attempts': 1}, **({'proxies': {}} if direct else {}))
+                s3 = boto3.client('s3', region_name='us-east-1', config=config, **kw)
+                s3.upload_file(os.path.join(BASE, 'report.html'), 'starlitshorts', key, ExtraArgs=extra)
+                break
+            except Exception:
+                if direct:
+                    raise
+                log('S3 连接失败，保留证书校验并直连重试（仅本次上传）。')
         log(f'S3 已同步 s3://starlitshorts/{key}')
+        return True
     except Exception as e:
         log(f'S3 同步失败（不影响主流程）: {e}')
+        return False
 
 
 def run(push, headless):
@@ -567,8 +601,7 @@ def run(push, headless):
     if push and not stuck:
         # 先同步远端：另一台机器可能已采过同一数据日，pull 后靠"快照已存在"直接跳过，
         # 避免两台机器各自持有同名未跟踪文件把 git 通道互相顶死
-        r = subprocess.run(['git', 'pull', '--rebase', '--autostash'],
-                           cwd=BASE, capture_output=True, text=True)
+        r = run_git(['git', 'pull', '--rebase', '--autostash'])
         if r.returncode != 0:
             subprocess.run(['git', 'rebase', '--abort'], cwd=BASE, capture_output=True)
             log(f'预同步 pull 失败（继续本地采集）: {r.stderr.strip()[:200]}')
@@ -824,8 +857,10 @@ def publish_report(dd, push, stuck):
     today = datetime.date.today().isoformat()
     # 4) 分发。S3 优先（业务系统的消费口），git/分享页其次——三路互不阻塞，
     #    GitHub 偶发连不上时 S3 照常更新。
+    s3_ok = True
+    pages_ok = True
     if push or stuck:
-        sync_s3(dd)          # S3 是业务系统的消费口，git 卡住也得照常更新
+        s3_ok = sync_s3(dd)          # S3 是业务系统的消费口，git 卡住也得照常更新
     if stuck:
         log('git 仓库仍卡在中间态，本轮不做 git 分发（本地已入库，解开冲突后会一并补推）。')
         return 4
@@ -834,7 +869,7 @@ def publish_report(dd, push, stuck):
                     ['git', 'add', 'data', 'report.html'],
                     ['git', 'commit', '-m', f'data: snapshot {dd} (exported {today})'],
                     ['git', 'push']):
-            r = subprocess.run(cmd, cwd=BASE, capture_output=True, text=True)
+            r = run_git(cmd)
             if cmd[1] == 'pull' and r.returncode == 0:
                 st2 = git_stuck()        # autostash 落不回去，pull 仍然 rc 0
                 if st2:
@@ -857,7 +892,13 @@ def publish_report(dd, push, stuck):
                 return 4
         alert_clear('git_stuck', 'git_pull', 'git_push')
         log('已推送到远端。')
-        sync_pages_repo(today)
+        pages_ok = sync_pages_repo(today)
+    if not s3_ok:
+        log('数据与报告已保存在本地，但 S3 分发失败，未将整轮标记为全部成功。')
+        return 4
+    if not pages_ok:
+        log('本地报告与其他分发已完成，但分享页同步失败。')
+        return 4
     alert_clear_all()
     log('完成。')
     return 0
@@ -882,6 +923,14 @@ if __name__ == '__main__':
             from analytics_v2 import audit_data
             count, problems = audit_data(BASE)
             log(f'新版离线复查：{count} 个日档/区间档，{len(problems)} 个问题（只读，不改台账）')
+            from analytics_v2 import date_axis, read_json
+            manifest = read_json(os.path.join(DATA, 'v2', 'latest.json'))
+            start = manifest.get('requestedStart')
+            if start:
+                import glob
+                available = {os.path.basename(p)[:10] for p in glob.glob(os.path.join(DATA, 'v2', 'days', '*.json'))}
+                axis = date_axis(start, manifest['latest'])
+                log(f'历史覆盖 {start} ~ {manifest["latest"]}：已采 {len(set(axis) & available)}/{len(axis)} 天；未获取日期不计作已补齐。')
             for problem in problems:
                 log(problem)
             sys.exit(1 if problems else 0)

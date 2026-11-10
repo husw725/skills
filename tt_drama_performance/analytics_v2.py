@@ -289,7 +289,7 @@ def check_record(record):
             or set(record['daily']) != set(date_axis(start, end))):
         raise PageDataError('日期边界或日趋势覆盖不正确')
     rows, audit = record['rows'], record['audit']
-    if len(rows) != len({r['id'] for r in rows}) or any(not r['id'] for r in rows):
+    if len(rows) != len({r['id'] for r in rows}) or any(not isinstance(r['id'], str) or not r['id'] for r in rows):
         raise PageDataError('剧目 ID 缺失/重复')
     values = list(record['daily'].values()) + [r[k] for r in rows for k in ('qv', 'like', 'com', 'fav')]
     if any(type(v) is not int or v < 0 for v in values):
