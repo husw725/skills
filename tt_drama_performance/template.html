@@ -17,7 +17,7 @@
 }
 * { box-sizing: border-box; margin: 0; }
 body { background: var(--page); color: var(--ink); font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 28px 16px 64px; }
-.wrap { max-width: 1080px; margin: 0 auto; }
+.wrap { width: 100%; max-width: none; margin: 0 auto; }
 .hdr { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .kicker { color: var(--gold-dim); font-size: 11px; letter-spacing: .28em; text-transform: uppercase; margin-bottom: 6px; }
 h1 { font-family: var(--serif); font-size: 30px; font-weight: 500; letter-spacing: .01em; }
@@ -337,7 +337,7 @@ const tip = document.getElementById('tip');
 // 标签防叠字：完整标签装得进带宽才画，装不下退化成短标签（只写合计），再装不下只留
 // 阴影带和"缺采"小标——完整数值悬停 tooltip（note）里始终有，不丢信息。
 function lineChart(el, labels, series, yfmt, bands, xformat=d=>d.slice(5)) {
-  const W = Math.min(el.clientWidth || 1040, 1040), H = 260,
+  const W = el.clientWidth || 1040, H = 260,
         P = {l: 60, r: 74, t: 10, b: 24},
         iw = W - P.l - P.r, ih = H - P.t - P.b;
   // null = 该日无实测（平台合并下发，拿不到单日切分）。实线只连实测点；
@@ -651,7 +651,7 @@ function renderWow() {
 /* Top-10 horizontal bars */
 function renderTopBars() {
   const top = DATA.dramas.slice(0, 10), el = document.getElementById('cbar');
-  const W = Math.min(el.clientWidth || 1040, 1040), rowH = 30, P = {l: 230, r: 90, t: 4, b: 4};
+  const W = el.clientWidth || 1040, rowH = 30, P = {l: Math.min(230,W*.45), r: Math.min(90,W*.22), t: 4, b: 4};
   const H = P.t + P.b + top.length * rowH;
   const max = Math.max(...top.map(d => d.qv)) || 1;
   let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">`;
