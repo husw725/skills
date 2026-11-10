@@ -817,7 +817,7 @@ function renderSeriesDetails() {
   renderEpisodeDetail(r.id);
   const pick=el('detailTitleSelect');
   pick.setAttribute('aria-label',zh?'选择观众与流量详情剧目':'Choose audience and traffic title');
-  pick.innerHTML=sorted.map(s=>`<option value="${esc(s.id)}"${s.id===detailPick?' selected':''}>${esc(s.name)}${Object.keys(s.sections||{}).length?'':(zh?' · 暂无数据':' · Unavailable')}</option>`).join('');
+  pick.innerHTML=sorted.map(s=>`<option value="${esc(s.id)}"${s.id===detailPick?' selected':''}>${esc(s.name)}${Object.keys(s.sections||{}).length?'':(DATA.episodeDetails?.[s.id]?.rows?.length?(zh?' · 仅分集数据':' · Episode snapshot only'):(zh?' · 暂无数据':' · Unavailable'))}</option>`).join('');
   pick.onchange=()=>{detailPick=pick.value;detailChannel='';renderSeriesDetails();};
   const audience=sections['audience-stats'],channels=sections['traffic-stats'],added=sections['traffic-added'],accounts=sections.accounts;
   const same=(a,b)=>a&&b&&a.start===b.start&&a.end===b.end;
