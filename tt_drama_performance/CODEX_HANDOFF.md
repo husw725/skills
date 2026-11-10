@@ -17,6 +17,16 @@
 
 ## 当前接力记录
 
+### 2026-11-10 三项P2已修复并发布（最新，覆盖下方待修复状态）
+
+- 用户明确要求修复复审发现的三项P2。代码提交 `fa33bf7`，报告发布提交 `91ac9b1`；独立修复复核“修正后放行”，三项均验证关闭。
+- 两个新增采集器的读档、旧档校验、冷却时间解析、采集和落盘均在逐剧异常隔离内；坏档不覆盖，记录错误并跳过该剧，继续后续标题。详情末尾汇总也带errors读取，避免坏档在循环完成后再次抛断；manifest只保存异常类型及坏档数量，不泄露坏文件内容。坏档保留供诊断，不自动覆盖或补零。
+- 后端拒绝全null的画像字典；前端严格校验有限数字、类别和分布合计，只有真正可用的性别/年龄才计数，未用Number(null)凑0%。分集rows先验列表类型，缺rows或空列表的合法失败stub仍可读取；前端Array.isArray兜底。采集/观测时间缺时区的异常档同样拒绝并逐剧隔离。合法0值、缺集null、片段隔离保持原语义。
+- 新增 `tests/test_collection_isolation.py`：真实collect循环+临时fake页面，覆盖坏JSON、坏schema、无时区时间，验证原档字节不变且后续标题实际刷新/落盘；新增 `tests/browser_detail_regressions.py`（Windows加 `--channel chrome`）：真实浏览器验证全null不计数、不画0%，rows={}不崩溃，正常0%、缺集及片段仍正确。
+- 验证：Mac和Windows均37项测试、9条旧断言通过，3组真实浏览器回归通过；Windows `daily_update.py --audit` 151档0问题、退出0。使用现有已验收数据重建报告，本轮未再次拉取平台数据；主48天、性别28、年龄22、渠道32、分集29及主近7日897624/近30日5626863均未改变。异常注入只在临时目录或浏览器内存，不修改真实档案。
+- 发布：复用原Interactive身份实际完成S3+主Git+Pages，`REVIEW_FIX_PUBLISH_EXIT 0`。线上实际注入全null画像与rows={}后无JS错误，画像计数从28正确降至27、未绘0%或异常分集；恢复后39集曲线、手机390宽及语言正常。地址保持 https://husw725.github.io/tt-drama-report/#seriesDetailsCard 。
+- 收尾：临时任务 `TTDramaReviewFixPublishValidation20261110` 已删除，LastTaskResult0，原TTDramaDaily仍Ready且设置不变；验证/发布webhook运行时置空，未发送通知。Mac原有两份legacy JSON改动保留，无冲突；原Claude/sonnet洞察依然回退规则洞察，未改业务模型。
+
 ### 2026-11-10 二次代码审查：3项P2待修复（优先）
 
 - 用户要求再次review。本轮只审查与临时故障注入复现，没有修改业务代码、生产数据、页面或Windows任务，没有发送通知；本记录优先于前一轮“修正后放行”的结论。审查代码基于50fe08b，期间拉取的6c312a9仅定时数据/报告更新，业务代码未变。
