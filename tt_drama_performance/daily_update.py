@@ -463,7 +463,7 @@ def sync_pages_repo(today):
         return False
     shutil.copyfile(os.path.join(BASE, 'report.html'), os.path.join(d, 'index.html'))
     for cmd in (['git', 'add', 'index.html'],
-                ['git', 'commit', '-m', f'daily report {today}'],
+                ['git', 'commit', '--only', '-m', f'daily report {today}', '--', 'index.html'],
                 ['git', 'push']):
         r = run_git(cmd, cwd=d)
         if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
@@ -867,7 +867,7 @@ def publish_report(dd, push, stuck):
     if push:
         for cmd in (['git', 'pull', '--rebase', '--autostash'],
                     ['git', 'add', 'data', 'report.html'],
-                    ['git', 'commit', '-m', f'data: snapshot {dd} (exported {today})'],
+                    ['git', 'commit', '--only', '-m', f'data: snapshot {dd} (exported {today})', '--', 'data', 'report.html'],
                     ['git', 'push']):
             r = run_git(cmd)
             if cmd[1] == 'pull' and r.returncode == 0:
