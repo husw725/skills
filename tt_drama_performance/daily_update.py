@@ -380,9 +380,13 @@ def open_page(p, headless):
     return ctx, page
 
 
+def export_button(page):
+    return page.get_by_role('button', name=re.compile(r'^(?:Export(?: Data)?|导出(?:数据)?)$', re.I)).first
+
+
 def logged_in(page, timeout=20000):
     try:
-        page.get_by_text('Export Data').first.wait_for(state='visible', timeout=timeout)
+        export_button(page).wait_for(state='visible', timeout=timeout)
         return True
     except PWTimeout:
         return False
@@ -519,8 +523,8 @@ def data_date(page):
     快照必须按数据日期归档，不能按导出日期。"""
     for _ in range(3):
         try:
-            m = re.search(r'(?:data updated to|数据更新至)\s*(\d{4}-\d{2}-\d{2})',
-                          page.inner_text('body'))
+            m = re.search(r'(?:data updated to|updated through|数据更新至)\s*(\d{4}-\d{2}-\d{2})',
+                          page.inner_text('body'), re.I)
             if m:
                 return m.group(1)
         except Exception:
@@ -600,6 +604,17 @@ def run(push, headless):
 
             alert_clear('login_expired')      # 登录态恢复了，下次失效要能立刻推出去
             dd = data_date(page)
+            if page.get_by_role('button', name='Export', exact=True).count():
+                from analytics_v2 import collect
+                from report_v2 import build_report
+                manifest = collect(page, BASE, log=log,
+                        backfill_days=int(CFG.get('v2_backfill_days', 30)),
+                        refresh_days=int(CFG.get('v2_refresh_days', 3)),
+                        history_start=CFG.get('v2_history_start', '2026-03-01'),
+                        retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
+                dd = manifest['latest']
+                build_report(BASE)
+                return publish_report(dd, push, stuck)
             daily = page.evaluate(EXTRACT_JS)
             if not dd and daily:
                 dd = daily[-1]['eventDate']  # 趋势最后一天=数据截止日，语言无关的兜底
@@ -629,7 +644,7 @@ def run(push, headless):
             for attempt in range(1, 4):
                 try:
                     with page.expect_download(timeout=30000) as dl:
-                        page.get_by_text('Export Data').first.click()
+                        export_button(page).click()
                     dl.value.save_as(cand)
                     last_err = None
                     break
@@ -802,6 +817,11 @@ def run(push, headless):
     if dd not in open(os.path.join(BASE, 'report.html'), encoding='utf-8').read():
         log(f'警告：report.html 中未找到本次数据日期 {dd}。')
 
+    return publish_report(dd, push, stuck)
+
+
+def publish_report(dd, push, stuck):
+    today = datetime.date.today().isoformat()
     # 4) 分发。S3 优先（业务系统的消费口），git/分享页其次——三路互不阻塞，
     #    GitHub 偶发连不上时 S3 照常更新。
     if push or stuck:
@@ -848,10 +868,23 @@ if __name__ == '__main__':
     ap.add_argument('--login', action='store_true', help='首次人工登录')
     ap.add_argument('--push', action='store_true', help='更新后 git 推送')
     ap.add_argument('--headless', action='store_true', help='无浏览器窗口运行')
+    ap.add_argument('--local-only', action='store_true', help='只采集和生成本地报告，不分发或发送通知')
     ap.add_argument('--audit', action='store_true',
                     help='离线全量复查已入库快照并重建验收台账（不开浏览器、不改数据）')
     a = ap.parse_args()
+    if a.local_only:
+        if a.push:
+            ap.error('--local-only 不能和 --push 同时使用')
+        CFG['git_push'] = False
+        CFG['dingtalk_webhook'] = ''
     if a.audit:
+        if os.path.exists(os.path.join(DATA, 'v2', 'latest.json')):
+            from analytics_v2 import audit_data
+            count, problems = audit_data(BASE)
+            log(f'新版离线复查：{count} 个日档/区间档，{len(problems)} 个问题（只读，不改台账）')
+            for problem in problems:
+                log(problem)
+            sys.exit(1 if problems else 0)
         _, probs = audit_all()
         sys.exit(1 if probs else 0)
     if a.login:

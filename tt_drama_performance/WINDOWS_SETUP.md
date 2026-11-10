@@ -1,5 +1,18 @@
 # Windows 每日自动更新配置（不依赖任何 AI agent）
 
+## 2026-11 新版运行
+
+原计划任务和持久化登录 profile 继续使用。新版识别 `Export` 按钮，不会再因按钮改名误报登录失效。
+
+- 首次更新默认从2026-03-01逐日扫描全部历史，并查询近7天、前7天、近30天；每个区间自动翻完分页并精确对账。
+- 新数据单独保存在 `data/v2/`，旧快照和历史指标保留。以后默认刷新最近3天，并重采机构趋势修订过的日期。
+- `config.json` 可设置 `v2_history_start`（默认2026-03-01）；设为空时只回填 `v2_backfill_days`（默认30，1~180）。`v2_refresh_days` 默认3，历史失败日期的重试间隔 `v2_history_retry_hours` 默认24小时。服务端不能返回和采集未验收的日期分别标记；前30日不可用时不显示月环比。
+- `python daily_update.py --local-only --headless`：采集并更新本地报告，跳过Git/S3分发及钉钉通知，适用于维护验证。
+- `python daily_update.py --audit`：有新版存档时只读复查新版数据，不打开浏览器，不发送通知。
+- `python generate_report.py`：使用已验收的新版存档重新生成报告。
+
+下文安装示例及故障表保留原流程背景，最新任务频率以现有 TTDramaDaily 为准。
+
 ## 快速安装（推荐）
 
 前置：装好 Python 3.9+（安装时勾选 "Add to PATH"）和 git（配好 GitHub 推送凭证）。

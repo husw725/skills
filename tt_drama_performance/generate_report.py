@@ -142,11 +142,18 @@ def ai_insights(payload):
                  for d in payload['dramas'][:8]],
         最新单日剧目增量=payload['moversSeries'][-1] if payload['moversSeries'] else None,
     )
+    if payload.get('schema') == 2:
+        digest['口径说明'] = payload.get('qualityNotes', [])
+        digest['区间增长贡献'] = [dict(起始=p['start'], 截止=p['end'], 有效播放=p['total'],
+                                        前期有效播放=p['previous'], 排名=p['rows'][:8]) for p in payload['periods']]
     prompt = (
         '你是一名资深短剧行业 BI 分析师。基于下面的 TikTok 短剧运营数据(JSON)，'
         '写 4-6 条深度洞察。要求：每条 1-2 句话、必须引用具体数字、'
         '聚焦趋势拐点/结构变化/内容集中度/互动质量/异常点，并尽量给出可执行建议；'
         '不要复述表面数字，要给判断。'
+        '缺失或null不能当作0；未提供的总播放、完播、分享不分析其比率。'
+        '区分当前累计与所选区间增长，不能用累计占比代替区间贡献。'
+        '前期数据不可用时不能编造环比，不能把统计相关性说成投流或推荐的因果结论。'
         '每条洞察同时给中文和英文两个版本（英文为地道的 BI 表达，不是直译腔）。'
         '只输出一个 JSON 数组，每个元素形如 {"zh":"中文洞察","en":"English insight"}，'
         '不要 markdown 代码块，不要其他文字。\n\n'
@@ -176,6 +183,9 @@ def ai_insights(payload):
 
 
 def build():
+    if os.path.exists(os.path.join(DATA, 'v2', 'latest.json')):
+        from report_v2 import build_report
+        return build_report(BASE)
     daily = load_daily()
     snaps = load_snapshots()
     snap_dates = sorted(snaps)

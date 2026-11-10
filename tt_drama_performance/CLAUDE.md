@@ -2,6 +2,16 @@
 
 TikTok 短剧数据日报（建于 2026-07-28），每日更新流程见 PLAYBOOK.md。
 
+## 2026-11 新版页面（优先于下文旧版事实）
+
+- 登录检测兼容 `Export` / `Export Data`。新版通过浏览器正常切换日期和分页，观察站点自己发出的响应；不直接请求或重放带签名的 API。
+- 新版按 **稳定剧目 ID + 明确起止日期** 保存实际增量，数据在 `data/v2/`。剧目分页条数、ID 唯一性、机构趋势逐日覆盖和汇总必须一致；区间剧目有效播放增量之和与机构趋势/汇总精确对账。日档齐全时再按 ID 核对逐日之和与整段的播放、点赞、收藏、评论四项。
+- 已实测可选择历史单日，不再依赖相邻累计快照相减。用户于11-10明确要求全部历史：默认从 `v2_history_start=2026-03-01` 逐日扫描，刷新最近3天；失败日期默认24小时后重试，机构历史修订额外重采并保存旧修订。设 history_start 为空时才使用近 `v2_backfill_days` 天的窗口。界面允许选日期不代表服务端能返回，服务端错误/未验收日期必须分别标注，不能编造历史或月环比。
+- 新 Excel 有17列但没有 ID，且累计值与页面存在滞后。增长分析以页面返回的区间增量为准，不使用 Excel 累计列，也不把新旧累计直接相减。日期筛选会改变导出行数与新增列，下文“导出与范围无关”仅对旧版成立。
+- 当前新版机构趋势仅返回有效播放；总播放、完播、分享等缺失字段留 null，不补0、不继续画成当前指标。旧 `daily_history.json` / XLSX / 验收台账保留，报告提供原始历史指标存档。合并系列成员集合不一致时不算该组环比。
+- `python daily_update.py --audit` 在存在新版 manifest 时只读重算新版日档/区间档和逐日/整段一致性，不重写旧台账；无新版存档时沿用原审计流程。`python generate_report.py` 自动选择已有新版 manifest，旧存档仍可通过 `read_snapshot()` 读取。
+- 新版主增长榜/趋势/区间分析仅用新版逐日实测，旧版合并档不再混入。报告保留双语、系列分组和累计明细，增加近7/30日增长贡献、前期比较、区间收藏/互动千播放、剧名搜索、14天内上新筛选、历史覆盖日历与任意日期分析。累计明细注明查询覆盖范围，不假称全机构所有历史剧目。自定义区间缺任一单日就不能生成完整排名；同时清空分析图，不让上次图形冒充新查询。
+
 ## 工作约定
 - 本仓库每 4 小时有 Windows 定时任务自动推送数据提交。**动手改任何东西之前先 `git pull --rebase --autostash`**，改完立即 commit+push，压缩撞车窗口。report.html 冲突时：取 theirs 完成 rebase → 重新跑 generate_report.py → amend。
 - **`git pull --rebase --autostash` 在 autostash 落不回去时返回码仍是 0**（已复现验证），只在 stdout 里留一行 "Applying autostash resulted in conflicts."。index 留 UU 但**没有** MERGE_HEAD/rebase-merge，`git rebase --abort` 救不了，只能解冲突后 `git add`（本地改动同时还留在 `git stash list` 里）。这之后每一轮 pull 都是 "Pulling is not possible because you have unmerged files"：采集照常、git 全废。2026-08-26 就这么静默卡了 5 天 30 轮，08-24/08-26 两份已验收快照一直没推出去。`daily_update.git_stuck()` 现在每轮开头 + 每次 pull 之后都体检 index，卡住就钉钉告警并禁掉本轮 git（S3 和本地入库照常）。
