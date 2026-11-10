@@ -360,7 +360,18 @@ def audit_data(base):
                 errors.append(f'{label} 逐日/整段指标不一致: {check["differences"][:3]}')
     except Exception as e:
         errors.append(str(e))
-    return len(files), errors
+    series_files = list((root / 'series').glob('*.json')) if (root / 'series_latest.json').exists() else []
+    if series_files:
+        from series_history import upgrade_record, validate_series
+        for path in series_files:
+            try:
+                record = upgrade_record(read_json(path))
+                validate_series(record)
+                if record['id'] != path.stem:
+                    raise PageDataError('单剧历史ID与文件名不匹配')
+            except Exception as e:
+                errors.append(f'{path.name}: {e}')
+    return len(files) + len(series_files), errors
 
 
 def collect(page, base, latest=None, log=print, backfill_days=30, refresh_days=3,

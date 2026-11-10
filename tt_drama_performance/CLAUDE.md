@@ -11,6 +11,8 @@ TikTok 短剧数据日报（建于 2026-07-28），每日更新流程见 PLAYBOO
 - 当前新版机构趋势仅返回有效播放；总播放、完播、分享等缺失字段留 null，不补0、不继续画成当前指标。旧 `daily_history.json` / XLSX / 验收台账保留，报告提供原始历史指标存档。合并系列成员集合不一致时不算该组环比。
 - `python daily_update.py --audit` 在存在新版 manifest 时只读重算新版日档/区间档和逐日/整段一致性，不重写旧台账；无新版存档时沿用原审计流程。`python generate_report.py` 自动选择已有新版 manifest，旧存档仍可通过 `read_snapshot()` 读取。
 - 新版主增长榜/趋势/区间分析仅用新版逐日实测，旧版合并档不再混入。报告保留双语、系列分组和累计明细，增加近7/30日增长贡献、前期比较、区间收藏/互动千播放、剧名搜索、14天内上新筛选、历史覆盖日历与任意日期分析。累计明细注明查询覆盖范围，不假称全机构所有历史剧目。自定义区间缺任一单日就不能生成完整排名；同时清空分析图，不让上次图形冒充新查询。
+- `series_history.py` 是独立补充来源：通过单剧详情页UI、按30天分段保存播放/平均时长曲线。43个目录ID不等于43部均有可访问数据；当前有HTTP500/422、空曲线与稀疏日期。缺日段标partial、24h后重试，实际值保留逐点observedAt（旧段迁移注明时间来源），不补0；与机构日档重合的点逐ID核对。报告在独立卡片展示，不增加全机构已验收日数、不推导互动、不与旧累计混算。`v2_series_history` 默认true。
+- Windows 分发：默认代理/Schannel连接失败时，Git使用单次OpenSSL+直连重试，S3保留TLS校验直连重试，不修改全局代理/证书设置。SSH非交互会话可能读不到WinCredMan凭证；实际计划任务Interactive会话已验证可push。Windows已配置 `pages_repo_dir=E:\workspace\tt-drama-report`，复用原GitHub Pages地址。临时验证任务要及时删除，验证脚本禁用webhook。
 
 ## 工作约定
 - 本仓库每 4 小时有 Windows 定时任务自动推送数据提交。**动手改任何东西之前先 `git pull --rebase --autostash`**，改完立即 commit+push，压缩撞车窗口。report.html 冲突时：取 theirs 完成 rebase → 重新跑 generate_report.py → amend。

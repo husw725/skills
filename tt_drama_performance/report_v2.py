@@ -192,6 +192,41 @@ def build_payload(base):
     if 'previous30' not in records:
         notes.append('平台未能返回前30日的对比数据，因此近30日可查看实际增长，但暂不提供月环比。')
         notes_en.append('The platform did not return the prior 30-day period. Actual growth for the last 30 days is available; month-over-month comparison is unavailable.')
+    series_history = []
+    series_errors = []
+    if (root / 'series_latest.json').exists():
+        from series_history import upgrade_record, validate_series
+        for path in sorted((root / 'series').glob('*.json')):
+            try:
+                record = upgrade_record(read_json(path))
+                validate_series(record)
+                if record['id'] != path.stem:
+                    raise ValueError('单剧历史文件名与ID不匹配')
+            except Exception:
+                series_errors.append(path.name)
+                continue
+            if not record.get('qv'):
+                continue
+            matched, differences = 0, []
+            for day, qv in record['qv'].items():
+                source = direct.get(day)
+                if source:
+                    row = next((r for r in source['rows'] if r['id'] == record['id']), None)
+                    if row is not None:
+                        matched += 1
+                        if row['qv'] != qv:
+                            differences.append(dict(date=day, curve=qv, measured=row['qv']))
+            series_history.append(dict(id=record['id'], name=record['name'], qv=record['qv'], dur=record.get('dur', {}),
+                                       matchedDays=matched, differences=differences,
+                                       start=min(record['qv']), end=max(record['qv'])))
+        series_history.sort(key=lambda r: -len(r['qv']))
+        total_points = sum(len(r['qv']) for r in series_history)
+        matched_points = sum(r['matchedDays'] for r in series_history)
+        notes.append(f'另保存 {len(series_history)} 部剧的 {total_points} 个单剧播放日值，重合核对 {matched_points} 点。此补充来源单独展示，不增加全机构已验收天数，也不补造未知互动指标。')
+        notes_en.append(f'A separate archive contains {total_points} title-day view values across {len(series_history)} titles, with {matched_points} overlapping points checked. It does not increase institution-wide verified-day coverage or supply unavailable interactions.')
+        if series_errors:
+            notes.append(f'{len(series_errors)} 份单剧补充档案未通过读取校验，暂不展示；主日报数据不受影响。')
+            notes_en.append(f'{len(series_errors)} supplemental title archives failed validation and are omitted. Primary report data is unaffected.')
     trend_titles = {d['id']: dict(id=d['id'], name=d['name']) for d in dramas}
     for did, info in catalog.items():
         gid = group_map[did]
@@ -205,6 +240,7 @@ def build_payload(base):
                 cumulativeScopeDays=cumulative_scope,
                 titleCatalog=catalog, groupMap=group_map,
                 trendTitles=list(trend_titles.values()),
+                seriesHistory=series_history,
                 dayDetails={day: [[r['id'], r['qv'], r['like'], r['fav'], r['com']] for r in record['rows']]
                             for day, record in sorted(direct.items())},
                 historyRequestedStart=requested_start,

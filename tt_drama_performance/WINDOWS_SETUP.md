@@ -10,6 +10,8 @@
 - `python daily_update.py --local-only --headless`：采集并更新本地报告，跳过Git/S3分发及钉钉通知，适用于维护验证。
 - `python daily_update.py --audit`：有新版存档时只读复查新版数据，不打开浏览器，不发送通知。
 - `python generate_report.py`：使用已验收的新版存档重新生成报告。
+- `v2_series_history=true`：额外保存单剧详情页的历史播放/时长曲线，按30天分段；来源与全机构单日档分开展示，缺失不补0，旧段时间不伪装成最新观测。
+- Git/S3会在连接失败后仅为当前操作使用保留TLS校验的直连重试。GitHub凭证需要原Interactive登录会话；SSH会话的WinCredMan错误不代表原定时任务不能推送。分享页目录配置在 `pages_repo_dir`，失败会如实返回状态，不能当作全部同步成功。
 
 下文安装示例及故障表保留原流程背景，最新任务频率以现有 TTDramaDaily 为准。
 

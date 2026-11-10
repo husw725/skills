@@ -67,6 +67,7 @@ tr.grp:hover td { background: rgba(216,178,92,.05); }
   border-radius: 8px; padding: 4px 10px; font-size: 13px; font-family: inherit;
   letter-spacing: normal; text-transform: none; }
 #dtrendSel:focus, .datesel:focus { outline: none; border-color: var(--gold-dim); }
+#dtrendSel { max-width:100%;min-width:0; }
 .datesel.on { color: var(--gold); border-color: var(--gold-dim); font-weight: 600; }
 tr.cut td { color: var(--gold-dim); font-size: 11px; text-align: center; padding: 4px 8px;
   border-top: 1px dashed var(--gold-dim); opacity: .8; }
@@ -163,10 +164,23 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
   </div>
 
   <div class="card" id="dtrendCard" style="display:none">
-    <h2 style="display:flex;align-items:center;gap:12px"><span id="dtrendTitle"></span>
+    <h2 style="display:flex;flex-wrap:wrap;align-items:center;gap:12px"><span id="dtrendTitle"></span>
       <select id="dtrendSel"></select></h2>
     <div class="chart" id="dtrend"></div>
     <div id="dtrendNote" style="font-size:11px;color:var(--gold-dim);margin-top:6px"></div>
+  </div>
+
+  <div class="card" id="seriesArchiveCard" style="display:none">
+    <h2 id="seriesArchiveTitle"></h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <select id="seriesArchiveSelect" class="datesel" style="max-width:100%;flex:1;min-width:180px"></select>
+      <select id="seriesArchiveMetric" class="datesel"></select>
+      <input type="date" id="seriesArchiveStart" class="datesel"><span>→</span><input type="date" id="seriesArchiveEnd" class="datesel">
+      <button id="seriesArchiveApply" class="datechip"></button>
+    </div>
+    <div id="seriesArchiveNote" class="meta" style="margin:0 0 10px"></div>
+    <div class="chart" id="seriesArchivePlot"></div>
+    <details><summary id="seriesArchiveDataLabel"></summary><div class="tbl-scroll" id="seriesArchiveData"></div></details>
   </div>
 
   <div class="card">
@@ -753,6 +767,51 @@ function renderDramaTbl() {
   }));
 }
 
+let seriesArchivePick=null,seriesArchiveMetric='qv',seriesArchiveWindow=null;
+function renderSeriesArchive() {
+  const records=DATA.seriesHistory||[];
+  if(!records.length)return;
+  const zh=LANG==='zh';
+  document.getElementById('seriesArchiveCard').style.display='';
+  document.getElementById('seriesArchiveTitle').textContent=zh?'单剧历史细数据 · 补充来源':'Per-title historical detail · Separate source';
+  if(!records.some(r=>r.id===seriesArchivePick))seriesArchivePick=records[0].id;
+  const pick=document.getElementById('seriesArchiveSelect'),metric=document.getElementById('seriesArchiveMetric');
+  pick.innerHTML=records.map(r=>`<option value="${esc(r.id)}"${r.id===seriesArchivePick?' selected':''}>${esc(r.name)}</option>`).join('');
+  const source=records.find(r=>r.id===seriesArchivePick),hasDuration=Object.keys(source.dur||{}).length>0;
+  if(!hasDuration)seriesArchiveMetric='qv';
+  metric.innerHTML=`<option value="qv"${seriesArchiveMetric==='qv'?' selected':''}>${zh?'有效播放':'Effective views'}</option><option value="dur"${seriesArchiveMetric==='dur'?' selected':''}${hasDuration?'':' disabled'}>${zh?'平台平均播放时长':'Platform average play duration'}</option>`;
+  const start=document.getElementById('seriesArchiveStart'),end=document.getElementById('seriesArchiveEnd');
+  for(const input of [start,end]){input.min=DATA.historyRequestedStart;input.max=DATA.dataThrough;}
+  if(!seriesArchiveWindow||seriesArchiveWindow.id!==source.id)seriesArchiveWindow={id:source.id,start:source.start,end:source.end};
+  start.value=seriesArchiveWindow.start;end.value=seriesArchiveWindow.end;
+  pick.setAttribute('aria-label',zh?'选择单剧历史':'Choose title history');metric.setAttribute('aria-label',zh?'历史指标':'Historical metric');
+  start.setAttribute('aria-label',zh?'单剧历史开始日期':'Title history start');end.setAttribute('aria-label',zh?'单剧历史结束日期':'Title history end');
+  document.getElementById('seriesArchiveApply').textContent=zh?'查看曲线':'View curve';
+  document.getElementById('seriesArchiveDataLabel').textContent=T().viewData;
+  const draw=()=>{
+    if(!start.value||!end.value||start.value>end.value||start.value<DATA.historyRequestedStart||end.value>DATA.dataThrough){
+      unavailableChart('seriesArchivePlot');document.getElementById('seriesArchiveData').innerHTML='';return;
+    }
+    seriesArchiveWindow={id:source.id,start:start.value,end:end.value};
+    const points=source[seriesArchiveMetric]||{},axis=[];
+    for(let d=start.value;d<=end.value;d=shiftDay(d,1))axis.push(d);
+    const observed=axis.filter(d=>Object.prototype.hasOwnProperty.call(points,d)).length;
+    document.getElementById('seriesArchiveNote').textContent=zh
+      ? `${start.value} ~ ${end.value} · 实际返回 ${observed}/${axis.length} 个日值 · 单剧页播放与机构单日重合核对 ${source.matchedDays} 点，差异 ${(source.differences||[]).length} 点。此处按单个剧目/版本展示，不计入全机构已验收覆盖；未返回日期留空，互动指标不从本曲线推导。`
+      : `${start.value} ~ ${end.value} · ${observed}/${axis.length} daily values returned · ${source.matchedDays} overlapping view points checked; ${(source.differences||[]).length} differences. This is a separate title/version source, not institution-wide verified coverage. Missing dates stay blank; interactions are not inferred.`;
+    if(!observed){unavailableChart('seriesArchivePlot');document.getElementById('seriesArchiveData').innerHTML='';return;}
+    const label=seriesArchiveMetric==='qv'?(zh?'有效播放':'Effective views'):(zh?'平均播放时长（秒）':'Average play duration (seconds)');
+    const series=[{name:label,color:'var(--s1)',values:axis.map(d=>Object.prototype.hasOwnProperty.call(points,d)?points[d]:null)}];
+    const format=v=>seriesArchiveMetric==='qv'?fmtN(v):(v==null?'-':Number(v).toFixed(2)+'s');
+    lineChart(document.getElementById('seriesArchivePlot'),axis,series,format);
+    dataTable('seriesArchiveData',axis,series,format);
+  };
+  pick.onchange=()=>{seriesArchivePick=pick.value;seriesArchiveWindow=null;renderSeriesArchive();};
+  metric.onchange=()=>{seriesArchiveMetric=metric.value;draw();};
+  document.getElementById('seriesArchiveApply').onclick=draw;
+  draw();
+}
+
 function renderAll() {
   renderHeader();
   renderModern();
@@ -765,6 +824,7 @@ function renderAll() {
   renderMovers();
   renderDtrend();
   renderDramaTbl();
+  renderSeriesArchive();
 }
 
 document.getElementById('langBtn').addEventListener('click', () => {

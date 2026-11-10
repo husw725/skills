@@ -646,6 +646,13 @@ def run(push, headless):
                         history_start=CFG.get('v2_history_start', '2026-03-01'),
                         retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
                 dd = manifest['latest']
+                if CFG.get('v2_series_history', True):
+                    try:
+                        from series_history import collect as collect_series
+                        collect_series(page, BASE, start=manifest['requestedStart'], log=log,
+                                       retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
+                    except Exception as e:
+                        log(f'单剧历史补充暂未完成，主日报继续使用已验收数据：{type(e).__name__}: {str(e).splitlines()[0][:160]}')
                 build_report(BASE)
                 return publish_report(dd, push, stuck)
             daily = page.evaluate(EXTRACT_JS)
@@ -922,7 +929,7 @@ if __name__ == '__main__':
         if os.path.exists(os.path.join(DATA, 'v2', 'latest.json')):
             from analytics_v2 import audit_data
             count, problems = audit_data(BASE)
-            log(f'新版离线复查：{count} 个日档/区间档，{len(problems)} 个问题（只读，不改台账）')
+            log(f'新版离线复查：{count} 个数据存档，{len(problems)} 个问题（只读，不改台账）')
             from analytics_v2 import date_axis, read_json
             manifest = read_json(os.path.join(DATA, 'v2', 'latest.json'))
             start = manifest.get('requestedStart')
