@@ -37,6 +37,33 @@ def aggregate(rows, groups):
     return sorted(merged.values(), key=lambda r: -r['qv'])
 
 
+def account_comparison(detail, periods, direct):
+    section = detail.get('sections', {}).get('traffic-added')
+    if not section:
+        return dict(status='unavailable')
+    start, end, did = section['start'], section['end'], detail['id']
+    rows = None
+    for record in periods.values():
+        if (record['start'], record['end']) == (start, end):
+            row = next((r for r in record['rows'] if r['id'] == did), None)
+            if row is not None:
+                rows = [row]
+                break
+    if rows is None:
+        rows = []
+        for day in date_axis(start, end):
+            row = next((r for r in direct.get(day, {}).get('rows', []) if r['id'] == did), None)
+            if row is None:
+                return dict(status='unavailable')
+            rows.append(row)
+    fields = ('qv', 'like', 'fav', 'com')
+    if any(r.get(k) is None for r in section['data'] for k in fields):
+        return dict(status='unavailable')
+    platform = {k: sum(r[k] for r in section['data']) for k in fields}
+    primary = {k: sum(r[k] for r in rows) for k in fields}
+    return dict(status='matched' if platform == primary else 'different', platform=platform, primary=primary)
+
+
 def build_payload(base):
     from generate_report import fmt, fmt_en, pct, safe_div
     base = Path(base)
@@ -231,6 +258,14 @@ def build_payload(base):
     for did, info in catalog.items():
         gid = group_map[did]
         trend_titles.setdefault(gid, dict(id=gid, name=info['name'] if gid == did else gid))
+    from series_details import load_details
+    detail_errors = []
+    details = load_details(root, errors=detail_errors)
+    for detail in details:
+        detail['accountAudit'] = account_comparison(detail, records, direct)
+    if detail_errors:
+        notes.append(f'{len(detail_errors)} 份单剧画像/流量档案未通过校验，已暂时隐藏。')
+        notes_en.append(f'{len(detail_errors)} audience/traffic snapshots failed validation and are omitted.')
     return dict(schema=2, generated=dt.datetime.now().strftime('%Y-%m-%d %H:%M'), dataThrough=latest,
                 snapDate=latest, daily=daily, kpis=kpis, wow=wow_periods[0]['rows'], wowPeriods=wow_periods,
                 dramas=dramas, moversSeries=movers, dramaTrends=dict(trends), gaps=gaps,
@@ -241,6 +276,7 @@ def build_payload(base):
                 titleCatalog=catalog, groupMap=group_map,
                 trendTitles=list(trend_titles.values()),
                 seriesHistory=series_history,
+                seriesDetails=details,
                 dayDetails={day: [[r['id'], r['qv'], r['like'], r['fav'], r['com']] for r in record['rows']]
                             for day, record in sorted(direct.items())},
                 historyRequestedStart=requested_start,

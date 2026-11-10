@@ -82,6 +82,17 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
 .coverage-day.institution_only { background:var(--s1); }
 .coverage-day.unverified { background:var(--s2); }
 .coverage-month { color:var(--ink2);font-size:12px; }
+.detail-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:18px;margin:16px 0; }
+.detail-panel { background:var(--surface2);border-radius:10px;padding:16px;min-width:0; }
+.detail-panel h3 { font-size:14px;font-weight:500;color:var(--ink);margin-bottom:4px; }
+.detail-note { color:var(--muted);font-size:12px;margin:6px 0 12px;overflow-wrap:anywhere; }
+.detail-empty { color:var(--ink2);padding:18px 0;font-size:13px; }
+.detail-bar { margin:12px 0; }
+.detail-bar-label { display:flex;justify-content:space-between;gap:10px;color:var(--ink2);font-size:12px; }
+.detail-bar-track { margin-top:5px;height:6px;background:var(--grid);border-radius:4px;overflow:hidden; }
+.detail-bar-fill { height:100%;border-radius:4px;background:var(--gold); }
+#detailTitleSelect,#detailChannelSelect { max-width:100%;min-width:0; }
+#detailAccounts td:first-child { min-width:175px; }
 </style>
 </head>
 <body>
@@ -168,6 +179,25 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
       <select id="dtrendSel"></select></h2>
     <div class="chart" id="dtrend"></div>
     <div id="dtrendNote" style="font-size:11px;color:var(--gold-dim);margin-top:6px"></div>
+  </div>
+
+  <div class="card" id="seriesDetailsCard" style="display:none">
+    <h2 id="seriesDetailsTitle"></h2>
+    <select id="detailTitleSelect" class="datesel" style="width:100%;margin-bottom:8px"></select>
+    <p id="detailSummary" class="detail-note"></p>
+    <div class="detail-grid">
+      <div class="detail-panel"><h3 id="detailGenderTitle"></h3><div id="detailGender"></div></div>
+      <div class="detail-panel"><h3 id="detailAgeTitle"></h3><div id="detailAge"></div></div>
+    </div>
+    <p id="detailAudienceNote" class="detail-note"></p>
+    <div class="detail-panel">
+      <h3 id="detailTrafficTitle"></h3><p id="detailTrafficNote" class="detail-note"></p>
+      <select id="detailChannelSelect" class="datesel"></select>
+      <div id="detailChannels"></div>
+    </div>
+    <h3 id="detailAccountsTitle" style="font-size:14px;font-weight:500;margin-top:22px"></h3>
+    <p id="detailAccountsNote" class="detail-note"></p>
+    <div id="detailAccounts" class="tbl-scroll"></div>
   </div>
 
   <div class="card" id="seriesArchiveCard" style="display:none">
@@ -767,6 +797,61 @@ function renderDramaTbl() {
   }));
 }
 
+let detailPick=null,detailChannel='';
+function renderSeriesDetails() {
+  const records=DATA.seriesDetails||[];
+  if(!records.length)return;
+  const zh=LANG==='zh',el=id=>document.getElementById(id),text=(id,s)=>el(id).textContent=s;
+  el('seriesDetailsCard').style.display='';
+  text('seriesDetailsTitle',zh?'单剧详情 · 观众与流量':'Title detail · Audience & traffic');
+  const sorted=[...records].sort((a,b)=>Number(!!b.sections?.['audience-stats'])-Number(!!a.sections?.['audience-stats'])||a.name.localeCompare(b.name));
+  if(!sorted.some(r=>r.id===detailPick))detailPick=sorted[0].id;
+  const r=sorted.find(r=>r.id===detailPick),sections=r.sections||{};
+  const pick=el('detailTitleSelect');
+  pick.setAttribute('aria-label',zh?'选择观众与流量详情剧目':'Choose audience and traffic title');
+  pick.innerHTML=sorted.map(s=>`<option value="${esc(s.id)}"${s.id===detailPick?' selected':''}>${esc(s.name)}${Object.keys(s.sections||{}).length?'':(zh?' · 暂无数据':' · Unavailable')}</option>`).join('');
+  pick.onchange=()=>{detailPick=pick.value;detailChannel='';renderSeriesDetails();};
+  const audience=sections['audience-stats'],channels=sections['traffic-stats'],added=sections['traffic-added'],accounts=sections.accounts;
+  const same=(a,b)=>a&&b&&a.start===b.start&&a.end===b.end;
+  const stamp=s=>s?`${s.start} ~ ${s.end} · ${zh?'采集于':'Observed'} ${new Date(s.checked).toLocaleString(zh?'zh-CN':'en-US',{hour12:false})}`:'';
+  const empty=zh?'平台暂未提供可用数据':'No usable data returned by the platform';
+  const fail=(endpoint)=>r.failures?.[endpoint]||r.failures?.page;
+  const scope=(s,endpoint)=>stamp(s)+(s&&fail(endpoint)?(zh?' · 本轮更新失败，保留上次结果':' · Refresh failed; showing the previous observation'):'');
+  const available=records.filter(s=>s.sections?.['audience-stats']).length;
+  text('detailSummary',zh?`来源：平台单剧详情页。已保存 ${available}/${records.length} 部剧的可用观众画像。各模块按下方查询范围展示，不随上方增长榜日期切换。观众地区暂不可用。`:`Source: platform title-detail pages. Usable audience snapshots for ${available}/${records.length} titles. Each module shows its own query range below, independently of the growth-board date filter. Viewer geography is unavailable.`);
+  text('detailGenderTitle',zh?'观众性别':'Viewer gender');text('detailAgeTitle',zh?'观众年龄':'Viewer age');
+  const bars=(id,rows)=>{
+    el(id).innerHTML=rows?.length?rows.map((v,i)=>`<div class="detail-bar"><div class="detail-bar-label"><span>${esc(v.label)}</span><span>${Number(v.pct).toFixed(1)}%</span></div><div class="detail-bar-track"><div class="detail-bar-fill" style="width:${Math.max(0,Math.min(100,v.pct))}%;background:${v.unknown?'var(--muted)':['var(--s1)','var(--s3)','var(--gold)','var(--s2)'][i%4]}"></div></div></div>`).join(''):`<p class="detail-empty">${empty}</p>`;
+  };
+  const genderLabels=zh?{male:'男性',female:'女性',gender_unknown:'未知'}:{male:'Male',female:'Female',gender_unknown:'Unknown'};
+  const ageLabels=zh?{l3:'18–24 岁',l4:'25–34 岁',l5:'35 岁及以上',unknown:'未知'}:{l3:'18–24 years',l4:'25–34 years',l5:'35+ years',unknown:'Unknown'};
+  bars('detailGender',audience?.data.gender?['male','female','gender_unknown'].map(k=>({label:genderLabels[k],pct:audience.data.gender[k],unknown:k==='gender_unknown'})):null);
+  bars('detailAge',audience?.data.age?Object.entries(audience.data.age).map(([k,v])=>({label:ageLabels[k],pct:v,unknown:k==='unknown'})):null);
+  text('detailAudienceNote',(scope(audience,'audience-stats')||empty)+(zh?'。未知保留在总人群中；样本不足时，性别或年龄可单独缺失。':' . Unknown remains part of the total. Gender or age may be withheld independently when the sample is too small.'));
+  text('detailTrafficTitle',zh?'流量来源':'Traffic sources');text('detailTrafficNote',scope(channels,'traffic-stats')||empty);
+  const accountRows=same(accounts,channels)?accounts.data:[],accountMap=new Map(accountRows.map(a=>[a.collectionId,a]));
+  const accountName=(id,map)=>{const a=map.get(id);return a?(a.handle?'@'+a.handle:a.name)+' · '+(zh?'版本 ':'Version ')+id.slice(-6):(zh?'发布版本 ':'Publishing version ')+id.slice(-6);};
+  const channelSelect=el('detailChannelSelect'),scopes=[...new Set((channels?.data||[]).map(c=>c.collectionId||''))];
+  if(!scopes.includes(detailChannel))detailChannel=scopes.includes('')?'':scopes[0]||'';
+  channelSelect.style.display=channels?'':'none';
+  channelSelect.setAttribute('aria-label',zh?'选择流量来源的账号范围':'Choose traffic account scope');
+  channelSelect.innerHTML=scopes.map(s=>`<option value="${esc(s)}"${s===detailChannel?' selected':''}>${esc(s?accountName(s,accountMap):(zh?'全部发布账号':'All publishing accounts'))}</option>`).join('');
+  const labels=zh?{fyp:'推荐频道',recommend:'关联短剧',self_profile:'观看历史、收藏、下载',other_profile:'作者主页',tab:'短剧频道',follow:'关注频道',search:'搜索',other:'其他',internal_share:'其他',incentive:'其他'}:{fyp:'For You channel',recommend:'Related dramas',self_profile:'Watch history, favorites and downloads',other_profile:'Creator profile',tab:'Drama channel',follow:'Following channel',search:'Search',other:'Other',internal_share:'Other',incentive:'Other'};
+  const drawChannels=()=>bars('detailChannels',(channels?.data||[]).filter(c=>(c.collectionId||'')===detailChannel).sort((a,b)=>b.pct-a.pct).map(c=>({label:labels[c.key]||c.key,pct:c.pct})));
+  channelSelect.onchange=()=>{detailChannel=channelSelect.value;drawChannels();};drawChannels();
+  text('detailAccountsTitle',zh?'发布版本表现 · 平台独立统计':'Publishing version performance · Separate platform source');
+  const audit=r.accountAudit||{},auditLabels=zh?{qv:'有效播放',like:'点赞',fav:'收藏',com:'评论'}:{qv:'Effective views',like:'Likes',fav:'Favorites',com:'Comments'};
+  const differences=audit.status==='different'?Object.keys(auditLabels).filter(k=>audit.platform[k]!==audit.primary[k]).map(k=>`${auditLabels[k]} ${fmtN(audit.platform[k])} / ${fmtN(audit.primary[k])}`).join(zh?'；':'; '):'';
+  const warning=added?(audit.status==='different'?(zh?`与主报表同区间汇总存在差异（平台账号合计 / 主报表：${differences}）。`:`Totals differ for the same range (platform accounts / primary report: ${differences}). `):audit.status==='matched'?(zh?'当前区间四项增量合计与主报表一致。':'All four increment totals match the primary report for this range. '):(zh?'当前区间尚无法与主报表完整核对。':'A complete comparison with the primary report is unavailable for this range. '))+(zh?'以下保留平台原值，不用于主增长榜、贡献率或互动效率计算。':'Platform values below are kept separately and excluded from primary growth, contribution and engagement-efficiency calculations. '):'';
+  el('detailAccountsNote').style.color=audit.status==='different'?'var(--down)':'var(--muted)';
+  text('detailAccountsNote',warning+' '+(scope(added,'traffic-added')||empty)+(same(accounts,added)?(zh?'。账号资料：':' . Account metadata: ')+scope(accounts,'accounts'):'')+(zh?'。地区为发布账号地区；同一账号的不同发布版本分行展示，不代表观众地区。':' . Regions belong to publishing accounts, not viewers. Different publishing versions are shown separately.'));
+  if(!added){el('detailAccounts').innerHTML=`<p class="detail-empty">${empty}</p>`;return;}
+  const metadata=new Map((same(accounts,added)?accounts.data:[]).map(a=>[a.collectionId,a]));
+  const region=code=>{if(!code)return '—';try{return new Intl.DisplayNames([zh?'zh-CN':'en'],{type:'region'}).of(code)||code;}catch(e){return code;}};
+  const cols=zh?['发布账号 / 版本','账号地区','平台新增有效播放','平台新增点赞','平台新增收藏','平台新增评论']:['Publishing account / version','Account region','Platform views added','Platform likes added','Platform favorites added','Platform comments added'];
+  el('detailAccounts').innerHTML='<table><thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+[...added.data].sort((a,b)=>(b.qv??-1)-(a.qv??-1)).map(a=>{const meta=metadata.get(a.collectionId);return `<tr><td>${esc(meta?.name||'—')}<div class="detail-note" style="margin:0">${esc(accountName(a.collectionId,metadata))}</div></td><td>${esc(region(meta?.region))}</td><td>${fmtN(a.qv)}</td><td>${fmtN(a.like)}</td><td>${fmtN(a.fav)}</td><td>${fmtN(a.com)}</td></tr>`;}).join('')+'</tbody></table>';
+}
+
 let seriesArchivePick=null,seriesArchiveMetric='qv',seriesArchiveWindow=null;
 function renderSeriesArchive() {
   const records=DATA.seriesHistory||[];
@@ -824,6 +909,7 @@ function renderAll() {
   renderMovers();
   renderDtrend();
   renderDramaTbl();
+  renderSeriesDetails();
   renderSeriesArchive();
 }
 

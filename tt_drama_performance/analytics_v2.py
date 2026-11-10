@@ -371,7 +371,15 @@ def audit_data(base):
                     raise PageDataError('单剧历史ID与文件名不匹配')
             except Exception as e:
                 errors.append(f'{path.name}: {e}')
-    return len(files) + len(series_files), errors
+    detail_files = list((root / 'details').glob('*.json'))
+    if detail_files:
+        from series_details import validate_record
+        for path in detail_files:
+            try:
+                validate_record(read_json(path), path.stem)
+            except Exception as e:
+                errors.append(f'details/{path.name}: {e}')
+    return len(files) + len(series_files) + len(detail_files), errors
 
 
 def collect(page, base, latest=None, log=print, backfill_days=30, refresh_days=3,

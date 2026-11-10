@@ -646,6 +646,13 @@ def run(push, headless):
                         history_start=CFG.get('v2_history_start', '2026-03-01'),
                         retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
                 dd = manifest['latest']
+                if CFG.get('v2_series_details', True):
+                    try:
+                        from series_details import collect as collect_details
+                        collect_details(page, BASE, log=log,
+                                        retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
+                    except Exception as e:
+                        log(f'单剧画像/流量暂未完成，主日报继续：{type(e).__name__}: {str(e).splitlines()[0][:160]}')
                 if CFG.get('v2_series_history', True):
                     try:
                         from series_history import collect as collect_series
@@ -930,6 +937,7 @@ if __name__ == '__main__':
             from analytics_v2 import audit_data
             count, problems = audit_data(BASE)
             log(f'新版离线复查：{count} 个数据存档，{len(problems)} 个问题（只读，不改台账）')
+            log('画像/流量档只校验结构、日期、数值及渠道分层；与主报表的来源差异另在账号模块提示，不计作主数据已对账。')
             from analytics_v2 import date_axis, read_json
             manifest = read_json(os.path.join(DATA, 'v2', 'latest.json'))
             start = manifest.get('requestedStart')
