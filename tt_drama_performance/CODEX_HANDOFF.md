@@ -17,6 +17,12 @@
 
 ## 当前接力记录
 
+### 2026-11-10 白色浅色主题已上线（最新样式偏好）
+
+- 用户指定浅色CSS，并要求后续页面沿用。`template.html` 已使用其全部主题值：light、页底#f5f7fa、白卡片、次级底#f7f9fc、深色文字、蓝色#1890ff/#1677c8；保留既有--gold变量名兼容用法，但值为用户指定蓝色。同步处理表格展开/悬浮行、提示框阴影及涨跌语义色；项目CLAUDE.md已记录默认浅色偏好。
+- 本轮为纯样式修改：Windows只替换report内style块，并逐字符验证其余HTML、脚本与数据完全一致；不重新采集、不改数据或AI洞察。Mac桌面/手机实际截图检查及Windows3组浏览器回归通过，线上确认light、白卡片、指定灰底和蓝色，390px无溢出、无JS错误。
+- 样式提交1afc67b、报告发布539ac7c；原S3+Git+Pages发布退出0，网址 https://husw725.github.io/tt-drama-report/ 。临时任务TTDramaLightThemePublishValidation20261110已删，原TTDramaDaily仍Ready；webhook运行内置空，未发通知。两端无冲突，Mac原有两份legacy JSON改动保留。
+
 ### 2026-11-10 三项P2已修复并发布（最新，覆盖下方待修复状态）
 
 - 用户明确要求修复复审发现的三项P2。代码提交 `fa33bf7`，报告发布提交 `91ac9b1`；独立修复复核“修正后放行”，三项均验证关闭。
