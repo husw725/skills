@@ -19,6 +19,8 @@ def numeric(row, field, count=False):
     value = row.get(field)
     if value is None:
         return None
+    if type(value) is bool:
+        raise PageDataError(f'{field} 不是数值')
     if count and not (type(value) is int or isinstance(value, str) and re.fullmatch(r'\d+', value)):
         raise PageDataError(f'{field} 不是整数')
     try:
@@ -177,12 +179,16 @@ def validate_record(obj, did):
                 raise PageDataError('详情明细ID/渠道重复或缺失')
             seen.add(key)
             if endpoint == 'traffic-stats':
+                if type(row['pct']) not in (int, float):
+                    raise PageDataError('渠道比例存档不是数值')
                 value = numeric(row, 'pct')
                 if value is None:
                     raise PageDataError('渠道比例缺失')
                 scopes.setdefault(cid, []).append(value)
             elif endpoint == 'traffic-added':
                 for field in ('qv', 'like', 'fav', 'com'):
+                    if row[field] is not None and type(row[field]) is not int:
+                        raise PageDataError('账号增量存档不是整数')
                     numeric(row, field, count=True)
             else:
                 if set(row) != {'collectionId', 'name', 'handle', 'region'}:
