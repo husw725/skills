@@ -225,7 +225,7 @@ def collect(page, base, log=print, retry_hours=24, refresh_hours=24):
                     continue
             record = dict(schema=2, source='contract_detail', id=did, name=info['name'],
                           asOf=main['latest'], lastAttempt=now.isoformat(timespec='seconds'),
-                          sections=dict(old.get('sections', {})), failures={})
+                          sections=dict(old.get('sections', {})), failures={}, fallbacks={})
             try:
                 for attempt in range(3):
                     try:
@@ -263,7 +263,7 @@ def collect(page, base, log=print, retry_hours=24, refresh_hours=24):
                             if attempt:
                                 page.reload(wait_until='domcontentloaded')
                             page.get_by_text(tab, exact=True).click(timeout=15000)
-                            ui.select_dates(start, end)
+                            ui.select_dates(start, end, timeout=8000)
                             capture.wait(pending)
                         except Exception as e:
                             for key in pending:
@@ -278,6 +278,15 @@ def collect(page, base, log=print, retry_hours=24, refresh_hours=24):
                             record['sections'][key[-1]] = capture.values[key]
                         else:
                             record['failures'][key[-1]] = capture.errors.get(key, '页面未返回匹配范围的数据')
+                            # A title may lag behind the institution's date limit.
+                            # Keep a successful normal-page observation of its own
+                            # actual scope, rather than discarding it or relabeling it.
+                            alternatives = [v for k, v in capture.values.items()
+                                if k[0] == did and k[-1] == key[-1] and v['end'] <= main['latest']
+                                and v['checked'] >= record['lastAttempt']]
+                            if alternatives:
+                                record['sections'][key[-1]] = max(alternatives, key=lambda v: (v['end'], v['checked']))
+                                record['fallbacks'][key[-1]] = 'requested_range_unavailable'
             except Exception as e:
                 record['failures']['page'] = str(e).splitlines()[0][:180]
             validate_record(record, did)

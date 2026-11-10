@@ -172,10 +172,10 @@ class PageCapture:
             self.page.wait_for_timeout(100)
         raise PageDataError(f'等待{what}超时；' + '；'.join(self.errors[-3:]))
 
-    def select_dates(self, start, end):
+    def select_dates(self, start, end, timeout=30000):
         page = self.page
-        page.get_by_role('button', name='Date range').click()
-        page.locator('.semi-datepicker-month-grid-left:visible').wait_for()
+        page.get_by_role('button', name='Date range').click(timeout=timeout)
+        page.locator('.semi-datepicker-month-grid-left:visible').wait_for(timeout=timeout)
         for target in (start, end):
             for _ in range(25):
                 # The two calendar panels navigate independently (Sep / Nov is
@@ -193,11 +193,11 @@ class PageCapture:
                 if not visible:
                     raise PageDataError('日期选择器结构改变')
                 direction = 'Previous month' if target < visible[0] else 'Next month'
-                calendar.get_by_role('button', name=direction, exact=True).evaluate('(el) => el.click()')
+                calendar.get_by_role('button', name=direction, exact=True).evaluate('(el) => el.click()', timeout=timeout)
                 page.wait_for_timeout(100)
             else:
                 raise PageDataError(f'无法定位日历日期 {target}')
-        page.get_by_role('button', name='Confirm', exact=True).click()
+        page.get_by_role('button', name='Confirm', exact=True).click(timeout=timeout)
         page.wait_for_timeout(100)
 
     def collect(self, start, end):
