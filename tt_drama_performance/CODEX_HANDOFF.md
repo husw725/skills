@@ -17,6 +17,15 @@
 
 ## 当前接力记录
 
+### 2026-11-10 二次代码审查：3项P2待修复（优先）
+
+- 用户要求再次review。本轮只审查与临时故障注入复现，没有修改业务代码、生产数据、页面或Windows任务，没有发送通知；本记录优先于前一轮“修正后放行”的结论。审查代码基于50fe08b，期间拉取的6c312a9仅定时数据/报告更新，业务代码未变。
+- P2：`series_details.py:232` 与 `episode_details.py:102` 的旧档读取/冷却时间解析位于逐剧异常隔离之外；单个JSON损坏会让整个补充采集函数退出，后续剧目一直得不到刷新。临时三剧目录100/101/102，100冷却跳过、101坏JSON，实测JSONDecodeError且102未访问。父入口只捕获整批异常并继续主日报，不会恢复剩余标题。
+- P2：`series_details.py:165-168` 对全null的gender/age字典调用distribution，忽略其None返回；因此异常档仍能通过validate_record并进入报告。实际浏览器复现Male/Female/Unknown均显示0.0%，违反缺失不补零。应拒绝或规范化全null字典，并防前端Number(null)补零。
+- P2：`episode_details.py:45-46` 以Python真假值判断无rows，允许 `rows={}` 通过验证。JS把空对象当真，`template.html:869` 执行rows.filter抛TypeError，单剧详情及后续渲染被中断。应先严格检查rows为数组/列表，前端也做类型兜底。
+- 验证：现有33项测试及9条旧断言仍通过，151份实际存档结构审计0问题；三个问题通过隔离临时数据/实际浏览器复现，未声称当前线上存档已触发。需要新增逐剧坏档隔离、全null画像、非列表rows回归测试后再修复发布。Mac原有两份legacy JSON改动与其他项目改动保留，无未解决冲突。
+- 独立复审同样复现这3项P2，未发现P1；本轮结论为待修复，不能沿用前轮放行视为这些边界已验收。
+
 ### 2026-11-10 单剧画像、流量、发布版本与分集已上线（最新）
 
 - 用户明确批准将已核验的新字段接入页面。新增 `series_details.py` 与 `episode_details.py`，Windows正常入口默认随 `v2_series_details=true` 自动运行；原计划任务频率、Interactive登录方式与业务模型未改。仅观察正常Audience/Traffic/Core UI响应，不重放签名API。
