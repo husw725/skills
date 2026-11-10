@@ -6,13 +6,13 @@
 <title>TikTok Drama Daily Report</title>
 <style>
 :root {
-  color-scheme: dark;
-  --page: #0a0806; --surface: #14100a; --surface2: #1c1710;
-  --ink: #f2ead8; --ink2: #b3a78e; --muted: #7d745f;
-  --grid: #2a251c; --axis: #3a3428; --border: rgba(216,178,92,.16);
-  --gold: #d8b25c; --gold-dim: #a98a44;
-  --s1: #3987e5; --s2: #c98500; --s3: #199e70;
-  --up: #3fae63; --down: #e66767;
+  color-scheme: light;
+  --page: #f5f7fa; --surface: #fff; --surface2: #f7f9fc;
+  --ink: #1f1f1f; --ink2: #595959; --muted: #8c8c8c;
+  --grid: #f0f0f0; --axis: #d9d9d9; --border: rgba(0,0,0,.08);
+  --gold: #1890ff; --gold-dim: #1677c8;
+  --s1: #1890ff; --s2: #d48806; --s3: #389e0d;
+  --up: #237804; --down: #cf1322;
   --serif: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 * { box-sizing: border-box; margin: 0; }
@@ -50,7 +50,7 @@ svg text { fill: var(--muted); font-size: 11px; font-family: inherit; }
 svg .dl { fill: var(--ink2); font-size: 11px; font-weight: 600; }
 svg .bandlab { fill: var(--gold-dim); font-size: 10px; font-weight: 600; }
 #tip { position: fixed; pointer-events: none; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  border-radius: 10px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.12);
   display: none; z-index: 9; min-width: 140px; }
 #tip .d { color: var(--muted); margin-bottom: 3px; }
 #tip .row { display: flex; justify-content: space-between; gap: 12px; }
@@ -61,7 +61,7 @@ svg .bandlab { fill: var(--gold-dim); font-size: 10px; font-weight: 600; }
 .datechip:hover { border-color: var(--gold-dim); }
 .datechip.on { color: var(--gold); border-color: var(--gold-dim); font-weight: 600; }
 tr.grp { cursor: pointer; }
-tr.grp:hover td { background: rgba(216,178,92,.05); }
+tr.grp:hover td { background: rgba(24,144,255,.05); }
 .arr { color: var(--gold-dim); display: inline-block; width: 12px; }
 #dtrendSel, .datesel { background: var(--page); color: var(--ink); border: 1px solid var(--border);
   border-radius: 8px; padding: 4px 10px; font-size: 13px; font-family: inherit;
@@ -71,10 +71,10 @@ tr.grp:hover td { background: rgba(216,178,92,.05); }
 .datesel.on { color: var(--gold); border-color: var(--gold-dim); font-weight: 600; }
 tr.cut td { color: var(--gold-dim); font-size: 11px; text-align: center; padding: 4px 8px;
   border-top: 1px dashed var(--gold-dim); opacity: .8; }
-tr.tail td { background: rgba(216,178,92,.05); opacity: .8; }
+tr.tail td { background: rgba(24,144,255,.05); opacity: .8; }
 .badge { color: var(--gold-dim); border: 1px solid var(--border); border-radius: 8px;
   font-size: 11px; padding: 0 6px; margin-left: 4px; white-space: nowrap; }
-tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
+tr.sub td { color: var(--ink2); font-size: 12px; background: var(--surface2); }
 .subname { padding-left: 22px !important; }
 .coverage-grid { display:grid;grid-template-columns:repeat(31,minmax(0,1fr));gap:3px;margin:5px 0 12px; }
 .coverage-day { min-width:0;height:16px;padding:0;border:0;border-radius:3px;background:var(--grid);cursor:pointer; }
