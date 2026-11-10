@@ -803,6 +803,12 @@ function renderDramaTbl() {
 }
 
 let detailPick=null,detailChannel='';
+function validAudienceDistribution(values, keys) {
+  return !!values && typeof values==='object' && !Array.isArray(values)
+    && Object.keys(values).length===keys.length
+    && keys.every(k=>typeof values[k]==='number'&&Number.isFinite(values[k])&&values[k]>=0&&values[k]<=100)
+    && Math.abs(keys.reduce((total,k)=>total+values[k],0)-100)<=.15;
+}
 function renderSeriesDetails() {
   const byId=new Map((DATA.seriesDetails||[]).map(r=>[r.id,r]));
   Object.values(DATA.episodeDetails||{}).forEach(r=>{if(!byId.has(r.id))byId.set(r.id,{id:r.id,name:r.name,sections:{}});});
@@ -811,7 +817,9 @@ function renderSeriesDetails() {
   const zh=LANG==='zh',el=id=>document.getElementById(id),text=(id,s)=>el(id).textContent=s;
   el('seriesDetailsCard').style.display='';
   text('seriesDetailsTitle',zh?'单剧详情 · 观众与流量':'Title detail · Audience & traffic');
-  const sorted=[...records].sort((a,b)=>Number(!!b.sections?.['audience-stats'])-Number(!!a.sections?.['audience-stats'])||a.name.localeCompare(b.name));
+  const genderKeys=['male','female','gender_unknown'],ageKeys=['l3','l4','l5','unknown'];
+  const hasAudience=s=>{const data=s.sections?.['audience-stats']?.data;return validAudienceDistribution(data?.gender,genderKeys)||validAudienceDistribution(data?.age,ageKeys);};
+  const sorted=[...records].sort((a,b)=>Number(hasAudience(b))-Number(hasAudience(a))||a.name.localeCompare(b.name));
   if(!sorted.some(r=>r.id===detailPick))detailPick=sorted[0].id;
   const r=sorted.find(r=>r.id===detailPick),sections=r.sections||{};
   renderEpisodeDetail(r.id);
@@ -825,16 +833,17 @@ function renderSeriesDetails() {
   const empty=zh?'平台暂未提供可用数据':'No usable data returned by the platform';
   const fail=(endpoint)=>r.failures?.[endpoint]||r.failures?.page;
   const scope=(s,endpoint)=>stamp(s)+(s&&r.fallbacks?.[endpoint]?(zh?' · 请求区间不可用，展示平台实际返回范围':' · Requested range unavailable; showing the range actually returned'):s&&fail(endpoint)?(zh?' · 本轮更新失败，保留上次结果':' · Refresh failed; showing the previous observation'):'');
-  const available=records.filter(s=>s.sections?.['audience-stats']).length;
+  const available=records.filter(hasAudience).length;
   text('detailSummary',zh?`来源：平台单剧详情页。已保存 ${available}/${records.length} 部剧的可用观众画像。各模块按下方查询范围展示，不随上方增长榜日期切换。观众地区暂不可用。`:`Source: platform title-detail pages. Usable audience snapshots for ${available}/${records.length} titles. Each module shows its own query range below, independently of the growth-board date filter. Viewer geography is unavailable.`);
   text('detailGenderTitle',zh?'观众性别':'Viewer gender');text('detailAgeTitle',zh?'观众年龄':'Viewer age');
   const bars=(id,rows)=>{
-    el(id).innerHTML=rows?.length?rows.map((v,i)=>`<div class="detail-bar"><div class="detail-bar-label"><span>${esc(v.label)}</span><span>${Number(v.pct).toFixed(1)}%</span></div><div class="detail-bar-track"><div class="detail-bar-fill" style="width:${Math.max(0,Math.min(100,v.pct))}%;background:${v.unknown?'var(--muted)':['var(--s1)','var(--s3)','var(--gold)','var(--s2)'][i%4]}"></div></div></div>`).join(''):`<p class="detail-empty">${empty}</p>`;
+    const usable=Array.isArray(rows)&&rows.length&&rows.every(v=>typeof v.pct==='number'&&Number.isFinite(v.pct)&&v.pct>=0&&v.pct<=100);
+    el(id).innerHTML=usable?rows.map((v,i)=>`<div class="detail-bar"><div class="detail-bar-label"><span>${esc(v.label)}</span><span>${v.pct.toFixed(1)}%</span></div><div class="detail-bar-track"><div class="detail-bar-fill" style="width:${Math.max(0,Math.min(100,v.pct))}%;background:${v.unknown?'var(--muted)':['var(--s1)','var(--s3)','var(--gold)','var(--s2)'][i%4]}"></div></div></div>`).join(''):`<p class="detail-empty">${empty}</p>`;
   };
   const genderLabels=zh?{male:'男性',female:'女性',gender_unknown:'未知'}:{male:'Male',female:'Female',gender_unknown:'Unknown'};
   const ageLabels=zh?{l3:'18–24 岁',l4:'25–34 岁',l5:'35 岁及以上',unknown:'未知'}:{l3:'18–24 years',l4:'25–34 years',l5:'35+ years',unknown:'Unknown'};
-  bars('detailGender',audience?.data.gender?['male','female','gender_unknown'].map(k=>({label:genderLabels[k],pct:audience.data.gender[k],unknown:k==='gender_unknown'})):null);
-  bars('detailAge',audience?.data.age?Object.entries(audience.data.age).map(([k,v])=>({label:ageLabels[k],pct:v,unknown:k==='unknown'})):null);
+  bars('detailGender',validAudienceDistribution(audience?.data?.gender,genderKeys)?genderKeys.map(k=>({label:genderLabels[k],pct:audience.data.gender[k],unknown:k==='gender_unknown'})):null);
+  bars('detailAge',validAudienceDistribution(audience?.data?.age,ageKeys)?ageKeys.map(k=>({label:ageLabels[k],pct:audience.data.age[k],unknown:k==='unknown'})):null);
   text('detailAudienceNote',(scope(audience,'audience-stats')||empty)+(zh?'。未知保留在总人群中；样本不足时，性别或年龄可单独缺失。':' . Unknown remains part of the total. Gender or age may be withheld independently when the sample is too small.'));
   text('detailTrafficTitle',zh?'流量来源':'Traffic sources');text('detailTrafficNote',(scope(channels,'traffic-stats')||empty)+(same(accounts,channels)?(zh?'。账号资料：':' . Account metadata: ')+scope(accounts,'accounts'):''));
   const accountRows=same(accounts,channels)?accounts.data:[],accountMap=new Map(accountRows.map(a=>[a.collectionId,a]));
@@ -862,7 +871,7 @@ function renderSeriesDetails() {
 }
 
 function renderEpisodeDetail(did) {
-  const zh=LANG==='zh',record=(DATA.episodeDetails||{})[did],rows=record?.rows||[],el=id=>document.getElementById(id);
+  const zh=LANG==='zh',record=(DATA.episodeDetails||{})[did],rows=Array.isArray(record?.rows)?record.rows:[],el=id=>document.getElementById(id);
   el('detailEpisodesTitle').textContent=zh?'分集累计播放 · 平台快照':'Cumulative episode views · Platform snapshot';
   el('detailEpisodesDataLabel').textContent=zh?'查看分集数据（含片段）':'View episode data (including highlights)';
   el('detailEpisodesNote').textContent=(record?.checked?(zh?'采集于 ':'Observed ')+new Date(record.checked).toLocaleString(zh?'zh-CN':'en-US',{hour12:false})+(record.lastError?(zh?' · 本轮更新失败，保留上次结果':' · Refresh failed; showing the previous snapshot'):''):(zh?'平台暂未返回可用分集数据':'No usable episode snapshot returned'))+(zh?'。这是采集时的累计快照，不随日期筛选切换，平台未提供独立数据截止日；未返回集数留空，片段单列在数据表，不计算用户留存率。':' . This is a cumulative snapshot independent of date filters; a separate data watermark is unavailable. Missing episodes stay blank and highlights appear only in the table. These counts do not measure user retention.');

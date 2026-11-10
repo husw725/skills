@@ -153,7 +153,8 @@ def validate_record(obj, did):
             raise PageDataError('不认识的单剧详情分区')
         dt.date.fromisoformat(section['start'])
         dt.date.fromisoformat(section['end'])
-        dt.datetime.fromisoformat(section['checked'])
+        if dt.datetime.fromisoformat(section['checked']).tzinfo is None:
+            raise PageDataError('详情观测时间缺少时区')
         if section['start'] > section['end']:
             raise PageDataError('单剧详情日期倒置')
         data = section['data']
@@ -165,7 +166,8 @@ def validate_record(obj, did):
                 if data[field] is not None:
                     if set(data[field]) != keys:
                         raise PageDataError('画像类别异常')
-                    distribution(data[field])
+                    if distribution(data[field]) is None:
+                        raise PageDataError('画像分布全为空，不能当作0%')
             continue
         if not isinstance(data, list) or not data:
             raise PageDataError('详情明细为空或格式异常')
@@ -227,89 +229,99 @@ def collect(page, base, log=print, retry_hours=24, refresh_hours=24):
         if not catalog or any(not re.fullmatch(r'\d+', did) for did in catalog):
             raise PageDataError('单剧详情目录为空或ID异常')
         atomic_json(root / 'series_catalog.json', catalog)
+        processing_errors = {}
         for did, info in catalog.items():
-            path = root / 'details' / f'{did}.json'
-            old = read_json(path, {})
-            now = dt.datetime.now(dt.timezone.utc)
-            if old.get('asOf') == main['latest'] and old.get('lastAttempt'):
-                cooldown = retry_hours if old.get('failures') else refresh_hours
-                if (now - dt.datetime.fromisoformat(old['lastAttempt'])).total_seconds() < cooldown * 3600:
-                    continue
-            record = dict(schema=2, source='contract_detail', id=did, name=info['name'],
-                          asOf=main['latest'], lastAttempt=now.isoformat(timespec='seconds'),
-                          sections=dict(old.get('sections', {})), failures={}, fallbacks={})
             try:
-                for attempt in range(3):
-                    try:
-                        series.ranges.pop(did, None)
-                        series.failures.pop((did, 'range'), None)
-                        page.goto(f'https://www.tiktokdramacenter.com/series/{did}/performance/audience', wait_until='domcontentloaded')
-                        page.get_by_text('Audience', exact=True).wait_for(timeout=30000)
-                        try:
-                            series.wait(lambda: did in series.ranges or (did, 'range') in series.failures,
-                                        (did, 'range'), timeout=8000)
-                        except PageDataError:
-                            pass  # Availability is optional, never a gate for other tabs.
-                        break
-                    except Exception:
-                        if attempt == 2:
-                            raise
-                bounds = series.ranges.get(did)
-                # Core-chart availability is not evidence about other tabs.
-                # Its failure must never prevent an Audience/Traffic attempt.
-                if not bounds or not bounds.get('has_data'):
-                    bounds = read_json(root / 'series' / f'{did}.json', {}).get('availability')
-                end = min(main['latest'], bounds['max_date']) if bounds and bounds.get('has_data') else main['latest']
-                start = max(shift(end, -29), bounds['min_date']) if bounds and bounds.get('has_data') else shift(end, -29)
-                if start > end:
-                    raise PageDataError('平台数据范围与报告截止日无重合')
-                record['requested'] = dict(start=start, end=end)
-                for tab, endpoints in [('Audience', ('audience-stats',)),
-                                       ('Traffic', ('traffic-stats', 'accounts', 'traffic-added'))]:
-                    keys = [(did, start, end, e) for e in endpoints]
+                path = root / 'details' / f'{did}.json'
+                old = read_json(path, {})
+                if path.exists():
+                    validate_record(old, did)
+                now = dt.datetime.now(dt.timezone.utc)
+                if old.get('asOf') == main['latest'] and old.get('lastAttempt'):
+                    cooldown = retry_hours if old.get('failures') else refresh_hours
+                    if (now - dt.datetime.fromisoformat(old['lastAttempt'])).total_seconds() < cooldown * 3600:
+                        continue
+                record = dict(schema=2, source='contract_detail', id=did, name=info['name'],
+                              asOf=main['latest'], lastAttempt=now.isoformat(timespec='seconds'),
+                              sections=dict(old.get('sections', {})), failures={}, fallbacks={})
+                try:
                     for attempt in range(3):
-                        pending = [k for k in keys if k not in capture.values]
-                        if not pending:
-                            break
                         try:
-                            if attempt:
-                                page.reload(wait_until='domcontentloaded')
-                            page.get_by_text(tab, exact=True).click(timeout=15000)
-                            ui.select_dates(start, end, timeout=8000)
-                            capture.wait(pending)
-                        except Exception as e:
+                            series.ranges.pop(did, None)
+                            series.failures.pop((did, 'range'), None)
+                            page.goto(f'https://www.tiktokdramacenter.com/series/{did}/performance/audience', wait_until='domcontentloaded')
+                            page.get_by_text('Audience', exact=True).wait_for(timeout=30000)
+                            try:
+                                series.wait(lambda: did in series.ranges or (did, 'range') in series.failures,
+                                            (did, 'range'), timeout=8000)
+                            except PageDataError:
+                                pass  # Availability is optional, never a gate for other tabs.
+                            break
+                        except Exception:
+                            if attempt == 2:
+                                raise
+                    bounds = series.ranges.get(did)
+                    # Core-chart availability is not evidence about other tabs.
+                    # Its failure must never prevent an Audience/Traffic attempt.
+                    if not bounds or not bounds.get('has_data'):
+                        bounds = read_json(root / 'series' / f'{did}.json', {}).get('availability')
+                    end = min(main['latest'], bounds['max_date']) if bounds and bounds.get('has_data') else main['latest']
+                    start = max(shift(end, -29), bounds['min_date']) if bounds and bounds.get('has_data') else shift(end, -29)
+                    if start > end:
+                        raise PageDataError('平台数据范围与报告截止日无重合')
+                    record['requested'] = dict(start=start, end=end)
+                    for tab, endpoints in [('Audience', ('audience-stats',)),
+                                           ('Traffic', ('traffic-stats', 'accounts', 'traffic-added'))]:
+                        keys = [(did, start, end, e) for e in endpoints]
+                        for attempt in range(3):
+                            pending = [k for k in keys if k not in capture.values]
+                            if not pending:
+                                break
+                            try:
+                                if attempt:
+                                    page.reload(wait_until='domcontentloaded')
+                                page.get_by_text(tab, exact=True).click(timeout=15000)
+                                ui.select_dates(start, end, timeout=8000)
+                                capture.wait(pending)
+                            except Exception as e:
+                                for key in pending:
+                                    capture.errors[key] = str(e).splitlines()[0][:180]
+                            # Reload produces new normal page requests on the next attempt.
                             for key in pending:
-                                capture.errors[key] = str(e).splitlines()[0][:180]
-                        # Reload produces new normal page requests on the next attempt.
-                        for key in pending:
-                            if key not in capture.values:
-                                if attempt < 2:
-                                    capture.errors.pop(key, None)
-                    for key in keys:
-                        if key in capture.values:
-                            record['sections'][key[-1]] = capture.values[key]
-                        else:
-                            record['failures'][key[-1]] = capture.errors.get(key, '页面未返回匹配范围的数据')
-                            # A title may lag behind the institution's date limit.
-                            # Keep a successful normal-page observation of its own
-                            # actual scope, rather than discarding it or relabeling it.
-                            alternative = available_observation(capture.values, did, key[-1],
-                                                                record['lastAttempt'], main['latest'])
-                            if alternative:
-                                record['sections'][key[-1]] = alternative
-                                record['fallbacks'][key[-1]] = 'requested_range_unavailable'
+                                if key not in capture.values:
+                                    if attempt < 2:
+                                        capture.errors.pop(key, None)
+                        for key in keys:
+                            if key in capture.values:
+                                record['sections'][key[-1]] = capture.values[key]
+                            else:
+                                record['failures'][key[-1]] = capture.errors.get(key, '页面未返回匹配范围的数据')
+                                # A title may lag behind the institution's date limit.
+                                # Keep a successful normal-page observation of its own
+                                # actual scope, rather than discarding it or relabeling it.
+                                alternative = available_observation(capture.values, did, key[-1],
+                                                                    record['lastAttempt'], main['latest'])
+                                if alternative:
+                                    record['sections'][key[-1]] = alternative
+                                    record['fallbacks'][key[-1]] = 'requested_range_unavailable'
+                except Exception as e:
+                    record['failures']['page'] = str(e).splitlines()[0][:180]
+                validate_record(record, did)
+                if old.get('sections') and old['sections'] != record['sections']:
+                    stamp = old.get('lastAttempt', now.isoformat(timespec='seconds')).replace(':', '-')
+                    atomic_json(root / 'details_revisions' / did / f'{stamp}.json', old)
+                atomic_json(path, record)
+                log(f'单剧画像/流量 {info["name"]}：{len(record["sections"])}/4 分区，当前失败 {len(record["failures"])}')
             except Exception as e:
-                record['failures']['page'] = str(e).splitlines()[0][:180]
-            validate_record(record, did)
-            if old.get('sections') and old['sections'] != record['sections']:
-                stamp = old.get('lastAttempt', now.isoformat(timespec='seconds')).replace(':', '-')
-                atomic_json(root / 'details_revisions' / did / f'{stamp}.json', old)
-            atomic_json(path, record)
-            log(f'单剧画像/流量 {info["name"]}：{len(record["sections"])}/4 分区，当前失败 {len(record["failures"])}')
-        snapshots = load_details(root)
+                processing_errors[did] = type(e).__name__
+                # Preserve the original file for diagnosis; isolate this title.
+                log(f'单剧档案 {did} 处理失败（{type(e).__name__}），保留原档并继续后续剧目')
+        invalid_archives = []
+        snapshots = load_details(root, errors=invalid_archives)
         manifest = dict(schema=2, source='contract_detail', titles=len(catalog),
             withAudience=sum('audience-stats' in r.get('sections', {}) for r in snapshots),
             withTraffic=sum('traffic-stats' in r.get('sections', {}) for r in snapshots),
+            processingErrors=processing_errors, invalidArchives=len(invalid_archives),
             checked=dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds'))
         atomic_json(root / 'details_latest.json', manifest)
         return manifest

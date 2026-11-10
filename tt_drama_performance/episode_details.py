@@ -41,10 +41,15 @@ def validate_record(record, did):
             or not isinstance(record.get('name'), str) or not record['name']
             or record.get('queryMode') != 'cumulative_snapshot' or record.get('dataThrough') is not None):
         raise PageDataError('分集存档来源或查询口径异常')
-    dt.datetime.fromisoformat(record['lastAttempt'])
-    if not record.get('rows'):
+    if dt.datetime.fromisoformat(record['lastAttempt']).tzinfo is None:
+        raise PageDataError('分集采集时间缺少时区')
+    rows = record.get('rows', [])
+    if not isinstance(rows, list):
+        raise PageDataError('分集存档rows不是列表')
+    if not rows:
         return
-    dt.datetime.fromisoformat(record['checked'])
+    if dt.datetime.fromisoformat(record['checked']).tzinfo is None:
+        raise PageDataError('分集观测时间缺少时区')
     bounds = record['platformRange']
     dt.date.fromisoformat(bounds['start'])
     dt.date.fromisoformat(bounds['end'])
@@ -98,36 +103,42 @@ def collect(page, base, log=print, retry_hours=24):
     capture = EpisodeCapture(page)
     try:
         for did, info in catalog.items():
-            path = root / 'episodes' / f'{did}.json'
-            old = read_json(path, {})
-            now = dt.datetime.now(dt.timezone.utc)
-            if old.get('asOf') == latest and old.get('lastAttempt'):
-                if (now - dt.datetime.fromisoformat(old['lastAttempt'])).total_seconds() < retry_hours * 3600:
-                    continue
-            record = dict(old, schema=2, source='contract_episode_snapshot', id=did, name=info['name'],
-                          queryMode='cumulative_snapshot', dataThrough=None, asOf=latest,
-                          lastAttempt=now.isoformat(timespec='seconds'))
-            for attempt in range(3):
-                capture.errors.pop(did, None)
-                try:
-                    page.goto(f'https://www.tiktokdramacenter.com/series/{did}/performance/core',
-                              wait_until='domcontentloaded', timeout=15000)
-                    deadline = time.monotonic() + 8
-                    while did not in capture.values and did not in capture.errors and time.monotonic() < deadline:
-                        page.wait_for_timeout(100)
-                    if did in capture.values:
-                        record.update(capture.values[did])
-                        record.pop('lastError', None)
-                        break
-                    raise PageDataError(capture.errors.get(did, '分集快照响应超时'))
-                except Exception as e:
-                    record['lastError'] = str(e).splitlines()[0][:180]
-            validate_record(record, did)
-            if old.get('rows') and old.get('rows') != record.get('rows'):
-                stamp = old['checked'].replace(':', '-')
-                atomic_json(root / 'episode_revisions' / did / f'{stamp}.json', old)
-            atomic_json(path, record)
-            log(f'分集累计快照 {info["name"]}：{len(record.get("rows", []))} 个集/片段，' + ('本轮不可用，保留原值' if record.get('lastError') else '已保存'))
+            try:
+                path = root / 'episodes' / f'{did}.json'
+                old = read_json(path, {})
+                if path.exists():
+                    validate_record(old, did)
+                now = dt.datetime.now(dt.timezone.utc)
+                if old.get('asOf') == latest and old.get('lastAttempt'):
+                    if (now - dt.datetime.fromisoformat(old['lastAttempt'])).total_seconds() < retry_hours * 3600:
+                        continue
+                record = dict(old, schema=2, source='contract_episode_snapshot', id=did, name=info['name'],
+                              queryMode='cumulative_snapshot', dataThrough=None, asOf=latest,
+                              lastAttempt=now.isoformat(timespec='seconds'))
+                for attempt in range(3):
+                    capture.errors.pop(did, None)
+                    try:
+                        page.goto(f'https://www.tiktokdramacenter.com/series/{did}/performance/core',
+                                  wait_until='domcontentloaded', timeout=15000)
+                        deadline = time.monotonic() + 8
+                        while did not in capture.values and did not in capture.errors and time.monotonic() < deadline:
+                            page.wait_for_timeout(100)
+                        if did in capture.values:
+                            record.update(capture.values[did])
+                            record.pop('lastError', None)
+                            break
+                        raise PageDataError(capture.errors.get(did, '分集快照响应超时'))
+                    except Exception as e:
+                        record['lastError'] = str(e).splitlines()[0][:180]
+                validate_record(record, did)
+                if old.get('rows') and old.get('rows') != record.get('rows'):
+                    stamp = old['checked'].replace(':', '-')
+                    atomic_json(root / 'episode_revisions' / did / f'{stamp}.json', old)
+                atomic_json(path, record)
+                log(f'分集累计快照 {info["name"]}：{len(record.get("rows", []))} 个集/片段，' + ('本轮不可用，保留原值' if record.get('lastError') else '已保存'))
+            except Exception as e:
+                # Preserve the original file for diagnosis; isolate this title.
+                log(f'单剧档案 {did} 处理失败（{type(e).__name__}），保留原档并继续后续剧目')
     finally:
         capture.close()
 

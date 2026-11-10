@@ -29,6 +29,16 @@ class EpisodeTests(unittest.TestCase):
             with self.assertRaises(PageDataError):
                 normalize(dict(start_date='2026-03-01', end_date='2026-11-10', episodes=rows))
 
+    def test_non_list_rows_are_rejected_but_empty_failure_stubs_remain_readable(self):
+        stub = dict(schema=2, source='contract_episode_snapshot', id='123', name='Demo',
+            queryMode='cumulative_snapshot', dataThrough=None, asOf='2026-11-08',
+            lastAttempt='2026-11-10T00:00:00+00:00', lastError='HTTP 422 code 422')
+        validate_record(stub, '123')
+        validate_record(dict(stub, rows=[]), '123')
+        for bad in ({}, '', 0, False, None):
+            with self.subTest(rows=bad), self.assertRaises(PageDataError):
+                validate_record(dict(stub, rows=bad), '123')
+
 
 if __name__ == '__main__':
     unittest.main()

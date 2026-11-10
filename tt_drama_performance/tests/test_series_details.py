@@ -58,6 +58,15 @@ class DetailTests(unittest.TestCase):
                     checked='2026-11-10T00:00:00+00:00', data=[dict(collectionId='123', name='Demo',
                         handle='demo', region='BR', avatar_url='signed-secret')])}), '123')
 
+    def test_all_null_distribution_is_rejected_instead_of_counted_as_usable(self):
+        for gender, age in [({'male': None, 'female': None, 'gender_unknown': None}, None),
+                            (None, {'l3': None, 'l4': None, 'l5': None, 'unknown': None})]:
+            with self.subTest(gender=gender, age=age), self.assertRaises(PageDataError):
+                validate_record(dict(schema=2, source='contract_detail', id='123', name='Demo',
+                    asOf='2026-11-08', lastAttempt='2026-11-10T00:00:00+00:00',
+                    sections={'audience-stats': dict(start='2026-11-02', end='2026-11-08',
+                        checked='2026-11-10T00:00:00+00:00', data=dict(gender=gender, age=age))}), '123')
+
     def test_account_source_difference_is_flagged_without_replacing_primary(self):
         from report_v2 import account_comparison
         detail = dict(id='123', sections={'traffic-added': dict(start='2026-11-02', end='2026-11-08',
