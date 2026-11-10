@@ -472,6 +472,7 @@ function renderModern() {
   select.setAttribute('aria-label', zh ? '分析区间' : 'Analysis period');
   document.getElementById('periodNewLabel').textContent = zh ? '仅看14天内新剧' : 'Only launches in last 14 days';
   const draw = () => {
+    if(analysisUnavailable){document.getElementById('periodMeta').textContent=zh?'所选日期缺少完整实测记录，暂不能生成排名。':'Complete measurements are unavailable for the selected dates; no ranking is shown.';document.getElementById('periodTable').innerHTML='';return;}
     const p = options[periodSelection], query = search.value.trim().toLowerCase();
     const filtered = p.rows.filter(r => (!document.getElementById('periodNew').checked || r.new14)
       && (!query || r.name.toLowerCase().includes(query) || (r.members || []).some(m => m.name.toLowerCase().includes(query))));
