@@ -379,7 +379,15 @@ def audit_data(base):
                 validate_record(read_json(path), path.stem)
             except Exception as e:
                 errors.append(f'details/{path.name}: {e}')
-    return len(files) + len(series_files) + len(detail_files), errors
+    episode_files = list((root / 'episodes').glob('*.json'))
+    if episode_files:
+        from episode_details import validate_record as validate_episode
+        for path in episode_files:
+            try:
+                validate_episode(read_json(path), path.stem)
+            except Exception as e:
+                errors.append(f'episodes/{path.name}: {e}')
+    return len(files) + len(series_files) + len(detail_files) + len(episode_files), errors
 
 
 def collect(page, base, latest=None, log=print, backfill_days=30, refresh_days=3,

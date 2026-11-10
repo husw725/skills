@@ -14,6 +14,7 @@ TikTok 短剧数据日报（建于 2026-07-28），每日更新流程见 PLAYBOO
 - `series_history.py` 是独立补充来源：通过单剧详情页UI、按30天分段保存播放/平均时长曲线。43个目录ID不等于43部均有可访问数据；当前有HTTP500/422、空曲线与稀疏日期。缺日段标partial、24h后重试，实际值保留逐点observedAt（旧段迁移注明时间来源），不补0；与机构日档重合的点逐ID核对。报告在独立卡片展示，不增加全机构已验收日数、不推导互动、不与旧累计混算。`v2_series_history` 默认true。
 - `series_details.py` 通过正常Audience/Traffic页与日期操作采集单剧性别/年龄、分层渠道、账号元数据及平台账号增量，分别保留查询范围和采集时间，保存于 `data/v2/details/`；更新旧实测时保留 `details_revisions/`。`v2_series_details` 默认true，同截止日成功/失败24小时冷却，新截止日刷新。core data-range只能辅助选择日期，失败不能阻止其他tab独立采集。样本不足可只缺年龄或性别；年龄Unknown为other_pct+age_unknown_pct，不解释为未成年。
 - 单剧画像不合并系列，不推导独立观众数；账号地区不当观众地区。渠道按整剧/collection_id分开，账号资料只同查询范围关联。当前实测账号delta合计与主剧目统计存在显著来源差异，报告按同ID同范围核对并披露；这些原值单独展示，不用于主增长榜、贡献率或效率计算。账号share_pct、头像签名URL、UID和未核准时长不入库。`--audit`对详情检查结构/日期/数值，不把跨来源差异算成主数据已对账；不可用仍留空。
+- `episode_details.py` 单独观察Core页 `episode-views` 的无日期筛选请求，保存于 `data/v2/episodes/`。这是采集时累计快照：响应range末日可能是采集当天，不代表数据截止；固定 `queryMode=cumulative_snapshot`、`dataThrough=null`，绝不标成主报告最新日或所选区间增长。缺集留空，片段只单列表格；不由各集播放比计算用户留存。默认随 `v2_series_details` 运行，失败保留旧实测时间；新截止日刷新，同截止日24小时冷却。旧修订留在 `episode_revisions/`。
 - Windows 分发：默认代理/Schannel连接失败时，Git使用单次OpenSSL+直连重试，S3保留TLS校验直连重试，不修改全局代理/证书设置。SSH非交互会话可能读不到WinCredMan凭证；实际计划任务Interactive会话已验证可push。Windows已配置 `pages_repo_dir=E:\workspace\tt-drama-report`，复用原GitHub Pages地址。临时验证任务要及时删除，验证脚本禁用webhook。
 
 ## 工作约定

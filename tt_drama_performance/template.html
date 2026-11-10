@@ -199,6 +199,10 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: rgba(0,0,0,.25); }
     <p id="detailAccountsAlert" class="detail-note"></p>
     <p id="detailAccountsNote" class="detail-note"></p>
     <div id="detailAccounts" class="tbl-scroll"></div>
+    <h3 id="detailEpisodesTitle" style="font-size:14px;font-weight:500;margin-top:22px"></h3>
+    <p id="detailEpisodesNote" class="detail-note"></p>
+    <div id="detailEpisodesPlot" class="chart"></div>
+    <details><summary id="detailEpisodesDataLabel"></summary><div id="detailEpisodesData" class="tbl-scroll"></div></details>
   </div>
 
   <div class="card" id="seriesArchiveCard" style="display:none">
@@ -332,7 +336,7 @@ const tip = document.getElementById('tip');
 // bands: [{from, to, label, short, note}] —— 缺采区间。单日轴上不放假点（该空还空）。
 // 标签防叠字：完整标签装得进带宽才画，装不下退化成短标签（只写合计），再装不下只留
 // 阴影带和"缺采"小标——完整数值悬停 tooltip（note）里始终有，不丢信息。
-function lineChart(el, labels, series, yfmt, bands) {
+function lineChart(el, labels, series, yfmt, bands, xformat=d=>d.slice(5)) {
   const W = Math.min(el.clientWidth || 1040, 1040), H = 260,
         P = {l: 60, r: 74, t: 10, b: 24},
         iw = W - P.l - P.r, ih = H - P.t - P.b;
@@ -353,7 +357,7 @@ function lineChart(el, labels, series, yfmt, bands) {
   }
   const step = Math.ceil(labels.length / 7);
   labels.forEach((d, i) => { if (i % step === 0)
-    g += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${d.slice(5)}</text>`; });
+    g += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${xformat(d)}</text>`; });
   // 缺采带：画在网格之上、折线之下，覆盖整段留空的列（向两侧各让半格，正好卡在相邻实点之间）
   const half = labels.length > 1 ? iw / (labels.length - 1) / 2 : iw / 2;
   (bands || []).forEach((b, bi) => {
@@ -808,6 +812,7 @@ function renderSeriesDetails() {
   const sorted=[...records].sort((a,b)=>Number(!!b.sections?.['audience-stats'])-Number(!!a.sections?.['audience-stats'])||a.name.localeCompare(b.name));
   if(!sorted.some(r=>r.id===detailPick))detailPick=sorted[0].id;
   const r=sorted.find(r=>r.id===detailPick),sections=r.sections||{};
+  renderEpisodeDetail(r.id);
   const pick=el('detailTitleSelect');
   pick.setAttribute('aria-label',zh?'选择观众与流量详情剧目':'Choose audience and traffic title');
   pick.innerHTML=sorted.map(s=>`<option value="${esc(s.id)}"${s.id===detailPick?' selected':''}>${esc(s.name)}${Object.keys(s.sections||{}).length?'':(zh?' · 暂无数据':' · Unavailable')}</option>`).join('');
@@ -852,6 +857,19 @@ function renderSeriesDetails() {
   const region=code=>{if(!code)return '—';try{return new Intl.DisplayNames([zh?'zh-CN':'en'],{type:'region'}).of(code)||code;}catch(e){return code;}};
   const cols=zh?['发布账号 / 版本','账号地区','平台新增有效播放','平台新增点赞','平台新增收藏','平台新增评论']:['Publishing account / version','Account region','Platform views added','Platform likes added','Platform favorites added','Platform comments added'];
   el('detailAccounts').innerHTML='<table><thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+[...added.data].sort((a,b)=>(b.qv??-1)-(a.qv??-1)).map(a=>{const meta=metadata.get(a.collectionId);return `<tr><td>${esc(meta?.name||'—')}<div class="detail-note" style="margin:0">${esc(accountName(a.collectionId,metadata))}</div></td><td>${esc(region(meta?.region))}</td><td>${fmtN(a.qv)}</td><td>${fmtN(a.like)}</td><td>${fmtN(a.fav)}</td><td>${fmtN(a.com)}</td></tr>`;}).join('')+'</tbody></table>';
+}
+
+function renderEpisodeDetail(did) {
+  const zh=LANG==='zh',record=(DATA.episodeDetails||{})[did],rows=record?.rows||[],el=id=>document.getElementById(id);
+  el('detailEpisodesTitle').textContent=zh?'分集累计播放 · 平台快照':'Cumulative episode views · Platform snapshot';
+  el('detailEpisodesDataLabel').textContent=zh?'查看分集数据（含片段）':'View episode data (including highlights)';
+  el('detailEpisodesNote').textContent=(record?.checked?(zh?'采集于 ':'Observed ')+new Date(record.checked).toLocaleString(zh?'zh-CN':'en-US',{hour12:false})+(record.lastError?(zh?' · 本轮更新失败，保留上次结果':' · Refresh failed; showing the previous snapshot'):''):(zh?'平台暂未返回可用分集数据':'No usable episode snapshot returned'))+(zh?'。这是采集时的累计快照，不随日期筛选切换，平台未提供独立数据截止日；未返回集数留空，片段单列在数据表，不计算用户留存率。':' . This is a cumulative snapshot independent of date filters; a separate data watermark is unavailable. Missing episodes stay blank and highlights appear only in the table. These counts do not measure user retention.');
+  const regular=rows.filter(r=>!r.highlight&&r.episode>0),values=new Map(regular.map(r=>[r.episode,r.qv]));
+  if(regular.length){
+    const max=Math.max(...regular.map(r=>r.episode)),axis=Array.from({length:max},(_,i)=>String(i+1));
+    lineChart(el('detailEpisodesPlot'),axis,[{name:zh?'累计播放':'Views',color:'var(--s1)',values:axis.map(n=>values.has(+n)?values.get(+n):null)}],fmtN,[],s=>s);
+  }else unavailableChart('detailEpisodesPlot');
+  el('detailEpisodesData').innerHTML=rows.length?'<table><tr><th>'+(zh?'集号 / 片段':'Episode / highlight')+'</th><th>'+(zh?'平台累计有效播放':'Platform cumulative effective views')+'</th></tr>'+rows.map(r=>`<tr><td>${r.highlight?(zh?'片段 · ':'Highlight · '):r.episode===0?(zh?'未编号内容 · ':'Unnumbered content · '):(zh?'第 ':'Episode ')}${r.episode}${!r.highlight&&r.episode>0&&zh?' 集':''}</td><td>${fmtN(r.qv)}</td></tr>`).join('')+'</table>':'';
 }
 
 let seriesArchivePick=null,seriesArchiveMetric='qv',seriesArchiveWindow=null;

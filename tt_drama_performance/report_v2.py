@@ -266,6 +266,12 @@ def build_payload(base):
     if detail_errors:
         notes.append(f'{len(detail_errors)} 份单剧画像/流量档案未通过校验，已暂时隐藏。')
         notes_en.append(f'{len(detail_errors)} audience/traffic snapshots failed validation and are omitted.')
+    from episode_details import load_episodes
+    episode_errors = []
+    episodes = load_episodes(root, errors=episode_errors)
+    if episode_errors:
+        notes.append(f'{len(episode_errors)} 份分集快照校验失败，暂不展示。')
+        notes_en.append(f'{len(episode_errors)} episode snapshots failed validation and are omitted.')
     return dict(schema=2, generated=dt.datetime.now().strftime('%Y-%m-%d %H:%M'), dataThrough=latest,
                 snapDate=latest, daily=daily, kpis=kpis, wow=wow_periods[0]['rows'], wowPeriods=wow_periods,
                 dramas=dramas, moversSeries=movers, dramaTrends=dict(trends), gaps=gaps,
@@ -277,6 +283,7 @@ def build_payload(base):
                 trendTitles=list(trend_titles.values()),
                 seriesHistory=series_history,
                 seriesDetails=details,
+                episodeDetails=episodes,
                 dayDetails={day: [[r['id'], r['qv'], r['like'], r['fav'], r['com']] for r in record['rows']]
                             for day, record in sorted(direct.items())},
                 historyRequestedStart=requested_start,

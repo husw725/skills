@@ -653,6 +653,12 @@ def run(push, headless):
                                         retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
                     except Exception as e:
                         log(f'单剧画像/流量暂未完成，主日报继续：{type(e).__name__}: {str(e).splitlines()[0][:160]}')
+                    try:
+                        from episode_details import collect as collect_episodes
+                        collect_episodes(page, BASE, log=log,
+                                         retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
+                    except Exception as e:
+                        log(f'分集快照暂未完成，主日报继续：{type(e).__name__}: {str(e).splitlines()[0][:160]}')
                 if CFG.get('v2_series_history', True):
                     try:
                         from series_history import collect as collect_series

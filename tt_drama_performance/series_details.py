@@ -224,8 +224,8 @@ def collect(page, base, log=print, retry_hours=24, refresh_hours=24):
         page.get_by_role('button', name='Switch drama', exact=True).click(timeout=30000)
         series.wait(lambda: series.total is not None and len(series.catalog) == series.total, 'catalog')
         catalog = dict(series.catalog)
-        if not catalog:
-            raise PageDataError('单剧详情目录为空')
+        if not catalog or any(not re.fullmatch(r'\d+', did) for did in catalog):
+            raise PageDataError('单剧详情目录为空或ID异常')
         atomic_json(root / 'series_catalog.json', catalog)
         for did, info in catalog.items():
             path = root / 'details' / f'{did}.json'
