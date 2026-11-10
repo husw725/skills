@@ -804,7 +804,9 @@ function renderDramaTbl() {
 
 let detailPick=null,detailChannel='';
 function renderSeriesDetails() {
-  const records=DATA.seriesDetails||[];
+  const byId=new Map((DATA.seriesDetails||[]).map(r=>[r.id,r]));
+  Object.values(DATA.episodeDetails||{}).forEach(r=>{if(!byId.has(r.id))byId.set(r.id,{id:r.id,name:r.name,sections:{}});});
+  const records=[...byId.values()];
   if(!records.length)return;
   const zh=LANG==='zh',el=id=>document.getElementById(id),text=(id,s)=>el(id).textContent=s;
   el('seriesDetailsCard').style.display='';

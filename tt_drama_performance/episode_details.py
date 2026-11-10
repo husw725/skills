@@ -38,6 +38,7 @@ def normalize(data):
 def validate_record(record, did):
     if (record.get('schema') != 2 or record.get('source') != 'contract_episode_snapshot'
             or record.get('id') != did or not re.fullmatch(r'\d+', did)
+            or not isinstance(record.get('name'), str) or not record['name']
             or record.get('queryMode') != 'cumulative_snapshot' or record.get('dataThrough') is not None):
         raise PageDataError('分集存档来源或查询口径异常')
     dt.datetime.fromisoformat(record['lastAttempt'])

@@ -14,7 +14,7 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual([r['episode'] for r in value['rows'] if not r['highlight']], [1, 3])
         self.assertEqual(value['rows'][1]['qv'], 0)
         self.assertNotIn('item_id', value['rows'][0])
-        record = dict(value, schema=2, id='123', source='contract_episode_snapshot',
+        record = dict(value, schema=2, id='123', name='Demo', source='contract_episode_snapshot',
             queryMode='cumulative_snapshot', dataThrough=None, asOf='2026-11-08',
             lastAttempt='2026-11-10T06:00:00+00:00', checked='2026-11-10T06:00:01+00:00')
         # A platform range ending today is not promoted to a verified watermark.
