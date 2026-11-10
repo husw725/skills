@@ -1,7 +1,7 @@
 import unittest
 
 from analytics_v2 import PageDataError
-from series_history import parse_curve, upgrade_record
+from series_history import parse_curve, upgrade_record, failure_recent
 
 
 class SeriesHistoryTests(unittest.TestCase):
@@ -40,6 +40,12 @@ class SeriesHistoryTests(unittest.TestCase):
         self.assertEqual(updated['segments']['2026-03-01_2026-03-03']['status'],'partial')
         self.assertEqual(updated['observedAt']['qv']['2026-03-01'],'2026-11-09T00:00:00+00:00')
         self.assertNotIn('observedAt',old)
+
+    def test_failure_retry_uses_actual_failure_time_not_new_manifest_time(self):
+        import datetime as dt
+        previous=dict(checked='2026-11-10T01:00:00+00:00',failures={'id':'HTTP 500'},
+                      failureChecks={'id':'2026-11-09T00:00:00+00:00'})
+        self.assertFalse(failure_recent(previous,'id',24,dt.datetime.fromisoformat('2026-11-10T01:00:00+00:00')))
 
 
 if __name__ == '__main__':

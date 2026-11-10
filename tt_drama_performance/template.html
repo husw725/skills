@@ -797,8 +797,8 @@ function renderSeriesArchive() {
     for(let d=start.value;d<=end.value;d=shiftDay(d,1))axis.push(d);
     const observed=axis.filter(d=>Object.prototype.hasOwnProperty.call(points,d)).length;
     document.getElementById('seriesArchiveNote').textContent=zh
-      ? `${start.value} ~ ${end.value} · 实际返回 ${observed}/${axis.length} 个日值 · 单剧页播放与机构单日重合核对 ${source.matchedDays} 点，差异 ${(source.differences||[]).length} 点。此处按单个剧目/版本展示，不计入全机构已验收覆盖；未返回日期留空，互动指标不从本曲线推导。`
-      : `${start.value} ~ ${end.value} · ${observed}/${axis.length} daily values returned · ${source.matchedDays} overlapping view points checked; ${(source.differences||[]).length} differences. This is a separate title/version source, not institution-wide verified coverage. Missing dates stay blank; interactions are not inferred.`;
+      ? `${start.value} ~ ${end.value} · 实际返回 ${observed}/${axis.length} 个日值 · 该剧全档播放与机构单日重合核对 ${source.matchedDays} 点，全档差异 ${(source.differences||[]).length} 点（不代表时长已核对）。此处按单个剧目/版本展示，不计入全机构已验收覆盖；未返回日期留空，互动指标不从本曲线推导。`
+      : `${start.value} ~ ${end.value} · ${observed}/${axis.length} daily values returned · Across all archived dates for this title: ${source.matchedDays} overlapping view points checked; ${(source.differences||[]).length} differences (not a duration check). This is a separate title/version source, not institution-wide verified coverage. Missing dates stay blank; interactions are not inferred.`;
     if(!observed){unavailableChart('seriesArchivePlot');document.getElementById('seriesArchiveData').innerHTML='';return;}
     const label=seriesArchiveMetric==='qv'?(zh?'有效播放':'Effective views'):(zh?'平均播放时长（秒）':'Average play duration (seconds)');
     const series=[{name:label,color:'var(--s1)',values:axis.map(d=>Object.prototype.hasOwnProperty.call(points,d)?points[d]:null)}];

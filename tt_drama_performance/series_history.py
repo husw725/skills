@@ -146,6 +146,19 @@ def upgrade_record(old):
     return record
 
 
+def failure_recent(previous, did, retry_hours, now=None):
+    if did not in previous.get('failures', {}):
+        return False
+    stamp = previous.get('failureChecks', {}).get(did) or previous.get('checked')
+    if not stamp:
+        return False
+    try:
+        age = (now or dt.datetime.now(dt.timezone.utc)) - dt.datetime.fromisoformat(stamp)
+        return age.total_seconds() < retry_hours * 3600
+    except (ValueError, TypeError):
+        return False
+
+
 def collect(page, base, start='2026-03-01', log=print, retry_hours=24):
     root = Path(base) / 'data' / 'v2'
     main = read_json(root / 'latest.json')
@@ -162,15 +175,14 @@ def collect(page, base, start='2026-03-01', log=print, retry_hours=24):
         catalog = dict(capture.catalog)
         atomic_json(root / 'series_catalog.json', catalog)
         previous = read_json(root / 'series_latest.json', {})
-        saved, errors = 0, {}
+        saved, errors, failure_checks = 0, {}, {}
         for did, info in catalog.items():
             path = root / 'series' / f'{did}.json'
             old = upgrade_record(read_json(path, {}))
-            if did in previous.get('failures', {}) and previous.get('checked'):
-                age = dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(previous['checked'])
-                if age.total_seconds() < retry_hours * 3600:
-                    errors[did] = previous['failures'][did]
-                    continue
+            if failure_recent(previous, did, retry_hours):
+                errors[did] = previous['failures'][did]
+                failure_checks[did] = previous.get('failureChecks', {}).get(did) or previous['checked']
+                continue
             record = dict(schema=2, source='contract_chart', id=did, name=info['name'],
                           pub=info.get('pub'), episodes=info.get('episodes'),
                           qv=dict(old.get('qv', {})), dur=dict(old.get('dur', {})), segments=dict(old.get('segments', {})),
@@ -259,9 +271,11 @@ def collect(page, base, start='2026-03-01', log=print, retry_hours=24):
                 log(f'单剧历史 {info["name"]}：{len(record["qv"])} 个播放日值，重合校验 {matched} 天，差异 {len(differences)}')
             except (PageDataError, ValueError, KeyError, TypeError) as e:
                 errors[did] = str(e)
+                failure_checks[did] = dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
                 log(f'单剧历史 {info["name"]} 暂不可用：{e}')
         manifest = dict(schema=2, source='contract_chart', requestedStart=start, titles=len(catalog),
-                        saved=saved, failures=errors, checked=dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds'))
+                        saved=saved, failures=errors, failureChecks=failure_checks,
+                        checked=dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds'))
         atomic_json(root / 'series_latest.json', manifest)
         return manifest
     finally:
