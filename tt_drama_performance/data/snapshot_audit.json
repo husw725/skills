@@ -682,5 +682,57 @@
   "rows": 32,
   "sdiff": 0,
   "status": "unresolved"
+ },
+ "2026-10-29": {
+  "base": "2026-10-26",
+  "checked": "2026-11-03T19:00:07",
+  "days": 3,
+  "dev": 0.026457786368093088,
+  "label": "2026-10-31",
+  "rows": 32,
+  "sdiff": 474243,
+  "status": "ok",
+  "tsum": 462019
+ },
+ "2026-10-31": {
+  "base": "2026-10-29",
+  "checked": "2026-11-04T07:00:07",
+  "days": null,
+  "dev": null,
+  "label": "2026-10-31",
+  "rows": 32,
+  "sdiff": 0,
+  "status": "unresolved"
+ },
+ "2026-11-01": {
+  "base": "2026-10-29",
+  "checked": "2026-11-07T19:00:30",
+  "days": 3,
+  "dev": 0.08761442305989837,
+  "label": "2026-11-04",
+  "rows": 32,
+  "sdiff": 491419,
+  "status": "smear",
+  "tsum": 451832
+ },
+ "2026-11-02": {
+  "base": "2026-10-29",
+  "checked": "2026-11-07T07:00:11",
+  "days": null,
+  "dev": null,
+  "label": "2026-11-02",
+  "rows": 32,
+  "sdiff": 267709,
+  "status": "unresolved"
+ },
+ "2026-11-03": {
+  "base": "2026-10-29",
+  "checked": "2026-11-07T15:00:23",
+  "days": null,
+  "dev": null,
+  "label": "2026-11-03",
+  "rows": 32,
+  "sdiff": 267709,
+  "status": "unresolved"
  }
 }
