@@ -1,7 +1,7 @@
 import unittest
 
 from analytics_v2 import PageDataError
-from series_details import normalize, validate_record
+from series_details import normalize, validate_record, available_observation
 
 
 class DetailTests(unittest.TestCase):
@@ -70,6 +70,17 @@ class DetailTests(unittest.TestCase):
         self.assertEqual(result['primary']['qv'], 100)
         self.assertEqual(period['rows'][0]['qv'], 100)
         self.assertEqual(account_comparison(detail, {}, {})['status'], 'unavailable')
+
+    def test_available_range_cannot_reuse_other_title_old_or_future_observations(self):
+        observed = dict(start='2026-10-26', end='2026-11-07', checked='2026-11-10T06:01:00+00:00')
+        key = ('123', observed['start'], observed['end'], 'audience-stats')
+        attempted = '2026-11-10T06:00:00+00:00'
+        self.assertEqual(available_observation({key: observed}, '123', 'audience-stats', attempted, '2026-11-08'), observed)
+        for values in ({('456', *key[1:]): observed},
+                       {(*key[:-1], 'accounts'): observed},
+                       {key: dict(observed, checked='2026-11-09T06:00:00+00:00')},
+                       {key: dict(observed, end='2026-11-09')}):
+            self.assertIsNone(available_observation(values, '123', 'audience-stats', attempted, '2026-11-08'))
 
 
 if __name__ == '__main__':

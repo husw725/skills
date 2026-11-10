@@ -133,6 +133,12 @@ class DetailCapture:
             self.page.wait_for_timeout(100)
 
 
+def available_observation(values, did, endpoint, attempted, latest):
+    choices = [v for k, v in values.items() if k[0] == did and k[-1] == endpoint
+               and v['end'] <= latest and v['checked'] >= attempted]
+    return max(choices, key=lambda v: (v['end'], v['checked'])) if choices else None
+
+
 def validate_record(obj, did):
     if (obj.get('schema') != 2 or obj.get('source') != 'contract_detail' or obj.get('id') != did
             or not re.fullmatch(r'\d+', did) or not isinstance(obj.get('name'), str) or not obj['name']):
@@ -281,11 +287,10 @@ def collect(page, base, log=print, retry_hours=24, refresh_hours=24):
                             # A title may lag behind the institution's date limit.
                             # Keep a successful normal-page observation of its own
                             # actual scope, rather than discarding it or relabeling it.
-                            alternatives = [v for k, v in capture.values.items()
-                                if k[0] == did and k[-1] == key[-1] and v['end'] <= main['latest']
-                                and v['checked'] >= record['lastAttempt']]
-                            if alternatives:
-                                record['sections'][key[-1]] = max(alternatives, key=lambda v: (v['end'], v['checked']))
+                            alternative = available_observation(capture.values, did, key[-1],
+                                                                record['lastAttempt'], main['latest'])
+                            if alternative:
+                                record['sections'][key[-1]] = alternative
                                 record['fallbacks'][key[-1]] = 'requested_range_unavailable'
             except Exception as e:
                 record['failures']['page'] = str(e).splitlines()[0][:180]
