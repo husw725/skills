@@ -233,7 +233,11 @@ def collect(page, base, log=print, retry_hours=24, refresh_hours=24):
                         series.failures.pop((did, 'range'), None)
                         page.goto(f'https://www.tiktokdramacenter.com/series/{did}/performance/audience', wait_until='domcontentloaded')
                         page.get_by_text('Audience', exact=True).wait_for(timeout=30000)
-                        page.wait_for_timeout(300)
+                        try:
+                            series.wait(lambda: did in series.ranges or (did, 'range') in series.failures,
+                                        (did, 'range'), timeout=8000)
+                        except PageDataError:
+                            pass  # Availability is optional, never a gate for other tabs.
                         break
                     except Exception:
                         if attempt == 2:

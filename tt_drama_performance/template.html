@@ -828,7 +828,7 @@ function renderSeriesDetails() {
   bars('detailGender',audience?.data.gender?['male','female','gender_unknown'].map(k=>({label:genderLabels[k],pct:audience.data.gender[k],unknown:k==='gender_unknown'})):null);
   bars('detailAge',audience?.data.age?Object.entries(audience.data.age).map(([k,v])=>({label:ageLabels[k],pct:v,unknown:k==='unknown'})):null);
   text('detailAudienceNote',(scope(audience,'audience-stats')||empty)+(zh?'。未知保留在总人群中；样本不足时，性别或年龄可单独缺失。':' . Unknown remains part of the total. Gender or age may be withheld independently when the sample is too small.'));
-  text('detailTrafficTitle',zh?'流量来源':'Traffic sources');text('detailTrafficNote',scope(channels,'traffic-stats')||empty);
+  text('detailTrafficTitle',zh?'流量来源':'Traffic sources');text('detailTrafficNote',(scope(channels,'traffic-stats')||empty)+(same(accounts,channels)?(zh?'。账号资料：':' . Account metadata: ')+scope(accounts,'accounts'):''));
   const accountRows=same(accounts,channels)?accounts.data:[],accountMap=new Map(accountRows.map(a=>[a.collectionId,a]));
   const accountName=(id,map)=>{const a=map.get(id);return a?(a.handle?'@'+a.handle:a.name)+' · '+(zh?'版本 ':'Version ')+id.slice(-6):(zh?'发布版本 ':'Publishing version ')+id.slice(-6);};
   const channelSelect=el('detailChannelSelect'),scopes=[...new Set((channels?.data||[]).map(c=>c.collectionId||''))];
