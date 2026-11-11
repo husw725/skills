@@ -23,7 +23,7 @@
 - P2（新发现）：series_history.py:181读档/upgrade_record位于逐剧try外，272行except也不捕获Playwright导航/等待错误。某剧坏JSON或ERR_EMPTY_RESPONSE会中断整批，后续剧目未访问且series_latest未保存失败冷却。独立fake101/102均复现；details/episode此前隔离修正未覆盖此模块。应把读档到保存整体放入逐剧异常隔离，保留原档，继续后续。
 - P2（已知再次确认）：analytics_v2.py:419 previous30同latest失败直接continue，不判断时间/retry_hours。独立fake一个月前的失败且retry_hours=0仍不请求该区间。应记录真实失败时间并按冷却重试，不在跳过时续期。
 - P2（新发现）：template.html:645仅在await前验证日期，658在await后重新读取可编辑输入框，输入变化不更新historyRequest。真实HTTP延迟首次history加载期间，11-08~11-08点击分析后将end改11-07，得到start11-08/end11-07、n0、qv0、rows0、analysisUnavailable=false的“有效”结果。应固定请求日期快照或在输入变化取消，并在异步返回后验证。
-- P2（已知再次确认）：daily_update.py:933仅识别nothing to commit；无data/report变化且存在untracked时真实git输出nothing added to commit，publish_report返回4且sync_pages_repo未调用。临时真实git仓库提取该返回值再mock发布路径复现，未真实push或通知。Pages自身:478同样有此文案判定。应根据目标路径实际diff处理无变化，继续必要push/分享页同步，不能吞真正失败。
+- P2（已知再次确认）：daily_update.py:933仅识别nothing to commit；无data/report变化且存在untracked时真实git输出nothing added to commit，publish_report返回4且sync_pages_repo未调用。临时真实git仓库提取该返回值再mock发布路径复现，未真实push或通知。Pages自身:475同样有此文案判定。应根据目标路径实际diff处理无变化，继续必要push/分享页同步，不能吞真正失败。
 - P2（新发现，条件性）：report_delivery.py:34只因hash文件已存在就跳过写入，不校验实际字节，且最初非原子写。模拟本地生成中断/坏缓存：临时details文件改为{}后重建，manifest仍声明原SHA且复用坏文件；后续发布会把坏分片放到immutable key，页面校验拒绝，普通重试无法修复来源。应校验/原子重建分片，发布前验证摘要，完整性失败重试考虑绕过浏览器缓存。当前生产档案未声称损坏。
 - 主代理复现脚本保存在忽略目录output/diagnostics/review_retry_dynamic_20261111.py；真实git无变化复现只在TemporaryDirectory及mock中。Mac原两份legacy JSON和其他项目改动保留，无未解决冲突。后续若用户要求修复，需新增对应回归并在Windows验证后再发布，不必重采现有已验收数据。
 
