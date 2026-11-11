@@ -574,18 +574,33 @@ def sync_s3(today):
         key = f'aigc/drama/{rel}/report.html'
         # ContentType 不设会被当附件下载；no-cache 保证每天刷新后立即生效
         extra = {'ContentType': 'text/html; charset=utf-8', 'CacheControl': 'no-cache'}
-        for direct in (False, True):
-            try:
-                config = BotoConfig(signature_version='s3v4', connect_timeout=10, read_timeout=30,
-                                    retries={'max_attempts': 1}, **({'proxies': {}} if direct else {}))
-                s3 = boto3.client('s3', region_name='us-east-1', config=config, **kw)
-                s3.upload_file(os.path.join(BASE, 'report.html'), 'starlitshorts', key, ExtraArgs=extra)
-                break
-            except Exception:
-                if direct:
-                    raise
-                log('S3 连接失败，保留证书校验并直连重试（仅本次上传）。')
+        def upload(path, destination, metadata):
+            for direct in (False, True):
+                try:
+                    config = BotoConfig(signature_version='s3v4', connect_timeout=10, read_timeout=30,
+                                        retries={'max_attempts': 1}, **({'proxies': {}} if direct else {}))
+                    s3 = boto3.client('s3', region_name='us-east-1', config=config, **kw)
+                    s3.upload_file(str(path), 'starlitshorts', destination, ExtraArgs=metadata)
+                    return
+                except Exception:
+                    if direct:
+                        raise
+                    log('S3 连接失败，保留证书校验并直连重试（仅本次上传）。')
+        report = os.path.join(BASE, 'report.html')
+        upload(report, key, extra)
         log(f'S3 已同步 s3://starlitshorts/{key}')
+        if CFG.get('s3_fast_report', True):
+            # Keep the existing raw-HTML key compatible with SDK consumers.
+            # Browsers transparently decode the separate HTTP-gzip entry.
+            import gzip
+            import tempfile
+            from pathlib import Path
+            fast_key = f'aigc/drama/{rel}/report-fast.html'
+            with tempfile.TemporaryDirectory(prefix='tt-report-gzip-') as tmp:
+                compressed = Path(tmp) / 'report.html.gz'
+                compressed.write_bytes(gzip.compress(Path(report).read_bytes(), compresslevel=9, mtime=0))
+                upload(compressed, fast_key, dict(extra, ContentEncoding='gzip'))
+            log(f'S3 快速入口已同步 s3://starlitshorts/{fast_key}')
         return True
     except Exception as e:
         log(f'S3 同步失败（不影响主流程）: {e}')

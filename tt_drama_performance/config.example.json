@@ -16,6 +16,8 @@
  "pages_repo_dir": "",
  "_pages说明": "分享页仓库的本地路径(相对本目录或绝对路径)。配置后每次推送会把 report.html 复制成 index.html 推过去，保持 github.io 分享链接最新；留空跳过",
  "s3_report_path": "",
+ "s3_fast_report": true,
+ "_s3_fast说明": "另同步report-fast.html供浏览器压缩传输，原report.html继续保持原始HTML格式，兼容已有业务读取方式。",
  "s3_ak": "",
  "s3_sk": "",
  "_s3说明": "配置后每次更新把 report.html 推到团队 S3 固定地址 s3://starlitshorts/aigc/drama/<s3_report_path>/report.html（同 key 覆盖，外部引用链接不变）。例如 report/tt_drama。需 pip install boto3；凭证填 s3_ak/s3_sk 或用环境变量 S3_UPLOAD_AK/SK；留空跳过"
