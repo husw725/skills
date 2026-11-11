@@ -1,0 +1,239 @@
+{
+ "asOf": "2026-11-08",
+ "failures": {
+  "audience-stats": "平台未返回观众画像，不按0填充"
+ },
+ "fallbacks": {},
+ "id": "7571058027617457163",
+ "lastAttempt": "2026-11-10T06:39:54+00:00",
+ "name": "Behind the Glory of the Runway",
+ "requested": {
+  "end": "2026-11-08",
+  "start": "2026-10-10"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-10T06:40:09+00:00",
+   "data": [
+    {
+     "collectionId": "7572504198349198343",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    },
+    {
+     "collectionId": "7572081746498458679",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    }
+   ],
+   "end": "2026-11-08",
+   "start": "2026-10-10"
+  },
+  "traffic-added": {
+   "checked": "2026-11-10T06:40:10+00:00",
+   "data": [
+    {
+     "collectionId": "7572081746498458679",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 22
+    },
+    {
+     "collectionId": "7572504198349198343",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 32
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "com": 0,
+     "fav": 2,
+     "like": 15,
+     "qv": 189
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "com": 0,
+     "fav": 2,
+     "like": 5,
+     "qv": 236
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "com": 0,
+     "fav": 12,
+     "like": 27,
+     "qv": 1111
+    }
+   ],
+   "end": "2026-11-08",
+   "start": "2026-10-10"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-10T06:40:10+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 0.1492
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 0.7956
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 0.1989
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 3.8289
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 6.6136
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 88.4137
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "other",
+     "pct": 0.2123
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "tab",
+     "pct": 0.1415
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "fyp",
+     "pct": 0.4246
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "search",
+     "pct": 0.4246
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "self_profile",
+     "pct": 4.4586
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "other_profile",
+     "pct": 94.3383
+    },
+    {
+     "collectionId": "7572081746498458679",
+     "key": "search",
+     "pct": 12.1212
+    },
+    {
+     "collectionId": "7572081746498458679",
+     "key": "self_profile",
+     "pct": 18.1818
+    },
+    {
+     "collectionId": "7572081746498458679",
+     "key": "other_profile",
+     "pct": 69.697
+    },
+    {
+     "collectionId": "7572504198349198343",
+     "key": "self_profile",
+     "pct": 3.0303
+    },
+    {
+     "collectionId": "7572504198349198343",
+     "key": "other_profile",
+     "pct": 96.9697
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "tab",
+     "pct": 0.4405
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "fyp",
+     "pct": 1.7621
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "search",
+     "pct": 2.2026
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "self_profile",
+     "pct": 24.2291
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "other_profile",
+     "pct": 71.3656
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "tab",
+     "pct": 0.3279
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "fyp",
+     "pct": 1.9672
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "self_profile",
+     "pct": 2.623
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "search",
+     "pct": 20.3279
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "other_profile",
+     "pct": 74.7541
+    }
+   ],
+   "end": "2026-11-08",
+   "start": "2026-10-10"
+  }
+ },
+ "source": "contract_detail"
+}

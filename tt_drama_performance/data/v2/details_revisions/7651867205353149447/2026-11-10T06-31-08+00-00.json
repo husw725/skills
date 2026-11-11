@@ -1,0 +1,80 @@
+{
+ "asOf": "2026-11-08",
+ "failures": {
+  "audience-stats": "平台未返回观众画像，不按0填充"
+ },
+ "fallbacks": {},
+ "id": "7651867205353149447",
+ "lastAttempt": "2026-11-10T06:31:08+00:00",
+ "name": "CEO Loves My Voice",
+ "requested": {
+  "end": "2026-10-30",
+  "start": "2026-10-01"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-10T06:31:21+00:00",
+   "data": [
+    {
+     "collectionId": "7655385474978272272",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    },
+    {
+     "collectionId": "7651925808491156501",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    }
+   ],
+   "end": "2026-10-30",
+   "start": "2026-10-01"
+  },
+  "traffic-added": {
+   "checked": "2026-11-10T06:31:21+00:00",
+   "data": [
+    {
+     "collectionId": "7655385474978272272",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 0
+    },
+    {
+     "collectionId": "7651925808491156501",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 0
+    }
+   ],
+   "end": "2026-10-30",
+   "start": "2026-10-01"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-10T06:31:21+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 100.0
+    },
+    {
+     "collectionId": "7651925808491156501",
+     "key": "fyp",
+     "pct": 100.0
+    },
+    {
+     "collectionId": "7655385474978272272",
+     "key": "fyp",
+     "pct": 100.0
+    }
+   ],
+   "end": "2026-10-30",
+   "start": "2026-10-01"
+  }
+ },
+ "source": "contract_detail"
+}

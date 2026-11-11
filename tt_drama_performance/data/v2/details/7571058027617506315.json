@@ -1,11 +1,9 @@
 {
  "asOf": "2026-11-08",
- "failures": {
-  "audience-stats": "Locator.click: Timeout 8000ms exceeded."
- },
+ "failures": {},
  "fallbacks": {},
  "id": "7571058027617506315",
- "lastAttempt": "2026-11-10T06:34:47+00:00",
+ "lastAttempt": "2026-11-11T07:26:40+00:00",
  "name": "Teaching my Robot Boyfriend How to Love",
  "requested": {
   "end": "2026-11-08",
@@ -14,7 +12,7 @@
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-10T06:35:44+00:00",
+   "checked": "2026-11-11T07:26:46+00:00",
    "data": [
     {
      "collectionId": "7595056185670374408",
@@ -44,8 +42,21 @@
    "end": "2026-11-08",
    "start": "2026-10-10"
   },
+  "audience-stats": {
+   "checked": "2026-11-11T07:26:44+00:00",
+   "data": {
+    "age": null,
+    "gender": {
+     "female": 43.8878,
+     "gender_unknown": 25.8517,
+     "male": 30.2605
+    }
+   },
+   "end": "2026-11-08",
+   "start": "2026-10-10"
+  },
   "traffic-added": {
-   "checked": "2026-11-10T06:35:44+00:00",
+   "checked": "2026-11-11T07:26:46+00:00",
    "data": [
     {
      "collectionId": "7595056185670374408",
@@ -80,7 +91,7 @@
    "start": "2026-10-10"
   },
   "traffic-stats": {
-   "checked": "2026-11-10T06:35:44+00:00",
+   "checked": "2026-11-11T07:26:46+00:00",
    "data": [
     {
      "collectionId": null,
