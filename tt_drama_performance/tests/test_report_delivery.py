@@ -17,11 +17,11 @@ class ReportDeliveryTests(unittest.TestCase):
                            dayDetails={'2026-11-08': [['123', 0, None]]},
                            seriesHistory=[], seriesDetails=[{'id': '123', 'name': '中文'}],
                            episodeDetails={'123': {'rows': [{'episode': 1, 'qv': 0}]}})
-            (base / 'template.html').write_text(template)
+            (base / 'template.html').write_text(template, encoding='utf-8')
             offline = template.replace('/*__DATA__*/null', encode_payload(payload))
-            (base / 'report.html').write_text(offline)
+            (base / 'report.html').write_text(offline, encoding='utf-8')
             web, assets = build_web_report(base)
-            core = read_report_payload(web.read_text())
+            core = read_report_payload(web.read_text(encoding='utf-8'))
             manifest = core.pop('_sections')
             for name, spec in manifest.items():
                 body = (web.parent / spec['path']).read_bytes()
@@ -30,7 +30,7 @@ class ReportDeliveryTests(unittest.TestCase):
                 self.assertEqual(packet['section'], name)
                 core.update(packet['data'])
             self.assertEqual(core, payload)
-            self.assertEqual((base / 'report.html').read_text(), offline)
+            self.assertEqual((base / 'report.html').read_text(encoding='utf-8'), offline)
             old = {relative: path.read_bytes() for relative, path in assets}
             payload['episodeDetails']['123']['rows'][0]['qv'] = 1
             _, new_assets = build_web_report(base, payload)
