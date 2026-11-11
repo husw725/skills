@@ -17,6 +17,17 @@
 
 ## 当前接力记录
 
+### 2026-11-11 S3同路径动态明细已上线（最新，覆盖单文件快速入口说明）
+
+- 用户明确要求数据分离到S3同路径文件夹动态加载，并询问尚未采集字段。已实现report_delivery.py：保留原report.html完整离线/业务读取版本；快速入口report-fast.html和Pages使用output/report-web/index.html，首屏仅嵌入核心字段。四组明细details（seriesDetails+episodeDetails）、archive（seriesHistory）、legacy（legacyDaily）、history（dayDetails）放在同路径data/<section>-<sha256>.json。
+- 画像/分集与单剧历史进入视区才加载，旧档展开时加载，单日明细点击日期分析才加载。并发请求复用、加载成功缓存、20秒超时、HTTP错误与SHA校验失败明确显示重试。慢日期回包不能覆盖后来选择的预设区间。预载后全重绘曾发现remote-pending未清理，已在f04f568修复并新增回归；正常加载与预载路径均验证通过。
+- 发布使用内容hash不可变文件名和一年immutable缓存，HTML no-cache；S3先上传全部gzip JSON再更新gzip HTML，旧hash文件保留供旧页面读取。Pages同一提交镜像HTML与data/，S3/Pages各自请求同源相对路径，无需改变CORS、ACL、TLS或凭证设置。原S3 report.html完整原值保留；s3_fast_report=false仅关闭额外动态入口。
+- 代码d676c5b、Windows UTF-8测试修正6570999、预载修正f04f568。Mac/Windows43项单测+9条旧断言、三组真实浏览器回归通过；新HTTP回归覆盖初始不请求明细、损坏200响应拒绝/重试、404后恢复、并发共享请求、晚回包不覆盖新选择、预载清占位、全量数据一致、双语/手机。独立只读数据/代码复核最终放行；Windows151档只读审计0问题。
+- 实际发布Windows原Interactive身份，最终日志dynamic-final-publish-20261111.log：13:30:05 S3、13:30:17 Pages，DYNAMIC_FINAL_PUBLISH_EXIT0。初次调用完整publish_report因本轮没有新data/report变化，git commit返回nothing added to commit而退出4（旧检测只认nothing to commit），未继续Pages；已针对本轮调用sync_s3+sync_pages_repo完成两路发布，不需要提交空数据或重复采集。该无变化提交文案兼容仍是原入口边界，未在本轮改动。
+- 线上 https://starlitshorts.s3.amazonaws.com/aigc/drama/report/tt_drama/report-fast.html 首屏gzip52504字节（前一版99756，减少约47%）；Mac4.03秒、Windows5.61秒，均初始0条明细请求。四组分段全量重组与完整报告逐项一致、均同源、切语言/剧目不重下、390px无溢出或JS错误。原分享页 https://husw725.github.io/tt-drama-report/ 同样验收通过，首屏53959字节、本次2.82秒；仅为本次网络实测，不保证用户所有网络延迟。
+- 本轮未再采平台数据。只读核对Windows既有audience-probe/responses.json字段名：accounts存在avg_play_date/avg_play_duration和部分非delta统计，当前normalizer未入库，需核单位/日期/口径后才可展示；episodes含item_id/item_ids但当前仅保存集号/播放/片段标记。未确认分集每日、完播、时长、互动或观众地区来源，不推算留存。缺失14部分集、部分画像及205天未验收历史仍按原机制保留原因重试，不声称已补齐。
+- 临时TTDramaDynamicPublishValidation20261111最终LastTaskResult0后已删除；原TTDramaDaily Ready，11:00:02结果0，下一轮15:00，持久频率未改。验证/发布webhook运行时置空，未发消息。Mac原两份legacy JSON及其他项目修改保留，autostash正常恢复，两端无未解决冲突。
+
 ### 2026-11-11 分集可用字段问答核验
 
 - 用户询问更多数据，重点为每部剧每集。只读核对当前43份分集档：29部1417条，当前均为正片，字段仅集号/累计有效播放/片段标记；页面已在单剧详情展示曲线与折叠表。样例My Boss Is a Superstar39条、CEO and the Country Girl59条，条数不等于证明整剧全部集数齐全。
