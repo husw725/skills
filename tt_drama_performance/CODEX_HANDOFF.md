@@ -17,6 +17,18 @@
 
 ## 当前接力记录
 
+### 2026-11-11 打开慢优化已上线（最新）
+
+- 用户反馈早上版本打不开，并要求针对超时优化。实测原公开入口HTTP200、无JS错误，但原S3无压缩传输，优化第一阶段后仍曾约26.6秒，不能把本次发布表述为保证任何网络不超时。
+- 代码736b10f：新增report_codec.py无损compact-v1字典编码，Python/浏览器解码保持null、0、负数、Unicode和特殊对象键；read_report_payload兼容旧/新报告。单文件不依赖外部脚本/请求。静态标题与加载提示先显示，主渲染后设置data-report-ready；关闭的历史表、覆盖日历、图表数据表及分集数据表延迟到展开时生成，切无数据范围清理旧回调。浅色与全宽偏好不变。
+- HTML从Windows729200字节降至368080字节（约49.5%），首屏DOM4899降至1605（约67%）；本地4倍CPU降速FCP338.5ms降至134.9ms。这是编码/渲染优化，DATA全量一致，没有删减或重新采集数据。主已对账48/253天、近7日897624、近30日5626863、画像性别28/年龄22/渠道32、分集29部1417行保持原值。
+- 报告825813a已通过原Windows Interactive身份实际发布S3/主Git/Pages，临时任务TTDramaPerfPublishValidation20261111退出0后删除。GitHub入口 https://husw725.github.io/tt-drama-report/ 实测HTTP200、约3.2秒、无JS错误。
+- 代码6e76d56：保留原S3 report.html原始HTML及元数据，新增同目录report-fast.html gzip浏览器入口，Content-Encoding=gzip、ContentType为HTML、no-cache，定时sync_s3默认同时更新；可用s3_fast_report=false关闭镜像。未改变旧业务读取契约、TLS校验、ACL或凭证配置。独立只读审核放行。
+- 新快速地址 https://starlitshorts.s3.amazonaws.com/aigc/drama/report/tt_drama/report-fast.html 已实际上传，公开读取99756字节、解压后368080字节，与生产原报告逐字节一致（Mac比较时仅规范CRLF）。实际浏览器HTTP200、gzip自动解压、单HTML请求，桌面/390px手机、历史展开、语言/剧目切换无JS错误；本次Mac加载约8.1秒。原入口继续兼容。
+- 验证：Mac/Windows42项Python测试及9条旧断言通过；两端详情故障注入与性能浏览器回归通过，151份存档审计0问题。独立数据审核确认无损编码及来源边界不变，压缩镜像审核亦放行。
+- 定时核验：TTDramaDaily Ready，今早07:00:02运行结果0，07:01:37完成，下一轮11:00；每日03/07/11/15/19/23及登录后3分钟，仍需Windows开机、桌面登录和平台登录态。本轮未改频率/持久任务、未发送消息；平台截止日仍11-08，并非11-11新数据。每轮刷新近3个数据日；画像/分集同截止日默认24小时冷却，主previous30 unavailable同水位保留缓存，不能统称全部24小时重试。
+- Mac原有daily_history.json/snapshot_audit.json和其他项目修改保留，无未解决冲突。验证/发布进程webhook置空；原Claude/sonnet规则回退不在本轮修改范围。
+
 ### 2026-11-10 页面100%宽度已上线（最新布局偏好）
 
 - 用户要求页面宽度100%。已移除1080px页面上限，容器占满可用宽度，保留两侧16px内边距；两类SVG图表移除1040px绘制上限，Top10条形图手机侧边距按宽度适配。浅色主题保留，CLAUDE.md已记录全宽偏好。
