@@ -22,6 +22,15 @@ def error_kind(reason):
     return 'unverified'
 
 
+def failure_in_cooldown(failure, retry_hours, now=None):
+    """Legacy failures without an actual attempt time must be retried."""
+    try:
+        age = ((now or dt.datetime.now(dt.timezone.utc)) - dt.datetime.fromisoformat(failure['checked'])).total_seconds()
+        return 0 <= age < retry_hours * 3600
+    except (KeyError, ValueError, TypeError):
+        return False
+
+
 def atomic_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -416,15 +425,18 @@ def collect(page, base, latest=None, log=print, backfill_days=30, refresh_days=3
                 end = shift(latest, -days) if previous else latest
                 start = shift(end, 1-days)
                 label = ('previous' if previous else 'last') + str(days)
-                if label == 'previous30' and prior_manifest.get('latest') == latest and prior_manifest.get('unavailablePeriods', {}).get(label):
-                    unavailable[label] = prior_manifest['unavailablePeriods'][label]
+                prior_failure = prior_manifest.get('unavailablePeriods', {}).get(label)
+                if (label == 'previous30' and prior_manifest.get('latest') == latest and prior_failure
+                        and failure_in_cooldown(prior_failure, retry_hours)):
+                    unavailable[label] = prior_failure
                     continue
                 try:
                     record = capture.collect(start, end)
                 except PageDataError as e:
                     if label != 'previous30':
                         raise
-                    unavailable[label] = dict(start=start, end=end, reason=str(e))
+                    unavailable[label] = dict(start=start, end=end, reason=str(e),
+                                             checked=dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds'))
                     log(f'前30日暂不可用：{e}；保留近30日实测，不编造月环比')
                     continue
                 atomic_json(root / 'periods' / f'{start}_{end}.json', record)

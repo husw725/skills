@@ -76,6 +76,18 @@ def run_git(cmd, cwd=BASE):
     return result
 
 
+def run_publish_git(cmd, cwd=BASE):
+    """Skip an empty scoped commit using Git's diff status, never message text."""
+    if len(cmd) > 1 and cmd[1] == 'commit' and '--' in cmd:
+        paths = cmd[cmd.index('--') + 1:]
+        diff = run_git(['git', 'diff', '--quiet', 'HEAD', '--', *paths], cwd=cwd)
+        if diff.returncode == 0:
+            return subprocess.CompletedProcess(cmd, 0, 'Report paths unchanged; commit skipped.', '')
+        if diff.returncode != 1:
+            return diff
+    return run_git(cmd, cwd=cwd)
+
+
 # ---- 快照验收台账 --------------------------------------------------------
 # 老逻辑的跳过判定只看"这个数据日的文件在不在"，于是一份半刷新快照一旦入库就被永久
 # 冻住、后续每一轮都跳过（2026-08-18 实测因此漏掉 08-19 的单日切分）。现在每份快照都
@@ -461,9 +473,10 @@ def sync_pages_repo(today):
     if git_stuck(d):
         log('分享页仓库有未解决冲突，停止同步以保留现有修改。')
         return False
-    from report_delivery import build_web_report
+    from report_delivery import build_web_report, verify_asset
     web, assets = build_web_report(BASE)
     for relative, source in assets:
+        verify_asset(relative, source)
         target = os.path.join(d, relative)
         os.makedirs(os.path.dirname(target), exist_ok=True)
         shutil.copyfile(source, target)
@@ -471,8 +484,8 @@ def sync_pages_repo(today):
     for cmd in (['git', 'add', 'index.html', 'data'],
                 ['git', 'commit', '--only', '-m', f'daily report {today}', '--', 'index.html', 'data'],
                 ['git', 'push']):
-        r = run_git(cmd, cwd=d)
-        if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
+        r = run_publish_git(cmd, cwd=d)
+        if r.returncode != 0:
             log(f'分享页同步失败: {" ".join(cmd)} -> {r.stderr.strip()[:200]}')
             notify_once('pages_sync',
                         f'【TikTok短剧日报】分享页(tt-drama-report)同步失败（{cmd[1]}），'
@@ -601,12 +614,13 @@ def sync_s3(today):
             import gzip
             import tempfile
             from pathlib import Path
-            from report_delivery import build_web_report
+            from report_delivery import build_web_report, verify_asset
             web, assets = build_web_report(BASE)
             fast_key = f'aigc/drama/{rel}/report-fast.html'
             with tempfile.TemporaryDirectory(prefix='tt-report-gzip-') as tmp:
                 # Immutable sections must exist before publishing their HTML manifest.
                 for relative, source in assets:
+                    verify_asset(relative, source)
                     compressed = Path(tmp) / 'section.json.gz'
                     compressed.write_bytes(gzip.compress(source.read_bytes(), compresslevel=9, mtime=0))
                     upload(compressed, f'aigc/drama/{rel}/{relative}', {
@@ -919,7 +933,7 @@ def publish_report(dd, push, stuck):
                     ['git', 'add', 'data', 'report.html'],
                     ['git', 'commit', '--only', '-m', f'data: snapshot {dd} (exported {today})', '--', 'data', 'report.html'],
                     ['git', 'push']):
-            r = run_git(cmd)
+            r = run_publish_git(cmd)
             if cmd[1] == 'pull' and r.returncode == 0:
                 st2 = git_stuck()        # autostash 落不回去，pull 仍然 rc 0
                 if st2:
@@ -930,7 +944,7 @@ def publish_report(dd, push, stuck):
                                 '数据已采集并同步 S3，但 GitHub 同步已停。'
                                 '修法：解开冲突后 git add + git commit（本地改动在 git stash list 里）。')
                     return 4
-            if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
+            if r.returncode != 0:
                 if 'pull' in cmd:
                     # rebase 冲突时把仓库恢复干净，避免后续每轮都卡在 rebase 中间态
                     subprocess.run(['git', 'rebase', '--abort'], cwd=BASE, capture_output=True)

@@ -256,7 +256,7 @@ function decodeReportData(encoded) {
 const DATA = decodeReportData(/*__DATA__*/null);
 
 // Relative URLs keep S3 and the Pages mirror on their own origin: no CORS needed.
-const reportLoads=new Map(),reportLoaded=new Set(),reportObservers=new Map();
+const reportLoads=new Map(),reportLoaded=new Set(),reportObservers=new Map(),reportReloads=new Set();
 async function loadReportSection(name) {
   const spec=DATA._sections?.[name];
   if(!spec||reportLoaded.has(name))return;
@@ -265,16 +265,17 @@ async function loadReportSection(name) {
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
     try {
       if(!new RegExp('^data/'+name+'-[a-f0-9]{64}\\.json$').test(spec.path))throw Error('Invalid section path');
-      const response=await fetch(new URL(spec.path,location.href),{signal:controller.signal,credentials:'omit'});
+      const response=await fetch(new URL(spec.path,location.href),{signal:controller.signal,credentials:'omit',cache:reportReloads.has(name)?'reload':'default'});
       if(!response.ok)throw Error('HTTP '+response.status);
       const bytes=await response.arrayBuffer();
       const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
-      if(digest!==spec.sha256)throw Error('Section checksum mismatch');
+      if(digest!==spec.sha256){reportReloads.add(name);throw Error('Section checksum mismatch');}
       const packet=decodeReportData(JSON.parse(new TextDecoder().decode(bytes)));
       if(packet.section!==name||!packet.data||Object.keys(packet.data).length!==spec.keys.length
           ||!spec.keys.every(k=>Object.prototype.hasOwnProperty.call(packet.data,k)))throw Error('Invalid section data');
       for(const key of spec.keys)DATA[key]=packet.data[key];
       reportLoaded.add(name);
+      reportReloads.delete(name);
     } finally {clearTimeout(timer);reportLoads.delete(name);}
   })();
   reportLoads.set(name,pending);
@@ -642,7 +643,8 @@ function renderModern() {
   document.getElementById('historyAll').textContent=zh?'全部已采历史':'All collected history';
   const analyze=async()=>{
     const request=++historyRequest;
-    if(!start.value||!end.value||start.value>end.value||start.value<DATA.historyRequestedStart||end.value>DATA.dataThrough){
+    const requestedStart=start.value,requestedEnd=end.value;
+    if(!requestedStart||!requestedEnd||requestedStart>requestedEnd||requestedStart<DATA.historyRequestedStart||requestedEnd>DATA.dataThrough){
       document.getElementById('periodMeta').textContent=zh?'请选择有效的起止日期':'Choose a valid date range';analysisUnavailable=true;document.getElementById('periodTable').innerHTML='';renderTrendCharts();renderDtrend();return;
     }
     if(DATA._sections?.history&&!reportLoaded.has('history')){
@@ -655,7 +657,11 @@ function renderModern() {
         const button=document.createElement('button');button.className='datechip';button.textContent=LANG==='zh'?'重新加载':'Retry';button.onclick=()=>document.getElementById('historyAnalyze').click();target.append(button);return;
       }
     }
-    const p=historyPeriod(start.value,end.value);
+    // Editing the range cancels this analysis; a later click validates a new request.
+    if(start.value!==requestedStart||end.value!==requestedEnd){
+      document.getElementById('periodMeta').textContent=LANG==='zh'?'日期已修改，请重新点击分析。':'Dates changed. Click Analyze again.';return;
+    }
+    const p=historyPeriod(requestedStart,requestedEnd);
     if(p.missing){document.getElementById('periodMeta').textContent=zh?`所选区间仍缺 ${p.missing.length} 天，暂不能生成完整排名。缺失日期：${p.missing.slice(0,8).join('、')}${p.missing.length>8?'…':''}`:`${p.missing.length} days are unavailable; a complete ranking cannot be computed. Missing: ${p.missing.slice(0,8).join(', ')}${p.missing.length>8?'…':''}`;document.getElementById('periodTable').innerHTML='';analysisUnavailable=true;renderTrendCharts();renderDtrend();return;}
     customPeriod=p;periodSelection=DATA.periods.length;analysisWindow={start:p.start,end:p.end};analysisUnavailable=false;renderModern();renderTrendCharts();renderDtrend();
   };

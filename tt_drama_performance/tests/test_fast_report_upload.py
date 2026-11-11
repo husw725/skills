@@ -11,6 +11,26 @@ import daily_update as updater
 
 
 class FastReportUploadTests(unittest.TestCase):
+    def test_corrupt_asset_blocks_fast_manifest_upload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            template = 'const DATA = decodeReportData(/*__DATA__*/null);'
+            (base / 'template.html').write_text(template, encoding='utf-8')
+            (base / 'report.html').write_text(template.replace('/*__DATA__*/null', encode_payload({'episodeDetails': {}})), encoding='utf-8')
+            web, assets = build_web_report(base)
+            assets[0][1].write_bytes(b'{}')
+            uploaded = []
+            class Client:
+                def upload_file(self, path, bucket, key, ExtraArgs):
+                    uploaded.append(key)
+            boto = types.SimpleNamespace(client=lambda *a, **kw: Client())
+            config = types.SimpleNamespace(Config=lambda **kwargs: kwargs)
+            with patch.dict('sys.modules', {'boto3': boto, 'botocore.config': config}), \
+                 patch.object(updater, 'BASE', str(base)), patch.object(updater, 'CFG', {'s3_report_path': 'report/tt_drama'}), \
+                 patch('report_delivery.build_web_report', return_value=(web, assets)), patch.object(updater, 'log'):
+                self.assertFalse(updater.sync_s3('2026-11-11'))
+            self.assertEqual(uploaded, ['aigc/drama/report/tt_drama/report.html'])
+
     def test_fast_entry_is_gzip_and_original_entry_remains_raw_html(self):
         for enabled in (True, False):
             with self.subTest(enabled=enabled), tempfile.TemporaryDirectory() as base:

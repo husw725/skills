@@ -177,18 +177,18 @@ def collect(page, base, start='2026-03-01', log=print, retry_hours=24):
         previous = read_json(root / 'series_latest.json', {})
         saved, errors, failure_checks = 0, {}, {}
         for did, info in catalog.items():
-            path = root / 'series' / f'{did}.json'
-            old = upgrade_record(read_json(path, {}))
             if failure_recent(previous, did, retry_hours):
                 errors[did] = previous['failures'][did]
                 failure_checks[did] = previous.get('failureChecks', {}).get(did) or previous['checked']
                 continue
-            record = dict(schema=2, source='contract_chart', id=did, name=info['name'],
-                          pub=info.get('pub'), episodes=info.get('episodes'),
-                          qv=dict(old.get('qv', {})), dur=dict(old.get('dur', {})), segments=dict(old.get('segments', {})),
-                          observedAt={m: dict(old.get('observedAt', {}).get(m, {})) for m in ('qv', 'dur')},
-                          observedAtBasis={m: dict(old.get('observedAtBasis', {}).get(m, {})) for m in ('qv', 'dur')})
             try:
+                path = root / 'series' / f'{did}.json'
+                old = upgrade_record(read_json(path, {}))
+                record = dict(schema=2, source='contract_chart', id=did, name=info['name'],
+                              pub=info.get('pub'), episodes=info.get('episodes'),
+                              qv=dict(old.get('qv', {})), dur=dict(old.get('dur', {})), segments=dict(old.get('segments', {})),
+                              observedAt={m: dict(old.get('observedAt', {}).get(m, {})) for m in ('qv', 'dur')},
+                              observedAtBasis={m: dict(old.get('observedAtBasis', {}).get(m, {})) for m in ('qv', 'dur')})
                 capture.ranges.pop(did, None)
                 capture.failures.pop((did, 'range'), None)
                 page.goto(f'https://www.tiktokdramacenter.com/series/{did}/performance/core', wait_until='domcontentloaded')
@@ -269,7 +269,8 @@ def collect(page, base, start='2026-03-01', log=print, retry_hours=24):
                 atomic_json(path, record)
                 saved += 1
                 log(f'单剧历史 {info["name"]}：{len(record["qv"])} 个播放日值，重合校验 {matched} 天，差异 {len(differences)}')
-            except (PageDataError, ValueError, KeyError, TypeError) as e:
+            except Exception as e:
+                # A bad archive or Playwright navigation failure belongs to this title only.
                 errors[did] = str(e)
                 failure_checks[did] = dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
                 log(f'单剧历史 {info["name"]} 暂不可用：{e}')

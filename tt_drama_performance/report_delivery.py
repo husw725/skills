@@ -1,7 +1,9 @@
 """Versioned, same-origin report sections; retain the standalone business report."""
 import hashlib
 import json
+import os
 from pathlib import Path
+import tempfile
 
 from report_codec import encode_payload, pack_payload, read_report_payload
 
@@ -12,6 +14,28 @@ SECTION_KEYS = {
     'legacy': ('legacyDaily',),
     'history': ('dayDetails',),
 }
+
+
+def verify_asset(relative, path):
+    expected = Path(relative).stem.rsplit('-', 1)[-1]
+    if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+        raise ValueError(f'Report section checksum mismatch: {relative}')
+
+
+def write_asset(path, body):
+    if path.exists() and path.read_bytes() == body:
+        return
+    # Never leave a half-written immutable file after an interrupted generation.
+    descriptor, temporary = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=path.parent)
+    try:
+        with os.fdopen(descriptor, 'wb') as stream:
+            stream.write(body)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def build_web_report(base, payload=None):
@@ -31,8 +55,7 @@ def build_web_report(base, payload=None):
         digest = hashlib.sha256(body).hexdigest()
         relative = f'data/{name}-{digest}.json'
         path = directory / relative
-        if not path.exists():
-            path.write_bytes(body)
+        write_asset(path, body)
         manifest[name] = dict(path=relative, sha256=digest, keys=list(values))
         assets.append((relative, path))
     core['_sections'] = manifest
