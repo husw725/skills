@@ -281,8 +281,12 @@ async function loadReportSection(name) {
   return pending;
 }
 function deferReportSection(name,cardId,draw) {
-  if(!DATA._sections?.[name]||reportLoaded.has(name))return false;
+  if(!DATA._sections?.[name])return false;
   const card=document.getElementById(cardId),zh=LANG==='zh';
+  if(reportLoaded.has(name)){
+    reportObservers.get(name)?.disconnect();card.classList.remove('remote-pending');
+    card.querySelector('.remote-status')?.remove();return false;
+  }
   card.style.display='';card.classList.add('remote-pending');
   let status=card.querySelector('.remote-status');
   if(!status){status=document.createElement('div');status.className='remote-status';status.setAttribute('role','status');card.prepend(status);}

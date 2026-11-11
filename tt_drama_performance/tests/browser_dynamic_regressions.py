@@ -101,6 +101,10 @@ def main(channel=None):
                 other.wait_for_function("reportLoaded.has('history')")
                 assert other.evaluate('periodSelection===0&&customPeriod===null')
                 assert len(history_requests) == 2, history_requests  # failed request + one shared retry
+                # Preloaded/cached data also removes the placeholder before a full redraw.
+                other.evaluate("loadReportSection('details').then(()=>renderAll())")
+                assert other.locator('#detailTitleSelect').is_visible()
+                assert other.locator('#seriesDetailsCard .remote-status').count() == 0
                 other.close()
                 browser.close()
         finally:
