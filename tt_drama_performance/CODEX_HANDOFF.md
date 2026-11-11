@@ -17,6 +17,18 @@
 
 ## 当前接力记录
 
+### 2026-11-11 五项P2已修复发布（最新，覆盖下方待修复审查）
+
+- 用户明确要求修复。代码6f1000a、报告81bffb0已推送；独立复核最终“修正后放行”，下方5项P2全部验证关闭。保留既有业务模型与平台数据口径，不重采、不推算缺日或留存。
+- series_history逐剧try现在覆盖旧档读取/迁移、记录构造、Playwright导航/等待、采集及保存；异常记入failures/failureChecks后继续下一剧。失败冷却在读档前判断，跳过不续期；坏档原字节保留。新增整循环测试覆盖坏JSON、非对象档案、导航错误、后续剧实际处理、冷却到期再次尝试。
+- previous30失败保存实际checked；failure_in_cooldown按retry_hours控制同水位冷却，新水位重试，旧无时间/非法时间立即重试；跳过保持原失败时间。新测试通过真实collect控制流验证旧失败恢复、近期失败跳过、失败时间不续期、retry_hours=0及水位变化。
+- 日期分析在发起时固定起止日期，await后比较输入；加载中修改/清空日期取消此次分析、清旧结果并提示重新点击，不再生成反向日期0天0播放。保留已有晚回包/预设选择隔离。真实浏览器覆盖倒序、清空、越界编辑及重新确认恢复。
+- 主仓库与Pages统一run_publish_git：git diff --quiet HEAD -- 限定目标路径无差异时跳过commit，继续push/后续同步；真实diff/commit错误不吞，不依赖Git输出文案。临时真实git验证其他本地修改/untracked均保留；生产首次发布后再次执行主仓库无变化commit及Pages同步，输出UNCHANGED_MAIN_AND_PAGES_SYNC_OK。
+- 已有hash分片逐字节校验并原子重建（唯一临时文件、flush/fsync、replace、失败清理）；S3/Pages复制前verify_asset验证摘要，坏分片不切快速HTML。浏览器完整性校验失败后，下次retry使用cache=reload，成功清标记，避免immutable坏缓存永久拒载。测试包含损坏恢复、模拟replace中断、阻止坏分片发布及浏览器reload选项。
+- 验证：Mac/Windows50项测试+9条旧断言、三组浏览器回归通过；Windows151份存档只读审计0问题。独立复核另跑50项+9及最新HTTP回归通过。真实发布只将已有report DATA嵌入新模板，脚本先断言完全相同，未更新生成时间或AI洞察，主48/253天及现有分集画像不变。
+- Windows原Interactive身份完成S3（14:32:21）、主Git（14:32:28）、Pages（14:32:35），RETRY_FIXES_PUBLISH_EXIT0，14:32:42再次无变化Pages同步成功。快速入口 https://starlitshorts.s3.amazonaws.com/aigc/drama/report/tt_drama/report-fast.html 与原分享页 https://husw725.github.io/tt-drama-report/ 均线上验证四段同源、全DATA一致、缓存、双语/剧目、390px、无JS错误及真实下载中编辑日期取消/恢复。Pages构建42973163658成功。
+- 临时TTDramaRetryFixPublishValidation20261111最终LastTaskResult0后已删除；TTDramaDaily Ready，11:00:02结果0，下一轮15:00，持久频率未改。所有验证/发布进程禁用webhook，未发通知。Macpull一度TLS失败，单次HTTP/1.1重试成功，保留TLS校验与全局网络配置；autostash正常恢复原两份legacy JSON修改，无冲突、未提交其他项目改动。
+
 ### 2026-11-11 再次review：5项P2待修复（最新审查结论）
 
 - 用户仅要求review，本轮未修业务代码、未重新采集/发布、未动真实存档或计划任务，未发送通知。审查基于65a9403；现有43项测试+9条旧断言及动态HTTP浏览器回归通过，以下未覆盖边界已在临时目录/fake/真实浏览器复现。独立采集审核确认下述前两项，主代理复现后三项；未发现P1，不能沿用此前“放行”覆盖本次新问题。
