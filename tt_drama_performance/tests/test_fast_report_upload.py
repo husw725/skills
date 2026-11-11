@@ -4,6 +4,8 @@ import tempfile
 import types
 import unittest
 from unittest.mock import patch
+from report_codec import encode_payload, read_report_payload
+from report_delivery import build_web_report
 
 import daily_update as updater
 
@@ -12,7 +14,11 @@ class FastReportUploadTests(unittest.TestCase):
     def test_fast_entry_is_gzip_and_original_entry_remains_raw_html(self):
         for enabled in (True, False):
             with self.subTest(enabled=enabled), tempfile.TemporaryDirectory() as base:
-                original = '<html><body>中文 report data</body></html>'.encode('utf-8')
+                payload = {'seriesDetails': [], 'episodeDetails': {}, 'legacyDaily': [],
+                           'seriesHistory': [], 'dayDetails': {'2026-11-08': [[0, None]]}, 'schema': 2}
+                template = '<script>const DATA = decodeReportData(/*__DATA__*/null);</script>'
+                (Path(base) / 'template.html').write_text(template, encoding='utf-8')
+                original = template.replace('/*__DATA__*/null', encode_payload(payload)).encode('utf-8')
                 (Path(base) / 'report.html').write_bytes(original)
                 uploads = []
 
@@ -32,12 +38,18 @@ class FastReportUploadTests(unittest.TestCase):
                 self.assertEqual(uploads[0][2], original)
                 self.assertNotIn('ContentEncoding', uploads[0][3])
                 self.assertEqual((Path(base) / 'report.html').read_bytes(), original)
-                self.assertEqual(len(uploads), 2 if enabled else 1)
+                self.assertEqual(len(uploads), 6 if enabled else 1)
                 if enabled:
-                    self.assertEqual(uploads[1][1], 'aigc/drama/report/tt_drama/report-fast.html')
-                    self.assertEqual(uploads[1][3]['ContentEncoding'], 'gzip')
-                    self.assertEqual(uploads[1][3]['ContentType'], 'text/html; charset=utf-8')
-                    self.assertEqual(gzip.decompress(uploads[1][2]), original)
+                    self.assertEqual(uploads[-1][1], 'aigc/drama/report/tt_drama/report-fast.html')
+                    self.assertEqual(uploads[-1][3]['ContentEncoding'], 'gzip')
+                    self.assertEqual(uploads[-1][3]['ContentType'], 'text/html; charset=utf-8')
+                    web, assets = build_web_report(base)
+                    self.assertEqual(gzip.decompress(uploads[-1][2]), web.read_bytes())
+                    self.assertIn('_sections', read_report_payload(web.read_text()))
+                    for upload, (relative, path) in zip(uploads[1:-1], assets):
+                        self.assertTrue(upload[1].endswith(relative))
+                        self.assertEqual(gzip.decompress(upload[2]), path.read_bytes())
+                        self.assertIn('immutable', upload[3]['CacheControl'])
 
 
 if __name__ == '__main__':

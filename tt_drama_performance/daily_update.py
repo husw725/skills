@@ -461,9 +461,15 @@ def sync_pages_repo(today):
     if git_stuck(d):
         log('分享页仓库有未解决冲突，停止同步以保留现有修改。')
         return False
-    shutil.copyfile(os.path.join(BASE, 'report.html'), os.path.join(d, 'index.html'))
-    for cmd in (['git', 'add', 'index.html'],
-                ['git', 'commit', '--only', '-m', f'daily report {today}', '--', 'index.html'],
+    from report_delivery import build_web_report
+    web, assets = build_web_report(BASE)
+    for relative, source in assets:
+        target = os.path.join(d, relative)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        shutil.copyfile(source, target)
+    shutil.copyfile(web, os.path.join(d, 'index.html'))
+    for cmd in (['git', 'add', 'index.html', 'data'],
+                ['git', 'commit', '--only', '-m', f'daily report {today}', '--', 'index.html', 'data'],
                 ['git', 'push']):
         r = run_git(cmd, cwd=d)
         if r.returncode != 0 and 'nothing to commit' not in r.stdout + r.stderr:
@@ -595,10 +601,19 @@ def sync_s3(today):
             import gzip
             import tempfile
             from pathlib import Path
+            from report_delivery import build_web_report
+            web, assets = build_web_report(BASE)
             fast_key = f'aigc/drama/{rel}/report-fast.html'
             with tempfile.TemporaryDirectory(prefix='tt-report-gzip-') as tmp:
+                # Immutable sections must exist before publishing their HTML manifest.
+                for relative, source in assets:
+                    compressed = Path(tmp) / 'section.json.gz'
+                    compressed.write_bytes(gzip.compress(source.read_bytes(), compresslevel=9, mtime=0))
+                    upload(compressed, f'aigc/drama/{rel}/{relative}', {
+                        'ContentType': 'application/json; charset=utf-8', 'ContentEncoding': 'gzip',
+                        'CacheControl': 'public, max-age=31536000, immutable'})
                 compressed = Path(tmp) / 'report.html.gz'
-                compressed.write_bytes(gzip.compress(Path(report).read_bytes(), compresslevel=9, mtime=0))
+                compressed.write_bytes(gzip.compress(web.read_bytes(), compresslevel=9, mtime=0))
                 upload(compressed, fast_key, dict(extra, ContentEncoding='gzip'))
             log(f'S3 快速入口已同步 s3://starlitshorts/{fast_key}')
         return True

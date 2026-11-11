@@ -93,6 +93,7 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: var(--surface2); }
 .detail-bar-fill { height:100%;border-radius:4px;background:var(--gold); }
 #detailTitleSelect,#detailChannelSelect { max-width:100%;min-width:0; }
 #detailAccounts td:first-child { min-width:175px; }
+.remote-pending > :not(.remote-status) { display:none!important; }
 </style>
 </head>
 <body>
@@ -253,6 +254,62 @@ function decodeReportData(encoded) {
   return decode(encoded.root);
 }
 const DATA = decodeReportData(/*__DATA__*/null);
+
+// Relative URLs keep S3 and the Pages mirror on their own origin: no CORS needed.
+const reportLoads=new Map(),reportLoaded=new Set(),reportObservers=new Map();
+async function loadReportSection(name) {
+  const spec=DATA._sections?.[name];
+  if(!spec||reportLoaded.has(name))return;
+  if(reportLoads.has(name))return reportLoads.get(name);
+  const pending=(async()=>{
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+    try {
+      if(!new RegExp('^data/'+name+'-[a-f0-9]{64}\\.json$').test(spec.path))throw Error('Invalid section path');
+      const response=await fetch(new URL(spec.path,location.href),{signal:controller.signal,credentials:'omit'});
+      if(!response.ok)throw Error('HTTP '+response.status);
+      const bytes=await response.arrayBuffer();
+      const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
+      if(digest!==spec.sha256)throw Error('Section checksum mismatch');
+      const packet=decodeReportData(JSON.parse(new TextDecoder().decode(bytes)));
+      if(packet.section!==name||!packet.data||Object.keys(packet.data).length!==spec.keys.length
+          ||!spec.keys.every(k=>Object.prototype.hasOwnProperty.call(packet.data,k)))throw Error('Invalid section data');
+      for(const key of spec.keys)DATA[key]=packet.data[key];
+      reportLoaded.add(name);
+    } finally {clearTimeout(timer);reportLoads.delete(name);}
+  })();
+  reportLoads.set(name,pending);
+  return pending;
+}
+function deferReportSection(name,cardId,draw) {
+  if(!DATA._sections?.[name]||reportLoaded.has(name))return false;
+  const card=document.getElementById(cardId),zh=LANG==='zh';
+  card.style.display='';card.classList.add('remote-pending');
+  let status=card.querySelector('.remote-status');
+  if(!status){status=document.createElement('div');status.className='remote-status';status.setAttribute('role','status');card.prepend(status);}
+  const labels={details:zh?'单剧画像与分集':'Title audience and episodes',archive:zh?'单剧历史细数据':'Title history'};
+  const show=(state)=>{
+    status.replaceChildren();
+    const text=document.createElement('p');text.className='meta';
+    text.textContent=labels[name]+' · '+(state==='loading'?(zh?'正在加载…':'Loading…'):state==='failed'?(zh?'加载失败，请重试。':'Loading failed. Please retry.'):(zh?'浏览到这里时加载明细':'Details load when this section is visible'));
+    status.append(text);
+    const button=document.createElement('button');button.className='datechip';button.disabled=state==='loading';
+    button.textContent=state==='failed'?(zh?'重新加载':'Retry'):(zh?'加载明细':'Load details');
+    button.onclick=run;status.append(button);
+  };
+  const run=async()=>{
+    reportObservers.get(name)?.disconnect();show('loading');
+    try{await loadReportSection(name);card.classList.remove('remote-pending');status.remove();draw();}
+    catch(e){show('failed');}
+  };
+  if(!reportObservers.has(name)){
+    show('idle');
+    if('IntersectionObserver' in window){
+      const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))run();},{rootMargin:'100px'});
+      reportObservers.set(name,observer);observer.observe(card);
+    }else reportObservers.set(name,{disconnect(){}});
+  }else if(!reportLoads.has(name)&&!status.querySelector('button')?.disabled)show('idle');
+  return true;
+}
 
 /* ---------- i18n ---------- */
 const I18N = {
@@ -505,7 +562,7 @@ function renderHeader() {
   }
 }
 
-let periodSelection = 0, customPeriod = null, analysisWindow = null, analysisUnavailable = false;
+let periodSelection = 0, customPeriod = null, analysisWindow = null, analysisUnavailable = false, historyRequest=0;
 function unavailableChart(id) {
   document.getElementById(id).innerHTML = `<p class="meta">${LANG === 'zh' ? '所选日期缺少完整实测记录，暂无可展示的分析结果。' : 'Complete measurements are unavailable for the selected dates.'}</p>`;
 }
@@ -568,7 +625,7 @@ function renderModern() {
       + filtered.map(r=>`<tr><td>${esc(r.name)}${r.new14 ? ` <span class="badge">${T().newBadge}</span>` : ''}</td><td>${r.launch || '—'}</td><td>${fmtN(r.qv)}</td><td>${fmtP(r.change)}</td><td>${fmtP(r.share)}</td><td>${fmtN(r.like)}</td><td>${fmtN(r.fav)}</td><td>${fmtN(r.com)}</td><td>${r.fav1k == null ? '—' : r.fav1k.toFixed(1)}</td><td>${r.interactions1k == null ? '—' : r.interactions1k.toFixed(1)}</td></tr>`).join('')
       + (!filtered.length ? `<tr><td colspan="10">${zh ? '没有符合条件的剧目' : 'No matching titles'}</td></tr>` : '') + '</table>';
   };
-  select.onchange = () => {periodSelection = +select.value;const p=options[periodSelection];analysisWindow={start:p.start,end:p.end};analysisUnavailable=false;document.getElementById('historyStart').value=p.start;document.getElementById('historyEnd').value=p.end;draw();renderTrendCharts();renderDtrend();};
+  select.onchange = () => {historyRequest++;periodSelection = +select.value;const p=options[periodSelection];analysisWindow={start:p.start,end:p.end};analysisUnavailable=false;document.getElementById('historyStart').value=p.start;document.getElementById('historyEnd').value=p.end;draw();renderTrendCharts();renderDtrend();};
   search.oninput = draw;
   document.getElementById('periodNew').onchange = draw;
   draw();
@@ -579,16 +636,27 @@ function renderModern() {
   if(!start.value)start.value=DATA.periods[1].start;if(!end.value)end.value=DATA.dataThrough;
   document.getElementById('historyAnalyze').textContent=zh?'分析所选日期':'Analyze dates';
   document.getElementById('historyAll').textContent=zh?'全部已采历史':'All collected history';
-  const analyze=()=>{
+  const analyze=async()=>{
+    const request=++historyRequest;
     if(!start.value||!end.value||start.value>end.value||start.value<DATA.historyRequestedStart||end.value>DATA.dataThrough){
       document.getElementById('periodMeta').textContent=zh?'请选择有效的起止日期':'Choose a valid date range';analysisUnavailable=true;document.getElementById('periodTable').innerHTML='';renderTrendCharts();renderDtrend();return;
+    }
+    if(DATA._sections?.history&&!reportLoaded.has('history')){
+      analysisUnavailable=true;document.getElementById('periodTable').innerHTML='';renderTrendCharts();renderDtrend();
+      document.getElementById('periodMeta').textContent=zh?'正在加载所选日期明细…':'Loading date details…';
+      try{await loadReportSection('history');if(request!==historyRequest)return;}
+      catch(e){
+        if(request!==historyRequest)return;
+        const target=document.getElementById('periodMeta');target.textContent=LANG==='zh'?'日期明细加载失败，请重试。':'Date details failed to load. Please retry.';
+        const button=document.createElement('button');button.className='datechip';button.textContent=LANG==='zh'?'重新加载':'Retry';button.onclick=()=>document.getElementById('historyAnalyze').click();target.append(button);return;
+      }
     }
     const p=historyPeriod(start.value,end.value);
     if(p.missing){document.getElementById('periodMeta').textContent=zh?`所选区间仍缺 ${p.missing.length} 天，暂不能生成完整排名。缺失日期：${p.missing.slice(0,8).join('、')}${p.missing.length>8?'…':''}`:`${p.missing.length} days are unavailable; a complete ranking cannot be computed. Missing: ${p.missing.slice(0,8).join(', ')}${p.missing.length>8?'…':''}`;document.getElementById('periodTable').innerHTML='';analysisUnavailable=true;renderTrendCharts();renderDtrend();return;}
     customPeriod=p;periodSelection=DATA.periods.length;analysisWindow={start:p.start,end:p.end};analysisUnavailable=false;renderModern();renderTrendCharts();renderDtrend();
   };
   document.getElementById('historyAnalyze').onclick=analyze;
-  document.getElementById('historyAll').onclick=()=>{start.value=Object.keys(DATA.dayDetails).sort()[0];end.value=DATA.dataThrough;analyze();};
+  document.getElementById('historyAll').onclick=()=>{start.value=(DATA.historyCoverage||[]).filter(d=>d.status==='ok').map(d=>d.date).sort()[0]||DATA.historyRequestedStart;end.value=DATA.dataThrough;analyze();};
   document.getElementById('coverageCard').style.display='';
   const coverage=DATA.historyCoverage||[],available=coverage.filter(d=>d.status==='ok').length;
   document.getElementById('coverageTitle').textContent=zh?`全历史数据覆盖 · ${available}/${coverage.length} 天已验收`:`Historical coverage · ${available}/${coverage.length} verified days`;
@@ -603,7 +671,12 @@ function renderModern() {
   document.getElementById('legacyTitle').textContent = zh ? '查看旧版历史指标存档' : 'View legacy metric archive';
   document.getElementById('legacyNote').textContent = zh ? '以下保留原采集日期与数值，未以新版缺失字段覆盖。与新版有效播放的更新值可能存在平台修订差异。' : 'Original dates and values are preserved. Platform revisions may cause differences from the updated v2 effective views.';
   const labels = zh ? ['日期','总播放','有效播放','完播','点赞','收藏','评论','分享'] : ['Date','Views','Effective','Completions','Likes','Favorites','Comments','Shares'];
-  renderWhenOpen('legacyTable',()=>{
+  renderWhenOpen('legacyTable',async()=>{
+    if(DATA._sections?.legacy&&!reportLoaded.has('legacy')){
+      const target=document.getElementById('legacyTable');target.textContent=LANG==='zh'?'正在加载旧版档案…':'Loading archive…';
+      try{await loadReportSection('legacy');renderModern();}
+      catch(e){target.textContent=LANG==='zh'?'档案加载失败，请重试。':'Archive failed to load. Please retry.';const button=document.createElement('button');button.className='datechip';button.textContent=LANG==='zh'?'重新加载':'Retry';button.onclick=()=>renderModern();target.append(button);}return;
+    }
     document.getElementById('legacyTable').innerHTML = '<table><tr>'+labels.map(l=>`<th>${l}</th>`).join('')+'</tr>'+(DATA.legacyDaily||[]).slice().reverse().map(r=>`<tr><td>${r.date}</td>${['vv','qv','finish','likes','favs','comments','shares'].map(k=>`<td>${fmtN(r[k])}</td>`).join('')}</tr>`).join('')+'</table>';
   });
 }
@@ -848,6 +921,7 @@ function validAudienceDistribution(values, keys) {
     && Math.abs(keys.reduce((total,k)=>total+values[k],0)-100)<=.15;
 }
 function renderSeriesDetails() {
+  if(deferReportSection('details','seriesDetailsCard',renderSeriesDetails))return;
   const byId=new Map((DATA.seriesDetails||[]).map(r=>[r.id,r]));
   Object.values(DATA.episodeDetails||{}).forEach(r=>{if(!byId.has(r.id))byId.set(r.id,{id:r.id,name:r.name,sections:{}});});
   const records=[...byId.values()];
@@ -925,6 +999,7 @@ function renderEpisodeDetail(did) {
 
 let seriesArchivePick=null,seriesArchiveMetric='qv',seriesArchiveWindow=null;
 function renderSeriesArchive() {
+  if(deferReportSection('archive','seriesArchiveCard',renderSeriesArchive))return;
   const records=DATA.seriesHistory||[];
   if(!records.length)return;
   const zh=LANG==='zh';
@@ -987,6 +1062,7 @@ function renderAll() {
 }
 
 document.getElementById('langBtn').addEventListener('click', () => {
+  historyRequest++;
   LANG = LANG === 'zh' ? 'en' : 'zh';
   try { localStorage.setItem('ttdr_lang', LANG); } catch (e) {}
   renderAll();

@@ -304,5 +304,7 @@ def build_report(base):
     tmp = base / 'report.html.tmp'
     tmp.write_text(out, encoding='utf-8')
     tmp.replace(base / 'report.html')
+    from report_delivery import build_web_report
+    build_web_report(base, payload)
     print(f'report.html written; v2 through {payload["dataThrough"]}; {payload["directDays"]} measured drama days; {len(payload["dramas"])} grouped titles')
     return payload
