@@ -100,11 +100,11 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: var(--surface2); }
   <div class="hdr">
     <div>
       <div class="kicker">Analytics · Daily Report</div>
-      <h1 id="h1"></h1>
+      <h1 id="h1">TikTok Drama Daily Report</h1>
     </div>
     <button class="langbtn" id="langBtn"></button>
   </div>
-  <div class="meta" id="meta"></div>
+  <div class="meta" id="meta" role="status">Loading report · 正在加载报表…</div>
 
   <div class="card" id="qualityCard" style="display:none;border-color:var(--gold-dim)">
     <h2 id="qualityTitle"></h2><ul id="qualityNotes" style="padding-left:18px;color:var(--ink2)"></ul>
@@ -233,7 +233,26 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: var(--surface2); }
 <div id="tip"></div>
 
 <script>
-const DATA = /*__DATA__*/null;
+function decodeReportData(encoded) {
+  if(!encoded||encoded._reportEncoding!=='compact-v1')return encoded;
+  const {shapes,strings}=encoded;
+  const decode=value=>{
+    if(!Array.isArray(value))return value;
+    const tag=value[0];
+    if(!Number.isInteger(tag))throw new Error('Invalid report tag');
+    if(tag===-1)return value.slice(1).map(decode);
+    if(tag===-2){
+      if(value.length!==2||!Number.isInteger(value[1])||value[1]<0||value[1]>=strings.length)throw new Error('Invalid report string');
+      return strings[value[1]];
+    }
+    if(tag<0||tag>=shapes.length)throw new Error('Invalid report shape');
+    const keys=shapes[tag];
+    if(!keys||value.length!==keys.length+1)throw new Error('Invalid report data');
+    return Object.fromEntries(keys.map((key,i)=>[key,decode(value[i+1])]));
+  };
+  return decode(encoded.root);
+}
+const DATA = decodeReportData(/*__DATA__*/null);
 
 /* ---------- i18n ---------- */
 const I18N = {
@@ -435,8 +454,23 @@ function legend(el, series) {
 }
 
 function dataTable(el, labels, series, yfmt) {
-  document.getElementById(el).innerHTML = `<table><tr><th>${T().date}</th>${series.map(s=>`<th>${s.name}</th>`).join('')}</tr>` +
-    labels.map((d,i) => `<tr><td>${d}</td>${series.map(s=>`<td>${yfmt(s.values[i], true)}</td>`).join('')}</tr>`).join('') + '</table>';
+  renderWhenOpen(el,()=>{
+    document.getElementById(el).innerHTML = `<table><tr><th>${T().date}</th>${series.map(s=>`<th>${s.name}</th>`).join('')}</tr>` +
+      labels.map((d,i) => `<tr><td>${d}</td>${series.map(s=>`<td>${yfmt(s.values[i], true)}</td>`).join('')}</tr>`).join('') + '</table>';
+  });
+}
+
+function renderWhenOpen(id, draw) {
+  const el=document.getElementById(id),details=el.closest('details');
+  if(!details){draw();return;}
+  details.ontoggle=()=>{if(details.open)draw();};
+  if(details.open)draw();else el.innerHTML='';
+}
+
+function clearDataTable(id) {
+  const el=document.getElementById(id),details=el.closest('details');
+  if(details)details.ontoggle=null;
+  el.innerHTML='';
 }
 
 /* ---------- 跨语言/跨渲染保持的交互状态 ---------- */
@@ -559,15 +593,19 @@ function renderModern() {
   const coverage=DATA.historyCoverage||[],available=coverage.filter(d=>d.status==='ok').length;
   document.getElementById('coverageTitle').textContent=zh?`全历史数据覆盖 · ${available}/${coverage.length} 天已验收`:`Historical coverage · ${available}/${coverage.length} verified days`;
   document.getElementById('coverageSummary').textContent=zh?`${DATA.historyRequestedStart} ~ ${DATA.dataThrough}；绿色为单日明细，蓝色仅有大盘趋势，红色为平台报错，金色为采集未验收，灰色待采。点击日期可查看单日。`:`${DATA.historyRequestedStart} ~ ${DATA.dataThrough}. Green: title-day records; blue: institution trend only; red: platform error; gold: not verified; gray: pending. Click a day to analyze it.`;
-  const months=new Map();for(const d of coverage){const m=d.date.slice(0,7);if(!months.has(m))months.set(m,[]);months.get(m).push(d);}
-  const statuses=zh?{ok:'单日明细已验收',institution_only:'仅大盘趋势',unavailable:'平台暂不可用',unverified:'采集未验收',pending:'待采集'}:{ok:'Measured title-day',institution_only:'Institution trend only',unavailable:'Platform error',unverified:'Not verified',pending:'Pending collection'};
-  document.getElementById('coverageCalendar').innerHTML=[...months].map(([month,days])=>`<div class="coverage-month">${month} · ${days.filter(d=>d.status==='ok').length}/${days.length}</div><div class="coverage-grid">${days.map(d=>`<button class="coverage-day ${d.status}" data-day="${d.date}" title="${d.date} · ${statuses[d.status]}" aria-label="${d.date} ${statuses[d.status]}"></button>`).join('')}</div>`).join('');
-  document.querySelectorAll('.coverage-day').forEach(b=>b.onclick=()=>{start.value=b.dataset.day;end.value=b.dataset.day;analyze();});
+  renderWhenOpen('coverageCalendar',()=>{
+    const months=new Map();for(const d of coverage){const m=d.date.slice(0,7);if(!months.has(m))months.set(m,[]);months.get(m).push(d);}
+    const statuses=zh?{ok:'单日明细已验收',institution_only:'仅大盘趋势',unavailable:'平台暂不可用',unverified:'采集未验收',pending:'待采集'}:{ok:'Measured title-day',institution_only:'Institution trend only',unavailable:'Platform error',unverified:'Not verified',pending:'Pending collection'};
+    document.getElementById('coverageCalendar').innerHTML=[...months].map(([month,days])=>`<div class="coverage-month">${month} · ${days.filter(d=>d.status==='ok').length}/${days.length}</div><div class="coverage-grid">${days.map(d=>`<button class="coverage-day ${d.status}" data-day="${d.date}" title="${d.date} · ${statuses[d.status]}" aria-label="${d.date} ${statuses[d.status]}"></button>`).join('')}</div>`).join('');
+    document.querySelectorAll('.coverage-day').forEach(b=>b.onclick=()=>{start.value=b.dataset.day;end.value=b.dataset.day;analyze();});
+  });
   document.getElementById('legacyCard').style.display = '';
   document.getElementById('legacyTitle').textContent = zh ? '查看旧版历史指标存档' : 'View legacy metric archive';
   document.getElementById('legacyNote').textContent = zh ? '以下保留原采集日期与数值，未以新版缺失字段覆盖。与新版有效播放的更新值可能存在平台修订差异。' : 'Original dates and values are preserved. Platform revisions may cause differences from the updated v2 effective views.';
   const labels = zh ? ['日期','总播放','有效播放','完播','点赞','收藏','评论','分享'] : ['Date','Views','Effective','Completions','Likes','Favorites','Comments','Shares'];
-  document.getElementById('legacyTable').innerHTML = '<table><tr>'+labels.map(l=>`<th>${l}</th>`).join('')+'</tr>'+(DATA.legacyDaily||[]).slice().reverse().map(r=>`<tr><td>${r.date}</td>${['vv','qv','finish','likes','favs','comments','shares'].map(k=>`<td>${fmtN(r[k])}</td>`).join('')}</tr>`).join('')+'</table>';
+  renderWhenOpen('legacyTable',()=>{
+    document.getElementById('legacyTable').innerHTML = '<table><tr>'+labels.map(l=>`<th>${l}</th>`).join('')+'</tr>'+(DATA.legacyDaily||[]).slice().reverse().map(r=>`<tr><td>${r.date}</td>${['vv','qv','finish','likes','favs','comments','shares'].map(k=>`<td>${fmtN(r[k])}</td>`).join('')}</tr>`).join('')+'</table>';
+  });
 }
 
 /* 缺采声明：平台把相邻日合并下发时，剧目级拿不到单日切分。如实标出来，
@@ -615,7 +653,7 @@ function renderKpis() {
 }
 
 function renderTrendCharts() {
-  if(analysisUnavailable){unavailableChart('c1');unavailableChart('c2');document.getElementById('t1').innerHTML='';document.getElementById('t2').innerHTML='';document.getElementById('lg1').innerHTML='';document.getElementById('lg2').innerHTML='';return;}
+  if(analysisUnavailable){unavailableChart('c1');unavailableChart('c2');clearDataTable('t1');clearDataTable('t2');document.getElementById('lg1').innerHTML='';document.getElementById('lg2').innerHTML='';return;}
   const days = DATA.schema === 2 ? (analysisWindow ? DATA.daily.filter(r=>r.date>=analysisWindow.start&&r.date<=analysisWindow.end) : DATA.daily.slice(-60)) : DATA.daily, labels = days.map(r => r.date);
   const s1 = [
     {name: T().sVV, color: 'var(--s1)', values: days.map(r => r.vv)},
@@ -880,7 +918,9 @@ function renderEpisodeDetail(did) {
     const max=Math.max(...regular.map(r=>r.episode)),axis=Array.from({length:max},(_,i)=>String(i+1));
     lineChart(el('detailEpisodesPlot'),axis,[{name:zh?'累计播放':'Views',color:'var(--s1)',values:axis.map(n=>values.has(+n)?values.get(+n):null)}],fmtN,[],s=>s);
   }else unavailableChart('detailEpisodesPlot');
-  el('detailEpisodesData').innerHTML=rows.length?'<table><tr><th>'+(zh?'集号 / 片段':'Episode / highlight')+'</th><th>'+(zh?'平台累计有效播放':'Platform cumulative effective views')+'</th></tr>'+rows.map(r=>`<tr><td>${r.highlight?(zh?'片段 · ':'Highlight · '):r.episode===0?(zh?'未编号内容 · ':'Unnumbered content · '):(zh?'第 ':'Episode ')}${r.episode}${!r.highlight&&r.episode>0&&zh?' 集':''}</td><td>${fmtN(r.qv)}</td></tr>`).join('')+'</table>':'';
+  renderWhenOpen('detailEpisodesData',()=>{
+    el('detailEpisodesData').innerHTML=rows.length?'<table><tr><th>'+(zh?'集号 / 片段':'Episode / highlight')+'</th><th>'+(zh?'平台累计有效播放':'Platform cumulative effective views')+'</th></tr>'+rows.map(r=>`<tr><td>${r.highlight?(zh?'片段 · ':'Highlight · '):r.episode===0?(zh?'未编号内容 · ':'Unnumbered content · '):(zh?'第 ':'Episode ')}${r.episode}${!r.highlight&&r.episode>0&&zh?' 集':''}</td><td>${fmtN(r.qv)}</td></tr>`).join('')+'</table>':'';
+  });
 }
 
 let seriesArchivePick=null,seriesArchiveMetric='qv',seriesArchiveWindow=null;
@@ -906,7 +946,7 @@ function renderSeriesArchive() {
   document.getElementById('seriesArchiveDataLabel').textContent=T().viewData;
   const draw=()=>{
     if(!start.value||!end.value||start.value>end.value||start.value<DATA.historyRequestedStart||end.value>DATA.dataThrough){
-      unavailableChart('seriesArchivePlot');document.getElementById('seriesArchiveData').innerHTML='';return;
+      unavailableChart('seriesArchivePlot');clearDataTable('seriesArchiveData');return;
     }
     seriesArchiveWindow={id:source.id,start:start.value,end:end.value};
     const points=source[seriesArchiveMetric]||{},axis=[];
@@ -915,7 +955,7 @@ function renderSeriesArchive() {
     document.getElementById('seriesArchiveNote').textContent=zh
       ? `${start.value} ~ ${end.value} · 实际返回 ${observed}/${axis.length} 个日值 · 该剧全档播放与机构单日重合核对 ${source.matchedDays} 点，全档差异 ${(source.differences||[]).length} 点（不代表时长已核对）。此处按单个剧目/版本展示，不计入全机构已验收覆盖；未返回日期留空，互动指标不从本曲线推导。`
       : `${start.value} ~ ${end.value} · ${observed}/${axis.length} daily values returned · Across all archived dates for this title: ${source.matchedDays} overlapping view points checked; ${(source.differences||[]).length} differences (not a duration check). This is a separate title/version source, not institution-wide verified coverage. Missing dates stay blank; interactions are not inferred.`;
-    if(!observed){unavailableChart('seriesArchivePlot');document.getElementById('seriesArchiveData').innerHTML='';return;}
+    if(!observed){unavailableChart('seriesArchivePlot');clearDataTable('seriesArchiveData');return;}
     const label=seriesArchiveMetric==='qv'?(zh?'有效播放':'Effective views'):(zh?'平均播放时长（秒）':'Average play duration (seconds)');
     const series=[{name:label,color:'var(--s1)',values:axis.map(d=>Object.prototype.hasOwnProperty.call(points,d)?points[d]:null)}];
     const format=v=>seriesArchiveMetric==='qv'?fmtN(v):(v==null?'-':Number(v).toFixed(2)+'s');
@@ -942,6 +982,8 @@ function renderAll() {
   renderDramaTbl();
   renderSeriesDetails();
   renderSeriesArchive();
+  document.documentElement.dataset.reportReady='true';
+  performance.mark('report-ready');
 }
 
 document.getElementById('langBtn').addEventListener('click', () => {
@@ -949,7 +991,9 @@ document.getElementById('langBtn').addEventListener('click', () => {
   try { localStorage.setItem('ttdr_lang', LANG); } catch (e) {}
   renderAll();
 });
-renderAll();
+renderHeader();
+renderKpis();
+setTimeout(renderAll,0);
 </script>
 </body>
 </html>

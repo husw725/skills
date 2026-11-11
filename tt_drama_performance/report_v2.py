@@ -2,7 +2,6 @@
 from collections import defaultdict
 import datetime as dt
 import html
-import json
 from pathlib import Path
 
 from analytics_v2 import check_record, date_axis, error_kind, read_json, shift
@@ -299,7 +298,8 @@ def build_report(base):
     payload = build_payload(base)
     payload['aiInsights'] = ai_insights(payload)
     template = (base / 'template.html').read_text(encoding='utf-8')
-    encoded = json.dumps(payload, ensure_ascii=False, allow_nan=False).replace('</', '<\\/')
+    from report_codec import encode_payload
+    encoded = encode_payload(payload)
     out = template.replace('/*__DATA__*/null', encoded)
     tmp = base / 'report.html.tmp'
     tmp.write_text(out, encoding='utf-8')

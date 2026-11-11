@@ -8,7 +8,7 @@ import argparse
 import copy
 import json
 from pathlib import Path
-import re
+import sys
 import tempfile
 
 from playwright.sync_api import sync_playwright
@@ -16,8 +16,10 @@ from playwright.sync_api import sync_playwright
 
 def main(channel=None):
     base = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(base))
+    from report_codec import read_report_payload
     report = (base / 'report.html').read_text(encoding='utf-8')
-    payload = json.loads(re.search(r'const DATA = (.*?);\n', report, re.S).group(1))
+    payload = read_report_payload(report)
     template = (base / 'template.html').read_text(encoding='utf-8')
     now = '2026-11-10T00:00:00+00:00'
     detail = dict(id='123', name='Regression title', sections={'audience-stats': dict(
@@ -36,6 +38,7 @@ def main(channel=None):
             path = Path(tmp) / 'review.html'
             path.write_text(html, encoding='utf-8')
             page.goto(path.as_uri())
+            page.wait_for_function("document.documentElement.dataset.reportReady==='true'")
             page.evaluate("LANG='en'; renderAll()")
             assert not errors, errors
 
@@ -69,6 +72,8 @@ def main(channel=None):
             renderAll();
         }""")
         assert page.evaluate('window.episodeValues') == [10, None, 0]
+        page.locator('#detailEpisodesData').evaluate("el=>{el.closest('details').open=true}")
+        page.wait_for_function("document.querySelectorAll('#detailEpisodesData tr').length===4")
         assert page.locator('#detailEpisodesData tr').count() == 4
         page.set_viewport_size(dict(width=390, height=844))
         page.click('#langBtn')

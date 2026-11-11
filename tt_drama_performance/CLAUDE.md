@@ -20,6 +20,7 @@ TikTok 短剧数据日报（建于 2026-07-28），每日更新流程见 PLAYBOO
 ## 工作约定
 - 页面默认使用用户指定的白色浅色风格：浅灰页底、白色卡片、深色正文与蓝色强调（`#1890ff` / `#1677c8`）。后续页面维护沿用 `template.html` 的这套主题；表格、浮层和图表保持同一浅色配色。
 - 页面占满可用宽度（100%），保留两侧16px页内边距，不恢复1080px容器上限；SVG图表按实际容器宽度绘制，手机端保持内容不横向溢出。
+- 报表仍为可独立打开的单文件HTML，无外部数据请求。新版生成器用 `report_codec.py` 的compact-v1无损编码减少重复字段/字符串，浏览器恢复原DATA结构；旧plain JSON仍可读。读取已生成报表请用 `read_report_payload()`，不要再正则后直接json.loads。折叠明细展开时才绘制，清空查询时须同时用 `clearDataTable()`取消旧回调；浏览器检查先等待 `document.documentElement.dataset.reportReady==='true'`。
 - 本仓库每 4 小时有 Windows 定时任务自动推送数据提交。**动手改任何东西之前先 `git pull --rebase --autostash`**，改完立即 commit+push，压缩撞车窗口。report.html 冲突时：取 theirs 完成 rebase → 重新跑 generate_report.py → amend。
 - **`git pull --rebase --autostash` 在 autostash 落不回去时返回码仍是 0**（已复现验证），只在 stdout 里留一行 "Applying autostash resulted in conflicts."。index 留 UU 但**没有** MERGE_HEAD/rebase-merge，`git rebase --abort` 救不了，只能解冲突后 `git add`（本地改动同时还留在 `git stash list` 里）。这之后每一轮 pull 都是 "Pulling is not possible because you have unmerged files"：采集照常、git 全废。2026-08-26 就这么静默卡了 5 天 30 轮，08-24/08-26 两份已验收快照一直没推出去。`daily_update.git_stuck()` 现在每轮开头 + 每次 pull 之后都体检 index，卡住就钉钉告警并禁掉本轮 git（S3 和本地入库照常）。
 
