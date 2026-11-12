@@ -1,18 +1,18 @@
 {
- "asOf": "2026-11-09",
+ "asOf": "2026-11-10",
  "failures": {},
  "fallbacks": {},
  "id": "7652270026233287688",
- "lastAttempt": "2026-11-12T07:03:19+00:00",
+ "lastAttempt": "2026-11-12T11:04:10+00:00",
  "name": "Meu Ama Minha Voz",
  "requested": {
-  "end": "2026-11-09",
-  "start": "2026-10-11"
+  "end": "2026-11-10",
+  "start": "2026-10-12"
  },
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-12T07:03:32+00:00",
+   "checked": "2026-11-12T11:04:14+00:00",
    "data": [
     {
      "collectionId": "7655537016091841554",
@@ -21,37 +21,37 @@
      "region": "BR"
     },
     {
-     "averageDurationDate": "2026-11-09",
-     "averageDurationSeconds": 11.61,
+     "averageDurationDate": "2026-11-10",
+     "averageDurationSeconds": 10.97,
      "collectionId": "7652564872387073045",
      "handle": "altatv_app",
      "name": "AltaTV_APP",
      "region": "BR"
     }
    ],
-   "end": "2026-11-09",
-   "start": "2026-10-11"
+   "end": "2026-11-10",
+   "start": "2026-10-12"
   },
   "audience-stats": {
-   "checked": "2026-11-12T07:03:31+00:00",
+   "checked": "2026-11-12T11:04:14+00:00",
    "data": {
     "age": {
-     "l3": 36.5012,
-     "l4": 18.2266,
-     "l5": 8.8961,
-     "unknown": 36.376000000000005
+     "l3": 36.0438,
+     "l4": 18.599,
+     "l5": 9.1665,
+     "unknown": 36.1908
     },
     "gender": {
-     "female": 58.2041,
-     "gender_unknown": 20.6138,
-     "male": 21.1821
+     "female": 57.726,
+     "gender_unknown": 21.2056,
+     "male": 21.0684
     }
    },
-   "end": "2026-11-09",
-   "start": "2026-10-11"
+   "end": "2026-11-10",
+   "start": "2026-10-12"
   },
   "traffic-added": {
-   "checked": "2026-11-12T07:03:32+00:00",
+   "checked": "2026-11-12T11:04:15+00:00",
    "data": [
     {
      "collectionId": "7655537016091841554",
@@ -62,87 +62,87 @@
     },
     {
      "collectionId": "7652564872387073045",
-     "com": 567,
-     "fav": 20229,
-     "like": 196575,
-     "qv": 3714
+     "com": 554,
+     "fav": 18088,
+     "like": 179332,
+     "qv": 3701
     }
    ],
-   "end": "2026-11-09",
-   "start": "2026-10-11"
+   "end": "2026-11-10",
+   "start": "2026-10-12"
   },
   "traffic-stats": {
-   "checked": "2026-11-12T07:03:32+00:00",
+   "checked": "2026-11-12T11:04:14+00:00",
    "data": [
     {
      "collectionId": null,
      "key": "other",
-     "pct": 0.7217
+     "pct": 0.6854
     },
     {
      "collectionId": null,
      "key": "follow",
-     "pct": 0.0156
+     "pct": 0.016
     },
     {
      "collectionId": null,
      "key": "fyp",
-     "pct": 84.0521
+     "pct": 83.9879
     },
     {
      "collectionId": null,
      "key": "search",
-     "pct": 4.6417
+     "pct": 4.7227
     },
     {
      "collectionId": null,
      "key": "tab",
-     "pct": 0.0021
+     "pct": 0.0022
     },
     {
      "collectionId": null,
      "key": "self_profile",
-     "pct": 8.0951
+     "pct": 8.128
     },
     {
      "collectionId": null,
      "key": "other_profile",
-     "pct": 2.4717
+     "pct": 2.4578
     },
     {
      "collectionId": "7652564872387073045",
      "key": "other",
-     "pct": 0.7218
+     "pct": 0.6855
     },
     {
      "collectionId": "7652564872387073045",
      "key": "tab",
-     "pct": 0.0021
+     "pct": 0.0022
     },
     {
      "collectionId": "7652564872387073045",
      "key": "follow",
-     "pct": 0.0156
+     "pct": 0.016
     },
     {
      "collectionId": "7652564872387073045",
      "key": "other_profile",
-     "pct": 2.4692
+     "pct": 2.4551
     },
     {
      "collectionId": "7652564872387073045",
      "key": "search",
-     "pct": 4.6418
+     "pct": 4.7229
     },
     {
      "collectionId": "7652564872387073045",
      "key": "self_profile",
-     "pct": 8.0952
+     "pct": 8.1281
     },
     {
      "collectionId": "7652564872387073045",
      "key": "fyp",
-     "pct": 84.0543
+     "pct": 83.9903
     },
     {
      "collectionId": "7655537016091841554",
@@ -155,8 +155,8 @@
      "pct": 97.561
     }
    ],
-   "end": "2026-11-09",
-   "start": "2026-10-11"
+   "end": "2026-11-10",
+   "start": "2026-10-12"
   }
  },
  "source": "contract_detail"

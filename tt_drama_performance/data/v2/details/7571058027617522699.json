@@ -1,18 +1,18 @@
 {
- "asOf": "2026-11-09",
+ "asOf": "2026-11-10",
  "failures": {},
  "fallbacks": {},
  "id": "7571058027617522699",
- "lastAttempt": "2026-11-12T07:04:35+00:00",
+ "lastAttempt": "2026-11-12T11:05:04+00:00",
  "name": "Taste of You",
  "requested": {
-  "end": "2026-11-09",
-  "start": "2026-10-11"
+  "end": "2026-11-10",
+  "start": "2026-10-12"
  },
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-12T07:04:39+00:00",
+   "checked": "2026-11-12T11:05:08+00:00",
    "data": [
     {
      "averageDurationDate": "2026-11-10",
@@ -55,29 +55,29 @@
      "region": "CA"
     }
    ],
-   "end": "2026-11-09",
-   "start": "2026-10-11"
+   "end": "2026-11-10",
+   "start": "2026-10-12"
   },
   "audience-stats": {
-   "checked": "2026-11-12T07:04:38+00:00",
+   "checked": "2026-11-12T11:05:07+00:00",
    "data": {
     "age": {
-     "l3": 24.7343,
-     "l4": 23.2318,
-     "l5": 22.9361,
-     "unknown": 29.0977
+     "l3": 24.4172,
+     "l4": 23.9933,
+     "l5": 23.244,
+     "unknown": 28.3454
     },
     "gender": {
-     "female": 56.3729,
-     "gender_unknown": 20.2863,
-     "male": 23.3408
+     "female": 58.1908,
+     "gender_unknown": 19.0159,
+     "male": 22.7933
     }
    },
-   "end": "2026-11-09",
-   "start": "2026-10-11"
+   "end": "2026-11-10",
+   "start": "2026-10-12"
   },
   "traffic-added": {
-   "checked": "2026-11-12T07:04:39+00:00",
+   "checked": "2026-11-12T11:05:08+00:00",
    "data": [
     {
      "collectionId": "7639990387931141141",
@@ -89,251 +89,251 @@
     {
      "collectionId": "7572106462823175181",
      "com": 1,
-     "fav": 5,
-     "like": 29,
-     "qv": 1655
+     "fav": 3,
+     "like": 19,
+     "qv": 1383
     },
     {
      "collectionId": "7572464688962130951",
      "com": 1,
-     "fav": 26,
+     "fav": 27,
      "like": 43,
-     "qv": 737
+     "qv": 793
     },
     {
      "collectionId": "7694492648106710023",
      "com": 2,
-     "fav": 3,
-     "like": 24,
-     "qv": 456
+     "fav": 2,
+     "like": 21,
+     "qv": 392
     },
     {
      "collectionId": "7595418110631924744",
      "com": 3,
      "fav": 199,
      "like": 319,
-     "qv": 16009
+     "qv": 16420
     }
    ],
-   "end": "2026-11-09",
-   "start": "2026-10-11"
+   "end": "2026-11-10",
+   "start": "2026-10-12"
   },
   "traffic-stats": {
-   "checked": "2026-11-12T07:04:39+00:00",
+   "checked": "2026-11-12T11:05:08+00:00",
    "data": [
     {
      "collectionId": null,
      "key": "other",
-     "pct": 0.8804
+     "pct": 0.8296
     },
     {
      "collectionId": null,
      "key": "follow",
-     "pct": 0.5973
+     "pct": 0.6024
     },
     {
      "collectionId": null,
      "key": "fyp",
-     "pct": 21.1188
+     "pct": 23.8956
     },
     {
      "collectionId": null,
      "key": "recommend",
-     "pct": 4.1954
+     "pct": 5.0306
     },
     {
      "collectionId": null,
      "key": "search",
-     "pct": 36.9834
+     "pct": 33.838
     },
     {
      "collectionId": null,
      "key": "tab",
-     "pct": 3.8812
-    },
-    {
-     "collectionId": null,
-     "key": "other_profile",
-     "pct": 20.0374
+     "pct": 3.6092
     },
     {
      "collectionId": null,
      "key": "self_profile",
-     "pct": 12.3061
+     "pct": 13.2636
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 18.931
+    },
+    {
+     "collectionId": "7572106462823175181",
+     "key": "self_profile",
+     "pct": 0.7674
     },
     {
      "collectionId": "7572106462823175181",
      "key": "follow",
-     "pct": 2.2831
-    },
-    {
-     "collectionId": "7572106462823175181",
-     "key": "self_profile",
-     "pct": 4.414
+     "pct": 2.6564
     },
     {
      "collectionId": "7572106462823175181",
      "key": "search",
-     "pct": 6.4942
-    },
-    {
-     "collectionId": "7572106462823175181",
-     "key": "fyp",
-     "pct": 12.9883
+     "pct": 8.0874
     },
     {
      "collectionId": "7572106462823175181",
      "key": "tab",
-     "pct": 13.445
+     "pct": 10.5667
+    },
+    {
+     "collectionId": "7572106462823175181",
+     "key": "fyp",
+     "pct": 15.1122
     },
     {
      "collectionId": "7572106462823175181",
      "key": "other_profile",
-     "pct": 15.5758
+     "pct": 18.0047
     },
     {
      "collectionId": "7572106462823175181",
      "key": "recommend",
-     "pct": 44.7996
+     "pct": 44.8052
     },
     {
      "collectionId": "7572464688962130951",
      "key": "other",
-     "pct": 0.4521
-    },
-    {
-     "collectionId": "7572464688962130951",
-     "key": "tab",
-     "pct": 0.4069
+     "pct": 0.4998
     },
     {
      "collectionId": "7572464688962130951",
      "key": "fyp",
-     "pct": 0.4973
+     "pct": 0.4089
+    },
+    {
+     "collectionId": "7572464688962130951",
+     "key": "tab",
+     "pct": 0.4089
     },
     {
      "collectionId": "7572464688962130951",
      "key": "recommend",
-     "pct": 4.1139
+     "pct": 3.9982
     },
     {
      "collectionId": "7572464688962130951",
      "key": "other_profile",
-     "pct": 22.0615
+     "pct": 21.5357
     },
     {
      "collectionId": "7572464688962130951",
      "key": "self_profile",
-     "pct": 30.1989
+     "pct": 32.8487
     },
     {
      "collectionId": "7572464688962130951",
      "key": "search",
-     "pct": 42.2694
+     "pct": 40.2999
     },
     {
      "collectionId": "7639990387931141141",
      "key": "other",
-     "pct": 0.2174
+     "pct": 0.2169
     },
     {
      "collectionId": "7639990387931141141",
      "key": "tab",
-     "pct": 0.6522
+     "pct": 0.6508
     },
     {
      "collectionId": "7639990387931141141",
      "key": "self_profile",
-     "pct": 26.087
+     "pct": 26.2473
     },
     {
      "collectionId": "7639990387931141141",
      "key": "other_profile",
-     "pct": 73.0435
+     "pct": 72.885
     },
     {
      "collectionId": "7694492648106710023",
      "key": "other",
-     "pct": 1.4756
+     "pct": 1.6618
     },
     {
      "collectionId": "7694492648106710023",
      "key": "recommend",
-     "pct": 0.1994
-    },
-    {
-     "collectionId": "7694492648106710023",
-     "key": "tab",
-     "pct": 0.339
+     "pct": 0.0898
     },
     {
      "collectionId": "7694492648106710023",
      "key": "follow",
-     "pct": 0.4187
+     "pct": 0.1572
+    },
+    {
+     "collectionId": "7694492648106710023",
+     "key": "tab",
+     "pct": 0.3818
     },
     {
      "collectionId": "7694492648106710023",
      "key": "other_profile",
-     "pct": 1.0967
+     "pct": 1.2351
     },
     {
      "collectionId": "7694492648106710023",
      "key": "self_profile",
-     "pct": 3.5494
+     "pct": 2.7846
     },
     {
      "collectionId": "7694492648106710023",
      "key": "fyp",
-     "pct": 40.0798
+     "pct": 44.3072
     },
     {
      "collectionId": "7694492648106710023",
      "key": "search",
-     "pct": 52.8415
+     "pct": 49.3824
     },
     {
      "collectionId": "7595418110631924744",
      "key": "other",
-     "pct": 0.8805
+     "pct": 0.7852
     },
     {
      "collectionId": "7595418110631924744",
      "key": "follow",
-     "pct": 0.5649
+     "pct": 0.6061
     },
     {
      "collectionId": "7595418110631924744",
      "key": "recommend",
-     "pct": 1.9403
+     "pct": 3.6262
     },
     {
      "collectionId": "7595418110631924744",
      "key": "tab",
-     "pct": 4.1962
+     "pct": 3.9877
     },
     {
      "collectionId": "7595418110631924744",
      "key": "self_profile",
-     "pct": 12.8341
-    },
-    {
-     "collectionId": "7595418110631924744",
-     "key": "fyp",
-     "pct": 20.194
+     "pct": 13.9089
     },
     {
      "collectionId": "7595418110631924744",
      "key": "other_profile",
-     "pct": 22.9564
+     "pct": 20.6447
+    },
+    {
+     "collectionId": "7595418110631924744",
+     "key": "fyp",
+     "pct": 23.4374
     },
     {
      "collectionId": "7595418110631924744",
      "key": "search",
-     "pct": 36.4334
+     "pct": 33.0039
     }
    ],
-   "end": "2026-11-09",
-   "start": "2026-10-11"
+   "end": "2026-11-10",
+   "start": "2026-10-12"
   }
  },
  "source": "contract_detail"
