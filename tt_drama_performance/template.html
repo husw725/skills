@@ -106,6 +106,7 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: var(--surface2); }
     <button class="langbtn" id="langBtn"></button>
   </div>
   <div class="meta" id="meta" role="status">Loading report · 正在加载报表…</div>
+  <button id="episodeOpsJump" class="datechip" style="display:none;margin-bottom:16px"></button>
 
   <div class="card" id="qualityCard" style="display:none;border-color:var(--gold-dim)">
     <h2 id="qualityTitle"></h2><ul id="qualityNotes" style="padding-left:18px;color:var(--ink2)"></ul>
@@ -1081,13 +1082,16 @@ function renderEpisodeOps() {
   const catalog=DATA.episodeInsightCatalog||[];
   if(!catalog.length)return;
   const zh=LANG==='zh',el=id=>document.getElementById(id),pct=v=>v==null?'—':(v*100).toFixed(1)+'%';
+  el('episodeOpsJump').style.display='';
+  el('episodeOpsJump').textContent=zh?'查看分集、逐秒与引流素材':'View episodes, second curves and promotional materials';
+  el('episodeOpsJump').onclick=()=>el('episodeOpsCard').scrollIntoView({block:'start',behavior:'smooth'});
   const sorted=[...catalog].sort((a,b)=>b.curves-a.curves||b.rows-a.rows||a.name.localeCompare(b.name));
   if(!sorted.some(r=>r.id===episodeOpsPick))episodeOpsPick=sorted[0].id;
   el('episodeOpsCard').style.display='';
   if(deferReportSection('episode-'+episodeOpsPick,'episodeOpsCard',renderEpisodeOps))return;
   const record=DATA.episodeInsights?.[episodeOpsPick];
   if(!record)return;
-  el('episodeOpsTitle').textContent=zh?'分集表现与观看曲线':'Episode performance and viewing curves';
+  el('episodeOpsTitle').textContent=zh?'内容运营 · 分集、观看与引流':'Content operations · Episodes, viewing and promotion';
   const select=el('episodeOpsTitleSelect');
   select.setAttribute('aria-label',zh?'选择分集运营剧目':'Choose episode operations title');
   select.innerHTML=sorted.map(r=>`<option value="${esc(r.id)}"${r.id===episodeOpsPick?' selected':''}>${esc(r.name)}</option>`).join('');

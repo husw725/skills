@@ -51,7 +51,8 @@ def main(channel=None):
                 page.wait_for_function("document.documentElement.dataset.reportReady==='true'")
                 assert page.evaluate('Object.keys(DATA.episodeInsights).length') == 0
                 assert not [u for u in requests if '/data/episode-' in u]
-                page.locator('#episodeOpsCard').scroll_into_view_if_needed()
+                assert page.locator('#episodeOpsJump').is_visible()
+                page.locator('#episodeOpsJump').click()
                 page.wait_for_function("document.querySelector('#episodeOpsKpis').textContent.includes('20.0%')")
                 assert page.locator('#episodeOpsKpis').inner_text().count('—') == 1
                 assert '0.0%' in page.locator('#episodeOpsKpis').inner_text()
