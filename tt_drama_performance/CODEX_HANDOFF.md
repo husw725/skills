@@ -17,6 +17,13 @@
 
 ## 当前接力记录
 
+### 2026-11-12 登录受阻复核：需用户在项目专用浏览器登录
+
+- 用户询问是否需要协助登录。先明确分离两问题：今晨03:00:01任务LastTaskResult4，日志实际是analytics_v2.select_dates抛“日期选择器结构改变”，不是登录失效退出2；07点漏跑1次，下一轮11点。该控件适配问题尚未在本轮修复，不能称重新登录就会解决。
+- quser确认melot console1于09:16登录且运行中。再次复用原Interactive身份、headed Chrome、项目原browser_profile只读打开Core，09:17:07临时探针已实际运行并退出0，但正常桌面会话仍重定向/login，无analytics响应；据此现在确需恢复项目专用浏览器的站点登录，不能仅归因为SSH解密差异。
+- 指引用户在Windows双击E:\workspace\skills\tt_drama_performance\login.bat，自行完成平台登录；脚本使用.venv Python及原browser_profile，最多等10分钟，检测成功自动关闭。用户通知登录完成后继续核验真实逐秒曲线，另核对日期控件异常。
+- 只读探针日志output/diagnostics/retention-session-20261112.log；临时TTDramaRetentionProbe20261112已删，LastTaskResult0，原TTDramaDaily仍Ready、设置不变。未改采集代码、真实数据/页面、持久任务或发送通知；原legacy JSON修改及其他项目改动保留，无冲突。
+
 ### 2026-11-12 逐秒指标功能文案核验（最新，仅核验，尚未采集）
 
 - 用户询问新版页面是否还有剧的秒级流失率。本轮只读探测平台正常Core路由，未改业务代码、真实数据、页面发布或持久计划任务，未发送消息，未调用/重放签名API。
