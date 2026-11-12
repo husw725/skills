@@ -17,6 +17,17 @@
 
 ## 当前接力记录
 
+### 2026-11-12 运营 BI 终版已发布验收（最新，覆盖下方进行中状态）
+
+- 完成本轮用户要求：核实真实逐秒数据，浏览Core/Traffic/Audience/Derivative materials，按运营与BI用途接入分集指标、单视频观看到达/点赞分布、衍生素材目录及曝光点击；明确暂未取得观众地区、素材有效播放归因、人数分母、收入成本/ROI来源。字段、口径与优先用途见DATA_INVENTORY.md，独立审核修正冷却文案后放行。
+- 最终43/43目录均已正常UI尝试，不能称43部都有数据：31部非空完整分集表共1517行、1部完整空表、11部超时未取得指标。770份观看曲线，其中324份另有点赞分布；视频失败81项明确空曲线、81项超时。素材385条，229条曝光/点击均有值，156条均缺失；231条统计响应含2条双null，不能称231条有效统计。素材失败9项HTTP422、1项操作超时。12部pending继续按视频进度续采；平台不可用不补零，不承诺历史逐秒可回查。
+- 注意同名剧按ID/语言独立：新补Revenge of the Abandoned Heiress ID7627885602473661456实际60行（曾因Windows乱码误读50，已对用户更正）；Taste of You实际73集/73曲线。以后SSH日志通过Python ascii或JSON ensure_ascii读取，避免直接解码控制台中文造成数字误读。
+- 11点原TTDramaDaily主接口恢复并正常结束0，919d793发布40档；终批a884c1a补齐所有目录尝试并补完7部已有可用曲线的pending，11:47:49原始S3、11:49:42快速S3、11:49:54主Git、11:50:02Pages，EPISODE_INVENTORY_FINISH_EXIT0。手动发布clear_alerts=False日志末尾沿用“主状态未成功”固定文案，不代表本次11点主任务失败：最终report无主刷新失败提示，主任务实测0。
+- 终版S3与Pages真实浏览器验收：43项目录与本地全等，实际分集档全等、曲线/6条MyBoss素材、按剧懒载及缓存、双语、390px、无JS错误。首屏初始0条逐秒分片请求，本次分别2.46/2.81秒，gzip105319/109929字节。Pages构建5efde39成功。入口仍为https://starlitshorts.s3.amazonaws.com/aigc/drama/report/tt_drama/report-fast.html 与 https://husw725.github.io/tt-drama-report/ 。
+- 独立终版数据审核放行：Windows43档与完整report全对象/目录ID一致，跨集版本关联、秒级范围、结构与敏感字段检查0问题。Mac终版416份档案只读审计0问题；主历史仍252/253天截止11/08，周897624、前周1169751、近30天5626863、前30天6338263保持已对账。67项测试+9旧断言和5组浏览器检查见下条；新追加.gitignore data/v2/**/*.tmp（6fb42d2）防止中断写临时文件被提交，已无跟踪tmp。
+- 所有本轮临时任务已删除（生产v3、RetentionProbe、InventoryFinish）。原TTDramaDaily Ready、LastTaskResult0、下一轮15:00；原03/07/11/15/19/23及登录触发均未改。后续轮次继续pending和冷却到期失败，不需要再创建持久补采任务。未发送通知、未改凭证/TLS/ACL，原用户legacy两JSON及其他项目改动保留，无未解决冲突。
+- 补扫排队脚本首次因PowerShell ErrorActionPreference=Stop将unittest正常stderr当原生命令错误而退出1，测试本身完成但采集未启动；改直接Python临时任务后成功。临时Python/PS诊断均在忽略的output/diagnostics，不进入业务代码。
+
 ### 2026-11-12 逐秒与运营 BI 已接入，生产续采进行中（覆盖下方登录受阻记录）
 
 - 用户已通过Windows项目登录脚本恢复登录。本轮正常headed UI核验并接入真实episode-page、episode-second-stats及material-catalog/material-stats；没有重放签名API、没有发送通知。业务含义与待验证字段见新增DATA_INVENTORY.md。
