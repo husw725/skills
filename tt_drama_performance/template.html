@@ -1084,7 +1084,7 @@ function renderEpisodeOps() {
   const zh=LANG==='zh',el=id=>document.getElementById(id),pct=v=>v==null?'—':(v*100).toFixed(1)+'%';
   el('episodeOpsJump').style.display='';
   el('episodeOpsJump').textContent=zh?'查看分集、逐秒与引流素材':'View episodes, second curves and promotional materials';
-  el('episodeOpsJump').onclick=()=>el('episodeOpsCard').scrollIntoView({block:'start',behavior:'smooth'});
+  el('episodeOpsJump').onclick=()=>el('episodeOpsCard').scrollIntoView({block:'start'});
   const sorted=[...catalog].sort((a,b)=>b.curves-a.curves||b.rows-a.rows||a.name.localeCompare(b.name));
   if(!sorted.some(r=>r.id===episodeOpsPick))episodeOpsPick=sorted[0].id;
   el('episodeOpsCard').style.display='';
