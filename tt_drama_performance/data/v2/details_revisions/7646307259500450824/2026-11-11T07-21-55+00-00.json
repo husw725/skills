@@ -1,0 +1,201 @@
+{
+ "asOf": "2026-11-08",
+ "failures": {},
+ "fallbacks": {},
+ "id": "7646307259500450824",
+ "lastAttempt": "2026-11-11T07:21:55+00:00",
+ "name": "My CEO Loves Voice",
+ "requested": {
+  "end": "2026-11-08",
+  "start": "2026-10-10"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-11T07:22:02+00:00",
+   "data": [
+    {
+     "collectionId": "7646605226837890068",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    }
+   ],
+   "end": "2026-11-08",
+   "start": "2026-10-10"
+  },
+  "audience-stats": {
+   "checked": "2026-11-11T07:22:00+00:00",
+   "data": {
+    "age": {
+     "l3": 17.1698,
+     "l4": 15.1621,
+     "l5": 44.8177,
+     "unknown": 22.8505
+    },
+    "gender": {
+     "female": 23.3688,
+     "gender_unknown": 19.9947,
+     "male": 56.6366
+    }
+   },
+   "end": "2026-11-08",
+   "start": "2026-10-10"
+  },
+  "traffic-added": {
+   "checked": "2026-11-11T07:22:02+00:00",
+   "data": [
+    {
+     "collectionId": "7646605226837890068",
+     "com": 0,
+     "fav": 14,
+     "like": 64,
+     "qv": 3538
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "com": 0,
+     "fav": 73,
+     "like": 180,
+     "qv": 8640
+    }
+   ],
+   "end": "2026-11-08",
+   "start": "2026-10-10"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-11T07:22:02+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 0.3302
+    },
+    {
+     "collectionId": null,
+     "key": "follow",
+     "pct": 0.027
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 84.067
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 0.9129
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 6.0545
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 1.6545
+    },
+    {
+     "collectionId": null,
+     "key": "recommend",
+     "pct": 2.892
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 4.0619
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "other",
+     "pct": 0.1008
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "follow",
+     "pct": 0.2772
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "fyp",
+     "pct": 1.1845
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "tab",
+     "pct": 3.9315
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "self_profile",
+     "pct": 7.7369
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "search",
+     "pct": 8.2409
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "recommend",
+     "pct": 30.8972
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "other_profile",
+     "pct": 47.631
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "follow",
+     "pct": 0.0153
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "other",
+     "pct": 0.341
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "tab",
+     "pct": 0.7716
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "search",
+     "pct": 1.3462
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "recommend",
+     "pct": 1.5809
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "other_profile",
+     "pct": 2.0222
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "self_profile",
+     "pct": 5.9757
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "fyp",
+     "pct": 87.9471
+    }
+   ],
+   "end": "2026-11-08",
+   "start": "2026-10-10"
+  }
+ },
+ "source": "contract_detail"
+}

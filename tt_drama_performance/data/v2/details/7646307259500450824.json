@@ -1,200 +1,204 @@
 {
- "asOf": "2026-11-08",
+ "asOf": "2026-11-09",
  "failures": {},
  "fallbacks": {},
  "id": "7646307259500450824",
- "lastAttempt": "2026-11-11T07:21:55+00:00",
+ "lastAttempt": "2026-11-12T07:03:33+00:00",
  "name": "My CEO Loves Voice",
  "requested": {
-  "end": "2026-11-08",
-  "start": "2026-10-10"
+  "end": "2026-11-09",
+  "start": "2026-10-11"
  },
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-11T07:22:02+00:00",
+   "checked": "2026-11-12T07:03:41+00:00",
    "data": [
     {
+     "averageDurationDate": "2026-11-09",
+     "averageDurationSeconds": 107.78,
      "collectionId": "7646605226837890068",
      "handle": "altatvapp_shortdrama",
      "name": "altatvapp_shortdrama",
      "region": "CA"
     },
     {
+     "averageDurationDate": "2026-11-09",
+     "averageDurationSeconds": 15.24,
      "collectionId": "7650035975669928978",
      "handle": "altatvapp",
      "name": "Altatvapp",
      "region": "US"
     }
    ],
-   "end": "2026-11-08",
-   "start": "2026-10-10"
+   "end": "2026-11-09",
+   "start": "2026-10-11"
   },
   "audience-stats": {
-   "checked": "2026-11-11T07:22:00+00:00",
+   "checked": "2026-11-12T07:03:40+00:00",
    "data": {
     "age": {
-     "l3": 17.1698,
-     "l4": 15.1621,
-     "l5": 44.8177,
-     "unknown": 22.8505
+     "l3": 20.5365,
+     "l4": 14.5139,
+     "l5": 38.3577,
+     "unknown": 26.5919
     },
     "gender": {
-     "female": 23.3688,
-     "gender_unknown": 19.9947,
-     "male": 56.6366
+     "female": 23.4378,
+     "gender_unknown": 19.6071,
+     "male": 56.9551
     }
    },
-   "end": "2026-11-08",
-   "start": "2026-10-10"
+   "end": "2026-11-09",
+   "start": "2026-10-11"
   },
   "traffic-added": {
-   "checked": "2026-11-11T07:22:02+00:00",
+   "checked": "2026-11-12T07:03:41+00:00",
    "data": [
     {
      "collectionId": "7646605226837890068",
      "com": 0,
-     "fav": 14,
+     "fav": 13,
      "like": 64,
-     "qv": 3538
+     "qv": 3544
     },
     {
      "collectionId": "7650035975669928978",
      "com": 0,
-     "fav": 73,
-     "like": 180,
-     "qv": 8640
+     "fav": 82,
+     "like": 210,
+     "qv": 10037
     }
    ],
-   "end": "2026-11-08",
-   "start": "2026-10-10"
+   "end": "2026-11-09",
+   "start": "2026-10-11"
   },
   "traffic-stats": {
-   "checked": "2026-11-11T07:22:02+00:00",
+   "checked": "2026-11-12T07:03:41+00:00",
    "data": [
     {
      "collectionId": null,
      "key": "other",
-     "pct": 0.3302
+     "pct": 0.2897
     },
     {
      "collectionId": null,
      "key": "follow",
-     "pct": 0.027
+     "pct": 0.016
     },
     {
      "collectionId": null,
      "key": "fyp",
-     "pct": 84.067
+     "pct": 86.5503
     },
     {
      "collectionId": null,
      "key": "tab",
-     "pct": 0.9129
+     "pct": 0.7374
     },
     {
      "collectionId": null,
      "key": "self_profile",
-     "pct": 6.0545
+     "pct": 4.8588
     },
     {
      "collectionId": null,
      "key": "search",
-     "pct": 1.6545
+     "pct": 1.3845
     },
     {
      "collectionId": null,
      "key": "recommend",
-     "pct": 2.892
+     "pct": 2.5169
     },
     {
      "collectionId": null,
      "key": "other_profile",
-     "pct": 4.0619
+     "pct": 3.6465
     },
     {
      "collectionId": "7646605226837890068",
      "key": "other",
-     "pct": 0.1008
+     "pct": 0.1009
     },
     {
      "collectionId": "7646605226837890068",
      "key": "follow",
-     "pct": 0.2772
+     "pct": 0.1765
     },
     {
      "collectionId": "7646605226837890068",
      "key": "fyp",
-     "pct": 1.1845
+     "pct": 1.1349
     },
     {
      "collectionId": "7646605226837890068",
      "key": "tab",
-     "pct": 3.9315
+     "pct": 3.9596
     },
     {
      "collectionId": "7646605226837890068",
      "key": "self_profile",
-     "pct": 7.7369
+     "pct": 7.7427
     },
     {
      "collectionId": "7646605226837890068",
      "key": "search",
-     "pct": 8.2409
+     "pct": 8.2472
     },
     {
      "collectionId": "7646605226837890068",
      "key": "recommend",
-     "pct": 30.8972
+     "pct": 31.3241
     },
     {
      "collectionId": "7646605226837890068",
      "key": "other_profile",
-     "pct": 47.631
+     "pct": 47.314
     },
     {
      "collectionId": "7650035975669928978",
      "key": "follow",
-     "pct": 0.0153
+     "pct": 0.0098
     },
     {
      "collectionId": "7650035975669928978",
      "key": "other",
-     "pct": 0.341
+     "pct": 0.297
     },
     {
      "collectionId": "7650035975669928978",
      "key": "tab",
-     "pct": 0.7716
+     "pct": 0.6126
     },
     {
      "collectionId": "7650035975669928978",
      "key": "search",
-     "pct": 1.3462
+     "pct": 1.1186
     },
     {
      "collectionId": "7650035975669928978",
      "key": "recommend",
-     "pct": 1.5809
+     "pct": 1.401
     },
     {
      "collectionId": "7650035975669928978",
      "key": "other_profile",
-     "pct": 2.0222
+     "pct": 1.9549
     },
     {
      "collectionId": "7650035975669928978",
      "key": "self_profile",
-     "pct": 5.9757
+     "pct": 4.7471
     },
     {
      "collectionId": "7650035975669928978",
      "key": "fyp",
-     "pct": 87.9471
+     "pct": 89.859
     }
    ],
-   "end": "2026-11-08",
-   "start": "2026-10-10"
+   "end": "2026-11-09",
+   "start": "2026-10-11"
   }
  },
  "source": "contract_detail"

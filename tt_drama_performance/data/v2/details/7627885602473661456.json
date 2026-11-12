@@ -1,132 +1,134 @@
 {
- "asOf": "2026-11-08",
+ "asOf": "2026-11-09",
  "failures": {},
  "fallbacks": {},
  "id": "7627885602473661456",
- "lastAttempt": "2026-11-11T07:33:26+00:00",
+ "lastAttempt": "2026-11-12T07:14:35+00:00",
  "name": "Revenge of the Abandoned Heiress",
  "requested": {
-  "end": "2026-11-08",
-  "start": "2026-10-10"
+  "end": "2026-11-09",
+  "start": "2026-10-11"
  },
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-11T07:33:32+00:00",
+   "checked": "2026-11-12T07:14:39+00:00",
    "data": [
     {
+     "averageDurationDate": "2026-11-10",
+     "averageDurationSeconds": 549.1,
      "collectionId": "7375270117237756971",
      "handle": "altatvapp",
      "name": "Altatvapp",
      "region": "US"
     }
    ],
-   "end": "2026-11-08",
-   "start": "2026-10-10"
+   "end": "2026-11-09",
+   "start": "2026-10-11"
   },
   "audience-stats": {
-   "checked": "2026-11-11T07:33:30+00:00",
+   "checked": "2026-11-12T07:14:39+00:00",
    "data": {
     "age": null,
     "gender": {
-     "female": 44.1389,
-     "gender_unknown": 27.9305,
-     "male": 27.9305
+     "female": 44.3425,
+     "gender_unknown": 28.2875,
+     "male": 27.37
     }
    },
-   "end": "2026-11-08",
-   "start": "2026-10-10"
+   "end": "2026-11-09",
+   "start": "2026-10-11"
   },
   "traffic-added": {
-   "checked": "2026-11-11T07:33:32+00:00",
+   "checked": "2026-11-12T07:14:40+00:00",
    "data": [
     {
      "collectionId": "7375270117237756971",
      "com": 0,
      "fav": 23,
      "like": 71,
-     "qv": 5873
+     "qv": 5810
     }
    ],
-   "end": "2026-11-08",
-   "start": "2026-10-10"
+   "end": "2026-11-09",
+   "start": "2026-10-11"
   },
   "traffic-stats": {
-   "checked": "2026-11-11T07:33:32+00:00",
+   "checked": "2026-11-12T07:14:39+00:00",
    "data": [
     {
      "collectionId": null,
      "key": "other",
-     "pct": 0.769
+     "pct": 0.784
     },
     {
      "collectionId": null,
      "key": "fyp",
-     "pct": 0.8771
+     "pct": 0.9065
     },
     {
      "collectionId": null,
      "key": "tab",
-     "pct": 2.6913
+     "pct": 2.7441
     },
     {
      "collectionId": null,
      "key": "recommend",
-     "pct": 4.9982
+     "pct": 5.2554
     },
     {
      "collectionId": null,
      "key": "self_profile",
-     "pct": 9.7201
+     "pct": 10.4741
     },
     {
      "collectionId": null,
      "key": "search",
-     "pct": 21.9272
+     "pct": 21.5607
     },
     {
      "collectionId": null,
      "key": "other_profile",
-     "pct": 59.0172
+     "pct": 58.2751
     },
     {
      "collectionId": "7375270117237756971",
      "key": "other",
-     "pct": 0.769
+     "pct": 0.784
     },
     {
      "collectionId": "7375270117237756971",
      "key": "fyp",
-     "pct": 0.8771
+     "pct": 0.9065
     },
     {
      "collectionId": "7375270117237756971",
      "key": "tab",
-     "pct": 2.6913
+     "pct": 2.7441
     },
     {
      "collectionId": "7375270117237756971",
      "key": "recommend",
-     "pct": 4.9982
+     "pct": 5.2554
     },
     {
      "collectionId": "7375270117237756971",
      "key": "self_profile",
-     "pct": 9.7201
+     "pct": 10.4741
     },
     {
      "collectionId": "7375270117237756971",
      "key": "search",
-     "pct": 21.9272
+     "pct": 21.5607
     },
     {
      "collectionId": "7375270117237756971",
      "key": "other_profile",
-     "pct": 59.0172
+     "pct": 58.2751
     }
    ],
-   "end": "2026-11-08",
-   "start": "2026-10-10"
+   "end": "2026-11-09",
+   "start": "2026-10-11"
   }
  },
  "source": "contract_detail"
