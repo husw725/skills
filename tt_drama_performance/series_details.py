@@ -81,6 +81,15 @@ def normalize(endpoint, data, start, end):
             if endpoint == 'accounts':
                 result.append(dict(collectionId=cid, name=str(row.get('name') or ''),
                                    handle=str(row.get('unique_id') or ''), region=str(row.get('region') or '')))
+                if row.get('avg_play_duration') is not None and row.get('avg_play_date'):
+                    if type(row['avg_play_duration']) is bool:
+                        raise PageDataError('账号人均时长不是数值')
+                    duration = float(row['avg_play_duration'])
+                    if not math.isfinite(duration) or duration < 0:
+                        raise PageDataError('账号人均时长越界')
+                    day = row['avg_play_date']
+                    dt.date.fromisoformat(day)
+                    result[-1].update(averageDurationSeconds=duration, averageDurationDate=day)
             else:
                 result.append(dict(collectionId=cid, **{k: numeric(row, f'delta_{f}', count=True)
                     for k, f in [('qv', 'innerfeed_vv'), ('like', 'like_cnt'), ('com', 'comment_cnt'), ('fav', 'favourite_cnt')]}))
@@ -193,10 +202,16 @@ def validate_record(obj, did):
                         raise PageDataError('账号增量存档不是整数')
                     numeric(row, field, count=True)
             else:
-                if set(row) != {'collectionId', 'name', 'handle', 'region'}:
+                base = {'collectionId', 'name', 'handle', 'region'}
+                if set(row) not in (base, base | {'averageDurationSeconds', 'averageDurationDate'}):
                     raise PageDataError('账号元数据含未允许字段')
                 if any(not isinstance(row[k], str) for k in ('name', 'handle', 'region')):
                     raise PageDataError('账号元数据格式异常')
+                if 'averageDurationSeconds' in row:
+                    value = row['averageDurationSeconds']
+                    if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+                        raise PageDataError('账号人均时长存档异常')
+                    dt.date.fromisoformat(row['averageDurationDate'])
         if any(abs(sum(values) - 100) > .15 for values in scopes.values()):
             raise PageDataError('渠道占比合计不为100%')
 

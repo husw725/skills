@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from analytics_v2 import PageDataError, atomic_json, read_json
 import episode_insights as insights
-from episode_insights import normalize_page, normalize_seconds, validate_record
+from episode_insights import normalize_page, normalize_seconds, validate_record, normalize_material_catalog, normalize_material_stats
 
 
 def fixture_record():
@@ -31,8 +31,84 @@ def fixture_record():
 
 
 class EpisodeInsightsTests(unittest.TestCase):
+    def test_empty_second_response_is_a_fast_item_specific_failure_then_recovers(self):
+        class Page:
+            def on(self, *args): pass
+            def remove_listener(self, *args): pass
+        class Request:
+            post_data_json = dict(contract_id='101', vid='video')
+        class Response:
+            status = 200
+            url = 'https://example.invalid/analytics/contract/episode-second-stats'
+            request = Request()
+            def json(self): return self.body
+        capture = insights.Capture(Page())
+        response = Response()
+        response.body = dict(code=0, data=dict(item_id='90011', retention_rate=[], like_rate=[]))
+        capture.response(response)
+        self.assertIn(('101', '90011'), capture.second_errors)
+        self.assertEqual(capture.seconds, {})
+        response.body['data']['retention_rate'] = [dict(second=0, rate=1)]
+        capture.response(response)
+        self.assertNotIn(('101', '90011'), capture.second_errors)
+        self.assertEqual(capture.seconds[('101', '90011')]['_sequence'], 2)
+
+    def test_material_pagination_rejects_cross_range_merge(self):
+        rows = [dict(itemId=str(i), title='Creative', account=dict(name='', handle='', region=''), published=None, durationSeconds=None) for i in (7001, 7002)]
+        class Locator:
+            @property
+            def first(self): return self
+            def count(self): return 0
+            def click(self, **kwargs): pass
+            def filter(self, **kwargs): return self
+        class Page:
+            keyboard = type('Keyboard', (), {'press': lambda *args: None})()
+            def locator(self, *args): return Locator()
+            def get_by_text(self, *args, **kwargs): return Locator()
+        class Capture:
+            material_catalogs = {('101', 1): dict(total=2, size=1, rows=[rows[0]]), ('101', 2): dict(total=2, size=1, rows=[rows[1]])}
+            material_stats = {('101', ('7001',)): dict(start='2026-11-01', end='2026-11-08', values={'7001': dict(impressions=70, clicks=0)}),
+                              ('101', ('7002',)): dict(start='2026-11-01', end='2026-11-08', values={'7002': dict(impressions=None, clicks=None)})}
+            def wait(self, predicate, *args):
+                if not predicate(): raise PageDataError('missing')
+        capture = Capture()
+        value = insights.collect_materials(Page(), capture, '101')
+        self.assertEqual(value['total'], 2)
+        self.assertEqual(value['rows'][0]['clicks'], 0)
+        self.assertIsNone(value['rows'][1]['clicks'])
+        capture.material_stats[('101', ('7002',))]['start'] = '2026-11-02'
+        with self.assertRaises(PageDataError):
+            insights.collect_materials(Page(), capture, '101')
+
+    def test_material_metadata_units_and_real_zero_are_preserved(self):
+        catalog = normalize_material_catalog(dict(total=1, page=1, page_size=100, list=[dict(
+            item_id='7001', title='Creative', duration=171039, publish_time='1793360580000', account={})]))
+        self.assertEqual(catalog['rows'][0]['durationSeconds'], 171.039)
+        self.assertEqual(catalog['rows'][0]['published'], '2026-10-30')
+        request = dict(start_date='2026-11-01', end_date='2026-11-08', item_ids=['7001'])
+        stats = normalize_material_stats(dict(start_date='2026-11-01', end_date='2026-11-08',
+            episodes=[dict(item_id='7001', impression_pv='70', click_pv='0')]), request)
+        self.assertEqual(stats['values']['7001'], dict(impressions=70, clicks=0))
+        with self.assertRaises(PageDataError):
+            normalize_material_stats(dict(start_date='2026-11-01', end_date='2026-11-08',
+                episodes=[dict(item_id='other')]), request)
+
+    def test_material_archive_rejects_unsafe_date_and_numeric_strings(self):
+        _, _, record = fixture_record()
+        record['materials'] = dict(complete=True, total=1, checked=record['lastAttempt'], start=None, end=None,
+            rows=[dict(itemId='7001', title='Creative', published='2026-10-30', durationSeconds=171,
+                       account=dict(name='', handle='', region=''), impressions=70, clicks=0)])
+        validate_record(record, '101')
+        for change in ('date', 'string'):
+            value = copy.deepcopy(record)
+            if change == 'date':value['materials']['rows'][0]['published'] = '<img onerror=alert(1)>'
+            if change == 'string':value['materials']['rows'][0]['durationSeconds'] = '171'
+            with self.subTest(change=change), self.assertRaises((PageDataError, ValueError)):
+                validate_record(value, '101')
+
     def test_whole_collector_paginates_and_isolates_corrupt_title(self):
         _, _, sample = fixture_record()
+        sample['metrics']['rows'][0]['itemIds'] = ['9001', '90011']
         class Locator:
             def __init__(self, page, selector): self.page, self.selector = page, selector
             @property
@@ -41,17 +117,20 @@ class EpisodeInsightsTests(unittest.TestCase):
             def last(self): return self
             def count(self): return int(self.page.drawer) if 'close' in self.selector else 1
             def get_by_role(self, *args, **kwargs): return self
+            def wait_for(self, **kwargs): pass
             def click(self, **kwargs):
                 if 'close' in self.selector:
                     self.page.drawer = False; return
                 if 'Switch' in self.selector: return
                 episode = 2 if 'Episode 2' in self.selector else 1
-                value = copy.deepcopy(sample['seconds']['9001']); value['itemId'] = '900' + str(episode)
+                value = copy.deepcopy(sample['seconds']['9001']); value['itemId'] = '90011' if episode == 1 else '9002'
                 value['checked'] = insights.stamp()
+                value.pop('episode'); value.pop('highlight')
+                self.page.capture.sequence += 1; value['_sequence'] = self.page.capture.sequence
                 self.page.capture.seconds[('102', value['itemId'])] = value
                 self.page.drawer = True
-            def evaluate(self, *args):
-                row = copy.deepcopy(sample['metrics']['rows'][0]); row.update(episode=2, itemId='9002')
+            def evaluate(self, *args, **kwargs):
+                row = copy.deepcopy(sample['metrics']['rows'][0]); row.update(episode=2, itemId='9002', itemIds=['9002'])
                 self.page.capture.pages[('102', '2026-10-10', '2026-11-08', 1)] = dict(
                     rows=[row], total=2, more=False, nextCursor=None)
         class Page:
@@ -66,6 +145,7 @@ class EpisodeInsightsTests(unittest.TestCase):
         class Capture:
             def __init__(self, page):
                 page.capture = self; self.pages, self.seconds, self.bounds = {}, {}, {}
+                self.sequence = 0
             def wait(self, predicate, *args, **kwargs):
                 if not predicate(): raise PageDataError('missing response')
             def close(self): pass
@@ -85,6 +165,7 @@ class EpisodeInsightsTests(unittest.TestCase):
             validate_record(healthy, '102')
             self.assertEqual(healthy['metrics']['total'], 2)
             self.assertEqual(len(healthy['seconds']), 2)
+            self.assertIn('90011', healthy['seconds'])
             self.assertFalse(healthy['pending'])
 
     def test_separate_cumulative_delta_video_scope_and_missing_second(self):

@@ -21,10 +21,16 @@ def main(channel=None):
     base = Path(__file__).resolve().parents[1]
     data = read_report_payload((base / 'report.html').read_text(encoding='utf-8'))
     _, _, first = fixture_record()
+    first['metrics']['rows'][0]['itemIds'] = ['9001', '90011']
+    first['seconds']['90011'] = first['seconds'].pop('9001')
+    first['seconds']['90011']['itemId'] = '90011'
     row = copy.deepcopy(first['metrics']['rows'][0])
-    row.update(episode=2, itemId='9002', finishRate=None, durationSeconds=None)
+    row.update(episode=2, itemId='9002', itemIds=['9002'], finishRate=None, durationSeconds=None)
     row['cumulative']['qv'] = 0; row['added']['qv'] = 0
     first['metrics']['rows'].append(row); first['metrics']['total'] = 2
+    first['materials'] = dict(complete=True, total=2, checked=first['lastAttempt'], start='2026-11-01', end='2026-11-08', rows=[
+        dict(itemId='7001', title='Creative', account=dict(name='Account', handle='account', region='US'), published='2026-10-30', durationSeconds=171.039, impressions=70, clicks=0),
+        dict(itemId='7002', title='No denominator', account=dict(name='', handle='', region=''), published=None, durationSeconds=None, impressions=0, clicks=0)])
     second = copy.deepcopy(first); second['id'] = '102'; second['name'] = 'Test Two'
     data['episodeInsights'] = {'101': first, '102': second}
     data['episodeInsightCatalog'] = [dict(id=k, name=v['name'], rows=2, curves=1, pending=False) for k, v in data['episodeInsights'].items()]
@@ -54,6 +60,10 @@ def main(channel=None):
                 assert '总点赞数' in page.locator('#episodeOpsCurveNote').inner_text()
                 assert '个百分点' in page.locator('#episodeOpsDrops').inner_text()
                 assert page.locator('#episodeOpsRetention svg').count() == 1
+                assert page.locator('#episodeOpsTable [data-insight-item="90011"]').count() == 1
+                material = page.locator('#episodeOpsMaterials tbody tr')
+                assert material.nth(0).locator('td').nth(7).inner_text() == '0.0%'
+                assert material.nth(1).locator('td').nth(7).inner_text() == '—'
                 page.select_option('#episodeOpsTitleSelect', '102')
                 page.wait_for_function("reportLoaded.has('episode-102')&&document.querySelector('#episodeOpsTitleSelect').value==='102'")
                 page.select_option('#episodeOpsTitleSelect', '101')

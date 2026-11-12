@@ -230,6 +230,9 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: var(--surface2); }
     <p id="episodeOpsScope" class="detail-note"></p>
     <select id="episodeOpsSort" class="datesel"></select>
     <div id="episodeOpsTable" class="tbl-scroll" style="max-height:480px;overflow:auto"></div>
+    <h3 id="episodeOpsMaterialTitle" style="margin-top:24px"></h3>
+    <p id="episodeOpsMaterialNote" class="detail-note"></p>
+    <div id="episodeOpsMaterials" class="tbl-scroll" style="max-height:360px;overflow:auto"></div>
     <h3 id="episodeOpsCurveTitle" style="margin-top:24px"></h3>
     <select id="episodeOpsVideo" class="datesel" style="max-width:100%"></select>
     <p id="episodeOpsCurveNote" class="detail-note"></p>
@@ -1004,12 +1007,12 @@ function renderSeriesDetails() {
   const warning=added?(audit.status==='different'?(zh?`与主报表同区间汇总存在差异（平台账号合计 / 主报表：${differences}）。`:`Totals differ for the same range (platform accounts / primary report: ${differences}). `):audit.status==='matched'?(zh?'当前区间四项增量合计与主报表一致。':'All four increment totals match the primary report for this range. '):(zh?'当前区间尚无法与主报表完整核对。':'A complete comparison with the primary report is unavailable for this range. '))+(zh?'以下保留平台原值，不用于主增长榜、贡献率或互动效率计算。':'Platform values below are kept separately and excluded from primary growth, contribution and engagement-efficiency calculations. '):'';
   el('detailAccountsAlert').style.color=audit.status==='different'?'var(--down)':'var(--muted)';
   text('detailAccountsAlert',warning);
-  text('detailAccountsNote',(scope(added,'traffic-added')||empty)+(same(accounts,added)?(zh?'。账号资料：':' . Account metadata: ')+scope(accounts,'accounts'):'')+(zh?'。地区为发布账号地区；同一账号的不同发布版本分行展示，不代表观众地区。':' . Regions belong to publishing accounts, not viewers. Different publishing versions are shown separately.'));
+  text('detailAccountsNote',(scope(added,'traffic-added')||empty)+(same(accounts,added)?(zh?'。账号资料：':' . Account metadata: ')+scope(accounts,'accounts'):'')+(zh?'。地区为发布账号地区；同一账号的不同发布版本分行展示，不代表观众地区。人均时长按所列独立统计日展示，不当作所选区间平均值。':' . Regions belong to publishing accounts, not viewers. Different publishing versions are shown separately. Average duration uses its own reported day, not the selected range average.'));
   if(!added){el('detailAccounts').innerHTML=`<p class="detail-empty">${empty}</p>`;return;}
   const metadata=new Map((same(accounts,added)?accounts.data:[]).map(a=>[a.collectionId,a]));
   const region=code=>{if(!code)return '—';try{return new Intl.DisplayNames([zh?'zh-CN':'en'],{type:'region'}).of(code)||code;}catch(e){return code;}};
-  const cols=zh?['发布账号 / 版本','账号地区','平台新增有效播放','平台新增点赞','平台新增收藏','平台新增评论']:['Publishing account / version','Account region','Platform views added','Platform likes added','Platform favorites added','Platform comments added'];
-  el('detailAccounts').innerHTML='<table><thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+[...added.data].sort((a,b)=>(b.qv??-1)-(a.qv??-1)).map(a=>{const meta=metadata.get(a.collectionId);return `<tr><td>${esc(meta?.name||'—')}<div class="detail-note" style="margin:0">${esc(accountName(a.collectionId,metadata))}</div></td><td>${esc(region(meta?.region))}</td><td>${fmtN(a.qv)}</td><td>${fmtN(a.like)}</td><td>${fmtN(a.fav)}</td><td>${fmtN(a.com)}</td></tr>`;}).join('')+'</tbody></table>';
+  const cols=zh?['发布账号 / 版本','账号地区','平台新增有效播放','平台新增点赞','平台新增收藏','平台新增评论','人均时长 · 有值日']:['Publishing account / version','Account region','Platform views added','Platform likes added','Platform favorites added','Platform comments added','Average duration · observed day'];
+  el('detailAccounts').innerHTML='<table><thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+[...added.data].sort((a,b)=>(b.qv??-1)-(a.qv??-1)).map(a=>{const meta=metadata.get(a.collectionId);return `<tr><td>${esc(meta?.name||'—')}<div class="detail-note" style="margin:0">${esc(accountName(a.collectionId,metadata))}</div></td><td>${esc(region(meta?.region))}</td><td>${fmtN(a.qv)}</td><td>${fmtN(a.like)}</td><td>${fmtN(a.fav)}</td><td>${fmtN(a.com)}</td><td>${meta?.averageDurationSeconds==null?'—':meta.averageDurationSeconds.toFixed(2)+' s'}<div class="detail-note">${meta?.averageDurationDate||''}</div></td></tr>`;}).join('')+'</tbody></table>';
 }
 
 function renderEpisodeDetail(did) {
@@ -1090,11 +1093,12 @@ function renderEpisodeOps() {
   select.innerHTML=sorted.map(r=>`<option value="${esc(r.id)}"${r.id===episodeOpsPick?' selected':''}>${esc(r.name)}</option>`).join('');
   select.onchange=()=>{episodeOpsPick=select.value;episodeOpsItem=null;renderEpisodeOps();};
   const metrics=record.metrics,rows=metrics?.rows||[],seconds=record.seconds||{};
-  const eligible=[...new Set(rows.filter(r=>!r.highlight&&r.itemId).map(r=>r.itemId))],covered=eligible.filter(id=>seconds[id]).length;
+  const videoFor=r=>Object.values(seconds).filter(v=>v.episode===r.episode&&v.highlight===r.highlight&&(v.itemId===r.itemId||(r.itemIds||[]).includes(v.itemId))).sort((a,b)=>b.checked.localeCompare(a.checked))[0];
+  const eligible=rows.filter(r=>!r.highlight&&r.episode>0&&r.itemId),covered=eligible.filter(r=>videoFor(r)).length;
   const when=s=>new Date(s).toLocaleString(zh?'zh-CN':'en-US',{hour12:false});
   el('episodeOpsScope').textContent=(metrics?`${metrics.start} ~ ${metrics.end} · ${zh?'采集于':'Observed'} ${when(metrics.checked)} · ${rows.length}/${metrics.total} ${zh?'集/片段已完整翻页':'episodes/highlights, all pages verified'}`:(zh?'平台暂未返回可用的分集指标表':'No usable episode metric table returned'))
     +(zh?'。新增列按此查询区间，累计列保留平台累计；完播率与平均时长为平台原值，不混入主增长榜。曝光与点击的口径尚未核准，不据此计算转化率。':' . Added columns use this query range; cumulative columns retain platform totals. Completion and average duration are separate platform metrics, excluded from primary growth rankings. Exposure/click definitions remain unverified; no conversion rate is inferred.')
-    +(metrics?(zh?` 逐秒采集覆盖 ${covered}/${eligible.length} 个当前代表视频。`:` Second curves cover ${covered}/${eligible.length} current representative videos.`):'')
+    +(metrics?(zh?` 逐秒采集覆盖 ${covered}/${eligible.length} 集的可用视频快照。`:` Second curves cover ${covered}/${eligible.length} episodes with available video snapshots.`):'')
     +(record.lastError?(zh?' 本轮更新失败，保留上述时间的结果。':' Refresh failed; retaining the observation above.'):'')
     +(record.pending?(zh?' 逐秒曲线仍在补采中。':' More second curves are pending collection.'):'');
   const sort=el('episodeOpsSort'),sorts=zh?{episode:'按集号',qv:'按新增有效播放',finishRate:'按平台完播率',durationSeconds:'按平均观看时长'}:{episode:'Episode order',qv:'Effective views added',finishRate:'Platform completion',durationSeconds:'Average duration'};
@@ -1103,9 +1107,17 @@ function renderEpisodeOps() {
   const value=r=>episodeOpsSort==='qv'?r.added.qv:r[episodeOpsSort];
   const ordered=[...rows].sort((a,b)=>episodeOpsSort==='episode'?Number(a.highlight)-Number(b.highlight)||a.episode-b.episode:(value(b)??-1)-(value(a)??-1)||a.episode-b.episode);
   const labels=zh?['集号','新增有效播放','累计有效播放','平台完播率','平均观看时长','新增点赞','新增收藏','新增评论','逐秒曲线']:['Episode','Effective views +','Cumulative effective','Platform completion','Average duration','Likes +','Favorites +','Comments +','Second curve'];
-  const name=r=>r.highlight?(zh?'片段 ':'Highlight ')+r.episode:(zh?'第 '+r.episode+' 集':'Episode '+r.episode);
-  el('episodeOpsTable').innerHTML=rows.length?'<table><thead><tr>'+labels.map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+ordered.map(r=>`<tr><td>${esc(name(r))}</td><td>${fmtN(r.added.qv)}</td><td>${fmtN(r.cumulative.qv)}</td><td>${pct(r.finishRate)}</td><td>${r.durationSeconds==null?'—':r.durationSeconds.toFixed(2)+' s'}</td><td>${fmtN(r.added.like)}</td><td>${fmtN(r.added.fav)}</td><td>${fmtN(r.added.com)}</td><td>${seconds[r.itemId]?`<button class="datechip" data-insight-item="${esc(r.itemId)}">${zh?'查看':'View'}</button>`:'—'}</td></tr>`).join('')+'</tbody></table>':'';
+  const name=r=>r.highlight?(zh?'片段 ':'Highlight ')+r.episode:r.episode===0?(zh?'未编号内容':'Unnumbered content'):(zh?'第 '+r.episode+' 集':'Episode '+r.episode);
+  el('episodeOpsTable').innerHTML=rows.length?'<table><thead><tr>'+labels.map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+ordered.map(r=>`<tr><td>${esc(name(r))}</td><td>${fmtN(r.added.qv)}</td><td>${fmtN(r.cumulative.qv)}</td><td>${pct(r.finishRate)}</td><td>${r.durationSeconds==null?'—':r.durationSeconds.toFixed(2)+' s'}</td><td>${fmtN(r.added.like)}</td><td>${fmtN(r.added.fav)}</td><td>${fmtN(r.added.com)}</td><td>${videoFor(r)?`<button class="datechip" data-insight-item="${esc(videoFor(r).itemId)}">${zh?'查看':'View'}</button>`:'—'}</td></tr>`).join('')+'</tbody></table>':'';
   el('episodeOpsTable').querySelectorAll('[data-insight-item]').forEach(b=>b.onclick=()=>{episodeOpsItem=b.dataset.insightItem;renderEpisodeOps();el('episodeOpsCurveTitle').scrollIntoView({block:'start',behavior:'smooth'});});
+  el('episodeOpsMaterialTitle').textContent=zh?'引流素材表现':'Promotional material performance';
+  const materials=record.materials;
+  el('episodeOpsMaterialNote').textContent=materials?`${zh?'目录已核对':'Catalog verified'} ${materials.rows.length}/${materials.total} · ${materials.start?materials.start+' ~ '+materials.end+' · ':''}${zh?'采集于':'Observed'} ${when(materials.checked)}`
+    +(zh?'。曝光和点击保留本源原值；点击/曝光比=点击量÷曝光量，分母为0或缺失时留空，不代表人数转化率。素材不与剧集主榜相加，同名素材按发布视频分行。账号地区不是观众地区；带剧贡献暂无可核对值，不推算或回填。':' . Exposure and clicks retain this source’s values. Click/exposure = clicks / exposures; zero or missing denominators stay blank. It is not a viewer conversion rate. Materials are excluded from primary drama totals; same-named publishing videos remain separate. Account regions are not viewer geography. No drama-play contribution is inferred.')
+    +(materials.statsPartial?(zh?' 部分素材统计尚未返回，缺值留空并继续重试。':' Some material statistics remain unavailable and will be retried.'):'')
+    +(record.materialError?(zh?' 本轮刷新失败，保留此快照。':' Refresh failed; retaining this snapshot.'):''):(zh?'素材数据尚未取得；后续继续重试，不按0填充。':'Material data is not yet available; it remains eligible for retry and is not filled with zeros.');
+  const materialCols=zh?['素材 / 视频','发布账号','账号地区','发布日（UTC）','素材时长','平台曝光','平台点击','点击/曝光比']:['Material / video','Publishing account','Account region','Published (UTC)','Duration','Platform exposure','Platform clicks','Click/exposure'];
+  el('episodeOpsMaterials').innerHTML=materials?.rows?.length?'<table><thead><tr>'+materialCols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+[...materials.rows].sort((a,b)=>(b.impressions??-1)-(a.impressions??-1)).map(r=>`<tr><td>${esc(r.title||(zh?'未命名素材':'Untitled material'))}<div class="detail-note">…${esc(r.itemId.slice(-6))}</div></td><td>${esc(r.account.name||r.account.handle||'—')}</td><td>${esc(r.account.region||'—')}</td><td>${r.published||'—'}</td><td>${r.durationSeconds==null?'—':r.durationSeconds.toFixed(1)+' s'}</td><td>${fmtN(r.impressions)}</td><td>${fmtN(r.clicks)}</td><td>${pct(r.impressions>0&&r.clicks!=null?r.clicks/r.impressions:null)}</td></tr>`).join('')+'</tbody></table>':'';
   el('episodeOpsCurveTitle').textContent=zh?'逐秒观看到达与点赞分布 · 单视频快照':'Second-by-second viewing and like distribution · Single-video snapshot';
   const videos=Object.values(seconds).sort((a,b)=>a.episode-b.episode||b.checked.localeCompare(a.checked));
   if(!videos.some(v=>v.itemId===episodeOpsItem))episodeOpsItem=videos[0]?.itemId||null;
@@ -1120,7 +1132,7 @@ function renderEpisodeOps() {
   }
   el('episodeOpsCurveNote').textContent=(zh?'采集于 ':'Observed ')+when(video.checked)+(zh?'。本曲线仅对应视频 …':' . This curve represents video …')+video.itemId.slice(-6)
     +(zh?'，不代表整集全部发布版本；不随日期筛选切换，平台未提供独立截止日或观众样本量。观看到达率=到达该秒的观众÷总播放观众；点赞分布=该秒点赞数÷总点赞数。分集表完播率与本曲线末值口径不同，不互相替代。':' only, not all publishing versions of this episode. It is independent of date filters; no separate watermark or viewer sample size is supplied. Reach = viewers reaching that second / total play viewers. Like distribution = likes at that second / total likes. Table completion and the curve endpoint have different scopes and are not interchangeable.')
-    +(record.failures?.[video.itemId]?(zh?' 最近重采失败，保留此快照。':' Latest refresh failed; this snapshot is retained.'):'');
+    +(Object.entries(record.failures||{}).some(([id])=>id===video.itemId||rows.some(r=>r.itemId===id&&r.episode===video.episode&&(r.itemIds||[]).includes(video.itemId)))?(zh?' 最近重采失败，保留此快照。':' Latest refresh failed; this snapshot is retained.'):'');
   const retention=new Map(video.retention),likes=new Map(video.likes),points=[...new Set([...retention.keys(),...likes.keys()])].sort((a,b)=>a-b),axis=Array.from({length:Math.max(...points)+1},(_,i)=>i);
   const kpis=[3,5,10].map(t=>({label:zh?t+'秒到达率':t+'s reach',value:pct(retention.has(t)?retention.get(t):null)}));
   el('episodeOpsKpis').innerHTML=kpis.map(k=>`<div class="detail-panel"><div class="meta">${k.label}</div><strong style="font-size:22px">${k.value}</strong></div>`).join('');

@@ -40,6 +40,13 @@ class DetailTests(unittest.TestCase):
         self.assertIsNone(rows[0]['like'])
         self.assertNotIn('share_pct', rows[0])
 
+    def test_account_duration_uses_its_own_day_and_seconds_without_percentage_cap(self):
+        rows = self.parse('accounts', accounts=[dict(collection_id='123', avg_play_duration='554.00', avg_play_date='2026-11-08')])
+        self.assertEqual(rows[0]['averageDurationSeconds'], 554)
+        self.assertEqual(rows[0]['averageDurationDate'], '2026-11-08')
+        absent = self.parse('accounts', accounts=[dict(collection_id='123', avg_play_duration='554.00')])
+        self.assertNotIn('averageDurationSeconds', absent[0])
+
     def test_wrong_range_duplicate_id_and_invalid_percentage_are_rejected(self):
         with self.assertRaises(PageDataError):
             normalize('accounts', self.payload(accounts=[]), '2026-11-01', '2026-11-08')
