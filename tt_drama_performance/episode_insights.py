@@ -347,7 +347,7 @@ def collect_materials(page, capture, did, deadline=None, allow_missing_stats=Fal
     rows = [dict(row, **values.get(row['itemId'], dict(impressions=None, clicks=None))) for row in catalog]
     return dict(complete=True, total=first['total'], rows=rows, checked=stamp(),
                 start=scope[0] if scope else None, end=scope[1] if scope else None,
-                statsRows=len(values), statsPartial=stats_partial)
+                statsRows=len(values), statsPartial=stats_partial or len(values) < first['total'])
 
 
 def collect(page, base, log=print, retry_hours=24, budget_seconds=1200, only_ids=None, seconds_per_title=10):
@@ -530,8 +530,14 @@ def collect(page, base, log=print, retry_hours=24, budget_seconds=1200, only_ids
                     record['pending'] = True
                 else:
                     try:
-                        materials = collect_materials(page, capture, did, deadline,
-                            allow_missing_stats=not old.get('materials') or old['materials'].get('statsPartial', False))
+                        old_materials = old.get('materials') or {}
+                        old_values = {r['itemId'] for r in old_materials.get('rows', [])
+                                      if r['impressions'] is not None or r['clicks'] is not None}
+                        materials = collect_materials(page, capture, did, deadline, allow_missing_stats=not old_values)
+                        new_values = {r['itemId'] for r in materials['rows'] if r['impressions'] is not None or r['clicks'] is not None}
+                        same_scope = (old_materials.get('start'), old_materials.get('end')) == (materials['start'], materials['end'])
+                        if old_values and (not new_values or same_scope and not old_values <= new_values):
+                            raise PageDataError('素材本轮统计缺失，保留上次同源快照')
                         if old.get('materials') and old['materials']['rows'] != materials['rows']:
                             preserve_old()
                         record['materials'] = materials
