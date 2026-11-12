@@ -271,6 +271,16 @@ def build_payload(base):
     if episode_errors:
         notes.append(f'{len(episode_errors)} 份分集快照校验失败，暂不展示。')
         notes_en.append(f'{len(episode_errors)} episode snapshots failed validation and are omitted.')
+    from episode_insights import load_records
+    insight_errors = []
+    episode_insights = load_records(root, errors=insight_errors)
+    insight_catalog = []
+    for did, record in episode_insights.items():
+        insight_catalog.append(dict(id=did, name=record['name'], rows=len((record.get('metrics') or {}).get('rows', [])),
+                                    curves=len(record.get('seconds', {})), pending=record.get('pending', False)))
+    if insight_errors:
+        notes.append(f'{len(insight_errors)} 份分集运营档案未通过校验，暂不展示。')
+        notes_en.append(f'{len(insight_errors)} episode-operation archives failed validation and are omitted.')
     return dict(schema=2, generated=dt.datetime.now().strftime('%Y-%m-%d %H:%M'), dataThrough=latest,
                 snapDate=latest, daily=daily, kpis=kpis, wow=wow_periods[0]['rows'], wowPeriods=wow_periods,
                 dramas=dramas, moversSeries=movers, dramaTrends=dict(trends), gaps=gaps,
@@ -282,7 +292,7 @@ def build_payload(base):
                 trendTitles=list(trend_titles.values()),
                 seriesHistory=series_history,
                 seriesDetails=details,
-                episodeDetails=episodes,
+                episodeDetails=episodes, episodeInsights=episode_insights, episodeInsightCatalog=insight_catalog,
                 dayDetails={day: [[r['id'], r['qv'], r['like'], r['fav'], r['com']] for r in record['rows']]
                             for day, record in sorted(direct.items())},
                 historyRequestedStart=requested_start,
@@ -292,11 +302,8 @@ def build_payload(base):
                                  for d in date_axis(requested_start, latest)])
 
 
-def build_report(base):
-    from generate_report import ai_insights
+def write_payload_report(base, payload):
     base = Path(base)
-    payload = build_payload(base)
-    payload['aiInsights'] = ai_insights(payload)
     template = (base / 'template.html').read_text(encoding='utf-8')
     from report_codec import encode_payload
     encoded = encode_payload(payload)
@@ -308,3 +315,33 @@ def build_report(base):
     build_web_report(base, payload)
     print(f'report.html written; v2 through {payload["dataThrough"]}; {payload["directDays"]} measured drama days; {len(payload["dramas"])} grouped titles')
     return payload
+
+
+def refresh_episode_report(base):
+    """Refresh independent episode data while retaining the accepted primary report."""
+    from report_codec import read_report_payload
+    from episode_insights import load_records
+    base = Path(base)
+    payload = read_report_payload((base / 'report.html').read_text(encoding='utf-8'))
+    if payload.get('schema') != 2:
+        raise ValueError('No accepted v2 report available for supplemental refresh')
+    errors = []
+    records = load_records(base / 'data/v2', errors=errors)
+    payload['episodeInsights'] = records
+    payload['episodeInsightCatalog'] = [dict(id=did, name=r['name'], rows=len((r.get('metrics') or {}).get('rows', [])),
+        curves=len(r.get('seconds', {})), pending=r.get('pending', False)) for did, r in records.items()]
+    zh = '本轮主数据刷新未成功，主增长榜保留上次已验收结果；分集运营数据独立更新。'
+    en = 'Primary refresh failed; growth rankings retain the last accepted data. Episode operations update independently.'
+    if zh not in payload['qualityNotes']:
+        payload['qualityNotes'].append(zh)
+    if en not in payload['qualityNotes_en']:
+        payload['qualityNotes_en'].append(en)
+    payload['generated'] = dt.datetime.now().strftime('%Y-%m-%d %H:%M')
+    return write_payload_report(base, payload)
+
+
+def build_report(base):
+    from generate_report import ai_insights
+    payload = build_payload(base)
+    payload['aiInsights'] = ai_insights(payload)
+    return write_payload_report(base, payload)

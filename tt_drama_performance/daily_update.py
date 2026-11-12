@@ -684,13 +684,23 @@ def run(push, headless):
             if page.get_by_role('button', name='Export', exact=True).count():
                 from analytics_v2 import collect
                 from report_v2 import build_report
-                manifest = collect(page, BASE, log=log,
-                        backfill_days=int(CFG.get('v2_backfill_days', 30)),
-                        refresh_days=int(CFG.get('v2_refresh_days', 3)),
-                        history_start=CFG.get('v2_history_start', '2026-03-01'),
-                        retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
+                from analytics_v2 import read_json
+                previous = read_json(os.path.join(BASE, 'data/v2/latest.json'), {})
+                main_failed = False
+                try:
+                    manifest = collect(page, BASE, log=log,
+                            backfill_days=int(CFG.get('v2_backfill_days', 30)),
+                            refresh_days=int(CFG.get('v2_refresh_days', 3)),
+                            history_start=CFG.get('v2_history_start', '2026-03-01'),
+                            retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
+                except Exception as exc:
+                    if not previous.get('latest') or not os.path.isfile(os.path.join(BASE, 'report.html')):
+                        raise
+                    main_failed = True
+                    manifest = previous
+                    log(f'主数据刷新未成功（{type(exc).__name__}: {(str(exc).splitlines() or [type(exc).__name__])[0][:160]}），保留上次已验收主报表；分集运营独立采集。')
                 dd = manifest['latest']
-                if CFG.get('v2_series_details', True):
+                if not main_failed and CFG.get('v2_series_details', True):
                     try:
                         from series_details import collect as collect_details
                         collect_details(page, BASE, log=log,
@@ -703,13 +713,30 @@ def run(push, headless):
                                          retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
                     except Exception as e:
                         log(f'分集快照暂未完成，主日报继续：{type(e).__name__}: {str(e).splitlines()[0][:160]}')
-                if CFG.get('v2_series_history', True):
+                if not main_failed and CFG.get('v2_series_history', True):
                     try:
                         from series_history import collect as collect_series
                         collect_series(page, BASE, start=manifest['requestedStart'], log=log,
                                        retry_hours=float(CFG.get('v2_history_retry_hours', 24)))
                     except Exception as e:
                         log(f'单剧历史补充暂未完成，主日报继续使用已验收数据：{type(e).__name__}: {str(e).splitlines()[0][:160]}')
+                if CFG.get('v2_episode_insights', True):
+                    try:
+                        from episode_insights import collect as collect_insights
+                        collect_insights(page, BASE, log=log,
+                            retry_hours=float(CFG.get('v2_history_retry_hours', 24)),
+                            budget_seconds=float(CFG.get('v2_episode_insights_budget_seconds', 1200)),
+                            seconds_per_title=int(CFG.get('v2_episode_insights_per_title', 10)))
+                    except Exception as exc:
+                        log(f'分集运营本轮未完成（{type(exc).__name__}），保留已取得的数据。')
+                if main_failed:
+                    from report_v2 import refresh_episode_report
+                    refresh_episode_report(BASE)
+                    paths = [p for p in ('data/v2/episode_insights', 'data/v2/episode_insights_latest.json',
+                                         'data/v2/episode_insights_revisions') if os.path.exists(os.path.join(BASE, p))]
+                    publish_report(dd, push, stuck, data_paths=paths, clear_alerts=False)
+                    log('补充报表分发已尝试；主采集仍未成功，本轮保持失败状态等待重试。')
+                    return 4
                 build_report(BASE)
                 return publish_report(dd, push, stuck)
             daily = page.evaluate(EXTRACT_JS)
@@ -917,7 +944,7 @@ def run(push, headless):
     return publish_report(dd, push, stuck)
 
 
-def publish_report(dd, push, stuck):
+def publish_report(dd, push, stuck, *, data_paths=None, clear_alerts=True):
     today = datetime.date.today().isoformat()
     # 4) 分发。S3 优先（业务系统的消费口），git/分享页其次——三路互不阻塞，
     #    GitHub 偶发连不上时 S3 照常更新。
@@ -929,9 +956,10 @@ def publish_report(dd, push, stuck):
         log('git 仓库仍卡在中间态，本轮不做 git 分发（本地已入库，解开冲突后会一并补推）。')
         return 4
     if push:
+        paths = ['data', 'report.html'] if data_paths is None else [*data_paths, 'report.html']
         for cmd in (['git', 'pull', '--rebase', '--autostash'],
-                    ['git', 'add', 'data', 'report.html'],
-                    ['git', 'commit', '--only', '-m', f'data: snapshot {dd} (exported {today})', '--', 'data', 'report.html'],
+                    ['git', 'add', *paths],
+                    ['git', 'commit', '--only', '-m', f'data: snapshot {dd} (exported {today})', '--', *paths],
                     ['git', 'push']):
             r = run_publish_git(cmd)
             if cmd[1] == 'pull' and r.returncode == 0:
@@ -963,8 +991,9 @@ def publish_report(dd, push, stuck):
     if not pages_ok:
         log('本地报告与其他分发已完成，但分享页同步失败。')
         return 4
-    alert_clear_all()
-    log('完成。')
+    if clear_alerts:
+        alert_clear_all()
+    log('完成。' if clear_alerts else '补充报表分发完成；主数据状态保持未成功。')
     return 0
 
 

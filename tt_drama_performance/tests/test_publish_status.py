@@ -87,6 +87,18 @@ class PublishTests(unittest.TestCase):
     def test_success_clears_alert_state(self):
         self.check_status(True, True, 0)
 
+    def test_supplemental_only_commit_never_stages_unaccepted_primary_files(self):
+        ok = subprocess.CompletedProcess([], 0, '', '')
+        with patch.object(d, 'sync_s3', return_value=True), patch.object(d, 'sync_pages_repo', return_value=True), \
+             patch.object(d, 'run_git', return_value=ok) as git, patch.object(d, 'git_stuck', return_value=None), \
+             patch.object(d, 'alert_clear'), patch.object(d, 'alert_clear_all') as clear, patch.object(d, 'log'):
+            result = d.publish_report('2026-11-08', True, None,
+                data_paths=['data/v2/episode_insights', 'data/v2/episode_insights_latest.json'], clear_alerts=False)
+        self.assertEqual(result, 0)
+        paths = next(c.args[0][2:] for c in git.call_args_list if c.args[0][1] == 'add')
+        self.assertEqual(paths, ['data/v2/episode_insights', 'data/v2/episode_insights_latest.json', 'report.html'])
+        clear.assert_not_called()
+
     def test_existing_pages_rebase_is_never_aborted(self):
         with patch.dict(d.CFG, {'pages_repo_dir': '/tmp/fake-pages'}), patch.object(d.os.path, 'isdir', return_value=True), \
                 patch.object(d, 'git_stuck', return_value='rebase-merge'), patch.object(d, 'run_git') as git, \

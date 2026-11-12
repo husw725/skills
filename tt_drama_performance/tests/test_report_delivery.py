@@ -10,6 +10,23 @@ from report_delivery import build_web_report, verify_asset
 
 
 class ReportDeliveryTests(unittest.TestCase):
+    def test_large_episode_records_are_split_by_title(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / 'template.html').write_text('const DATA = decodeReportData(/*__DATA__*/null);', encoding='utf-8')
+            payload = dict(schema=2, episodeInsights={'101': {'id': '101', 'values': [0, None]},
+                                                      '102': {'id': '102', 'values': [1]}},
+                           episodeInsightCatalog=[dict(id='101'), dict(id='102')])
+            web, assets = build_web_report(base, payload)
+            core = read_report_payload(web.read_text(encoding='utf-8'))
+            self.assertEqual(core['episodeInsights'], {})
+            self.assertEqual(set(core['_sections']), {'episode-101', 'episode-102'})
+            restored = {}
+            for _, path in assets:
+                record = unpack_payload(json.loads(path.read_bytes()))['data']['episodeInsightRecord']
+                restored[record['id']] = record
+            self.assertEqual(restored, payload['episodeInsights'])
+
     def test_sections_reassemble_exactly_and_old_versions_remain(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)

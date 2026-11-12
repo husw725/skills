@@ -200,7 +200,11 @@ class PageCapture:
                 visible = calendar.locator('[role="gridcell"][title]').evaluate_all(
                     '(es)=>es.filter(e=>e.getClientRects().length).map(e=>e.title).sort()')
                 if not visible:
-                    raise PageDataError('日期选择器结构改变')
+                    # Semi renders the panel shell before its cells, also after a selection.
+                    self.wait(lambda: calendar.locator('[role="gridcell"][title]').evaluate_all(
+                        '(es)=>es.some(e=>e.getClientRects().length&&/^\\d{4}-\\d{2}-\\d{2}$/.test(e.title))'),
+                        '日期单元格渲染', timeout=timeout)
+                    continue
                 direction = 'Previous month' if target < visible[0] else 'Next month'
                 calendar.get_by_role('button', name=direction, exact=True).evaluate('(el) => el.click()', timeout=timeout)
                 page.wait_for_timeout(100)
@@ -396,7 +400,15 @@ def audit_data(base):
                 validate_episode(read_json(path), path.stem)
             except Exception as e:
                 errors.append(f'episodes/{path.name}: {e}')
-    return len(files) + len(series_files) + len(detail_files) + len(episode_files), errors
+    insight_files = list((root / 'episode_insights').glob('*.json'))
+    if insight_files:
+        from episode_insights import validate_record as validate_insight
+        for path in insight_files:
+            try:
+                validate_insight(read_json(path), path.stem)
+            except Exception as e:
+                errors.append(f'episode_insights/{path.name}: {e}')
+    return len(files) + len(series_files) + len(detail_files) + len(episode_files) + len(insight_files), errors
 
 
 def collect(page, base, latest=None, log=print, backfill_days=30, refresh_days=3,

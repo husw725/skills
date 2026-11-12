@@ -46,8 +46,15 @@ def build_web_report(base, payload=None):
     manifest, assets = {}, []
     directory = base / 'output' / 'report-web'
     (directory / 'data').mkdir(parents=True, exist_ok=True)
-    for name, keys in SECTION_KEYS.items():
-        values = {key: core.pop(key) for key in keys if key in core}
+    sections = [(name, {key: core.pop(key) for key in keys if key in core}) for name, keys in SECTION_KEYS.items()]
+    if 'episodeInsights' in core:
+        insights = core.pop('episodeInsights')
+        core['episodeInsights'] = {}
+        for did, record in insights.items():
+            if not str(did).isdigit():
+                raise ValueError('Invalid episode insight title ID')
+            sections.append((f'episode-{did}', {'episodeInsightRecord': record}))
+    for name, values in sections:
         if not values:
             continue
         body = json.dumps(pack_payload(dict(section=name, data=values)), ensure_ascii=False,

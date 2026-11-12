@@ -224,6 +224,22 @@ tr.sub td { color: var(--ink2); font-size: 12px; background: var(--surface2); }
     <div class="tbl-scroll" id="dramaTbl"></div>
   </div>
 
+  <section class="card" id="episodeOpsCard" style="display:none">
+    <h2 id="episodeOpsTitle"></h2>
+    <select id="episodeOpsTitleSelect" class="datesel" style="max-width:100%"></select>
+    <p id="episodeOpsScope" class="detail-note"></p>
+    <select id="episodeOpsSort" class="datesel"></select>
+    <div id="episodeOpsTable" class="tbl-scroll" style="max-height:480px;overflow:auto"></div>
+    <h3 id="episodeOpsCurveTitle" style="margin-top:24px"></h3>
+    <select id="episodeOpsVideo" class="datesel" style="max-width:100%"></select>
+    <p id="episodeOpsCurveNote" class="detail-note"></p>
+    <div id="episodeOpsKpis" class="detail-grid"></div>
+    <p id="episodeOpsDrops" class="detail-note"></p>
+    <div id="episodeOpsRetention" class="chart"></div>
+    <div id="episodeOpsLikes" class="chart"></div>
+    <details><summary id="episodeOpsDataLabel"></summary><div id="episodeOpsData" class="tbl-scroll"></div></details>
+  </section>
+
   <details class="card" id="legacyCard" style="display:none">
     <summary id="legacyTitle"></summary><p id="legacyNote" class="meta"></p>
     <div class="tbl-scroll" id="legacyTable" style="max-height:420px;overflow:auto"></div>
@@ -273,7 +289,11 @@ async function loadReportSection(name) {
       const packet=decodeReportData(JSON.parse(new TextDecoder().decode(bytes)));
       if(packet.section!==name||!packet.data||Object.keys(packet.data).length!==spec.keys.length
           ||!spec.keys.every(k=>Object.prototype.hasOwnProperty.call(packet.data,k)))throw Error('Invalid section data');
-      for(const key of spec.keys)DATA[key]=packet.data[key];
+      if(name.startsWith('episode-')){
+        const record=packet.data.episodeInsightRecord,id=name.slice(8);
+        if(!record||record.id!==id||spec.keys.length!==1)throw Error('Episode source mismatch');
+        (DATA.episodeInsights??={})[id]=record;
+      }else for(const key of spec.keys)DATA[key]=packet.data[key];
       reportLoaded.add(name);
       reportReloads.delete(name);
     } finally {clearTimeout(timer);reportLoads.delete(name);}
@@ -295,7 +315,7 @@ function deferReportSection(name,cardId,draw) {
   const show=(state)=>{
     status.replaceChildren();
     const text=document.createElement('p');text.className='meta';
-    text.textContent=labels[name]+' · '+(state==='loading'?(zh?'正在加载…':'Loading…'):state==='failed'?(zh?'加载失败，请重试。':'Loading failed. Please retry.'):(zh?'浏览到这里时加载明细':'Details load when this section is visible'));
+    text.textContent=(labels[name]||(zh?'分集运营与逐秒曲线':'Episode operations and second curves'))+' · '+(state==='loading'?(zh?'正在加载…':'Loading…'):state==='failed'?(zh?'加载失败，请重试。':'Loading failed. Please retry.'):(zh?'浏览到这里时加载明细':'Details load when this section is visible'));
     status.append(text);
     const button=document.createElement('button');button.className='datechip';button.disabled=state==='loading';
     button.textContent=state==='failed'?(zh?'重新加载':'Retry'):(zh?'加载明细':'Load details');
@@ -1053,6 +1073,68 @@ function renderSeriesArchive() {
   draw();
 }
 
+let episodeOpsPick=null,episodeOpsItem=null,episodeOpsSort='episode';
+function renderEpisodeOps() {
+  const catalog=DATA.episodeInsightCatalog||[];
+  if(!catalog.length)return;
+  const zh=LANG==='zh',el=id=>document.getElementById(id),pct=v=>v==null?'—':(v*100).toFixed(1)+'%';
+  const sorted=[...catalog].sort((a,b)=>b.curves-a.curves||b.rows-a.rows||a.name.localeCompare(b.name));
+  if(!sorted.some(r=>r.id===episodeOpsPick))episodeOpsPick=sorted[0].id;
+  el('episodeOpsCard').style.display='';
+  if(deferReportSection('episode-'+episodeOpsPick,'episodeOpsCard',renderEpisodeOps))return;
+  const record=DATA.episodeInsights?.[episodeOpsPick];
+  if(!record)return;
+  el('episodeOpsTitle').textContent=zh?'分集表现与观看曲线':'Episode performance and viewing curves';
+  const select=el('episodeOpsTitleSelect');
+  select.setAttribute('aria-label',zh?'选择分集运营剧目':'Choose episode operations title');
+  select.innerHTML=sorted.map(r=>`<option value="${esc(r.id)}"${r.id===episodeOpsPick?' selected':''}>${esc(r.name)}</option>`).join('');
+  select.onchange=()=>{episodeOpsPick=select.value;episodeOpsItem=null;renderEpisodeOps();};
+  const metrics=record.metrics,rows=metrics?.rows||[],seconds=record.seconds||{};
+  const eligible=[...new Set(rows.filter(r=>!r.highlight&&r.itemId).map(r=>r.itemId))],covered=eligible.filter(id=>seconds[id]).length;
+  const when=s=>new Date(s).toLocaleString(zh?'zh-CN':'en-US',{hour12:false});
+  el('episodeOpsScope').textContent=(metrics?`${metrics.start} ~ ${metrics.end} · ${zh?'采集于':'Observed'} ${when(metrics.checked)} · ${rows.length}/${metrics.total} ${zh?'集/片段已完整翻页':'episodes/highlights, all pages verified'}`:(zh?'平台暂未返回可用的分集指标表':'No usable episode metric table returned'))
+    +(zh?'。新增列按此查询区间，累计列保留平台累计；完播率与平均时长为平台原值，不混入主增长榜。曝光与点击的口径尚未核准，不据此计算转化率。':' . Added columns use this query range; cumulative columns retain platform totals. Completion and average duration are separate platform metrics, excluded from primary growth rankings. Exposure/click definitions remain unverified; no conversion rate is inferred.')
+    +(metrics?(zh?` 逐秒采集覆盖 ${covered}/${eligible.length} 个当前代表视频。`:` Second curves cover ${covered}/${eligible.length} current representative videos.`):'')
+    +(record.lastError?(zh?' 本轮更新失败，保留上述时间的结果。':' Refresh failed; retaining the observation above.'):'')
+    +(record.pending?(zh?' 逐秒曲线仍在补采中。':' More second curves are pending collection.'):'');
+  const sort=el('episodeOpsSort'),sorts=zh?{episode:'按集号',qv:'按新增有效播放',finishRate:'按平台完播率',durationSeconds:'按平均观看时长'}:{episode:'Episode order',qv:'Effective views added',finishRate:'Platform completion',durationSeconds:'Average duration'};
+  sort.innerHTML=Object.entries(sorts).map(([k,v])=>`<option value="${k}"${k===episodeOpsSort?' selected':''}>${v}</option>`).join('');
+  sort.onchange=()=>{episodeOpsSort=sort.value;renderEpisodeOps();};
+  const value=r=>episodeOpsSort==='qv'?r.added.qv:r[episodeOpsSort];
+  const ordered=[...rows].sort((a,b)=>episodeOpsSort==='episode'?Number(a.highlight)-Number(b.highlight)||a.episode-b.episode:(value(b)??-1)-(value(a)??-1)||a.episode-b.episode);
+  const labels=zh?['集号','新增有效播放','累计有效播放','平台完播率','平均观看时长','新增点赞','新增收藏','新增评论','逐秒曲线']:['Episode','Effective views +','Cumulative effective','Platform completion','Average duration','Likes +','Favorites +','Comments +','Second curve'];
+  const name=r=>r.highlight?(zh?'片段 ':'Highlight ')+r.episode:(zh?'第 '+r.episode+' 集':'Episode '+r.episode);
+  el('episodeOpsTable').innerHTML=rows.length?'<table><thead><tr>'+labels.map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+ordered.map(r=>`<tr><td>${esc(name(r))}</td><td>${fmtN(r.added.qv)}</td><td>${fmtN(r.cumulative.qv)}</td><td>${pct(r.finishRate)}</td><td>${r.durationSeconds==null?'—':r.durationSeconds.toFixed(2)+' s'}</td><td>${fmtN(r.added.like)}</td><td>${fmtN(r.added.fav)}</td><td>${fmtN(r.added.com)}</td><td>${seconds[r.itemId]?`<button class="datechip" data-insight-item="${esc(r.itemId)}">${zh?'查看':'View'}</button>`:'—'}</td></tr>`).join('')+'</tbody></table>':'';
+  el('episodeOpsTable').querySelectorAll('[data-insight-item]').forEach(b=>b.onclick=()=>{episodeOpsItem=b.dataset.insightItem;renderEpisodeOps();el('episodeOpsCurveTitle').scrollIntoView({block:'start',behavior:'smooth'});});
+  el('episodeOpsCurveTitle').textContent=zh?'逐秒观看到达与点赞分布 · 单视频快照':'Second-by-second viewing and like distribution · Single-video snapshot';
+  const videos=Object.values(seconds).sort((a,b)=>a.episode-b.episode||b.checked.localeCompare(a.checked));
+  if(!videos.some(v=>v.itemId===episodeOpsItem))episodeOpsItem=videos[0]?.itemId||null;
+  const videoSelect=el('episodeOpsVideo');videoSelect.innerHTML=videos.map(v=>`<option value="${esc(v.itemId)}"${v.itemId===episodeOpsItem?' selected':''}>${esc(name(v))} · ${zh?'视频':'Video'} …${esc(v.itemId.slice(-6))}</option>`).join('');
+  videoSelect.setAttribute('aria-label',zh?'选择逐秒视频版本':'Choose second-curve video version');
+  videoSelect.onchange=()=>{episodeOpsItem=videoSelect.value;renderEpisodeOps();};
+  const video=seconds[episodeOpsItem];
+  el('episodeOpsDataLabel').textContent=zh?'查看逐秒原值':'View second-by-second values';
+  if(!video){
+    el('episodeOpsCurveNote').textContent=zh?'尚未取得可用逐秒曲线。平台可能因播放不足、未发布或数据过期不返回；缺失不按0处理，后续继续重试。':'No usable second curve yet. The platform may withhold it for insufficient plays, unpublished content or expiry. Missing data is not zero and remains eligible for retry.';
+    el('episodeOpsKpis').innerHTML='';el('episodeOpsDrops').textContent='';unavailableChart('episodeOpsRetention');unavailableChart('episodeOpsLikes');clearDataTable('episodeOpsData');return;
+  }
+  el('episodeOpsCurveNote').textContent=(zh?'采集于 ':'Observed ')+when(video.checked)+(zh?'。本曲线仅对应视频 …':' . This curve represents video …')+video.itemId.slice(-6)
+    +(zh?'，不代表整集全部发布版本；不随日期筛选切换，平台未提供独立截止日或观众样本量。观看到达率=到达该秒的观众÷总播放观众；点赞分布=该秒点赞数÷总点赞数。分集表完播率与本曲线末值口径不同，不互相替代。':' only, not all publishing versions of this episode. It is independent of date filters; no separate watermark or viewer sample size is supplied. Reach = viewers reaching that second / total play viewers. Like distribution = likes at that second / total likes. Table completion and the curve endpoint have different scopes and are not interchangeable.')
+    +(record.failures?.[video.itemId]?(zh?' 最近重采失败，保留此快照。':' Latest refresh failed; this snapshot is retained.'):'');
+  const retention=new Map(video.retention),likes=new Map(video.likes),points=[...new Set([...retention.keys(),...likes.keys()])].sort((a,b)=>a-b),axis=Array.from({length:Math.max(...points)+1},(_,i)=>i);
+  const kpis=[3,5,10].map(t=>({label:zh?t+'秒到达率':t+'s reach',value:pct(retention.has(t)?retention.get(t):null)}));
+  el('episodeOpsKpis').innerHTML=kpis.map(k=>`<div class="detail-panel"><div class="meta">${k.label}</div><strong style="font-size:22px">${k.value}</strong></div>`).join('');
+  const drops=[...retention].filter(([s,v])=>retention.has(s-1)&&retention.get(s-1)>v).map(([s,v])=>({second:s,pp:(retention.get(s-1)-v)*100})).sort((a,b)=>b.pp-a.pp).slice(0,3);
+  const peaks=[...likes].sort((a,b)=>b[1]-a[1]).slice(0,3);
+  el('episodeOpsDrops').textContent=(zh?'优先复盘的相邻秒下降：':'Largest adjacent-second drops to review: ')+(drops.length?drops.map(d=>`${d.second-1}→${d.second}s ${d.pp.toFixed(2)}${zh?'个百分点':' pp'}`).join('；'):'—')
+    +(zh?'。点赞集中秒点：':' . Like concentration: ')+(peaks.length?peaks.map(([s,v])=>s+'s '+pct(v)).join('；'):'—')+(zh?'。以上为观察线索，不推断流失人数或剧情因果。':' . These are review signals, not estimates of lost viewers or causal claims.');
+  const retentionSeries=[{name:zh?'平台逐秒完播率（观看到达）':'Platform completion by second (reach)',color:'var(--s1)',values:axis.map(s=>retention.has(s)?retention.get(s):null)}];
+  const likeSeries=[{name:zh?'点赞发生时间分布':'Like timing distribution',color:'var(--s3)',values:axis.map(s=>likes.has(s)?likes.get(s):null)}];
+  if(retention.size)lineChart(el('episodeOpsRetention'),axis.map(String),retentionSeries,pct,[],s=>s+'s');else unavailableChart('episodeOpsRetention');
+  if(likes.size)lineChart(el('episodeOpsLikes'),axis.map(String),likeSeries,pct,[],s=>s+'s');else unavailableChart('episodeOpsLikes');
+  dataTable('episodeOpsData',axis.map(s=>s+'s'),[...retentionSeries,...likeSeries],pct);
+}
+
 function renderAll() {
   renderHeader();
   renderModern();
@@ -1067,6 +1149,7 @@ function renderAll() {
   renderDramaTbl();
   renderSeriesDetails();
   renderSeriesArchive();
+  renderEpisodeOps();
   document.documentElement.dataset.reportReady='true';
   performance.mark('report-ready');
 }
