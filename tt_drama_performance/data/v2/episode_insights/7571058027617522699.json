@@ -1,9 +1,10 @@
 {
- "asOf": "2026-11-10",
+ "asOf": "2026-11-11",
  "collectorVersion": 3,
  "failures": {},
  "id": "7571058027617522699",
- "lastAttempt": "2026-11-12T11:33:41+00:00",
+ "lastAttempt": "2026-11-13T07:48:15+00:00",
+ "lastError": "本轮分集采集预算已用完，后续继续",
  "materials": {
   "checked": "2026-11-12T11:34:00+00:00",
   "complete": true,
@@ -2174,10 +2175,10 @@
   "total": 73
  },
  "name": "Taste of You",
- "pending": false,
+ "pending": true,
  "requested": {
-  "end": "2026-11-10",
-  "start": "2026-10-12"
+  "end": "2026-11-11",
+  "start": "2026-10-13"
  },
  "schema": 2,
  "seconds": {

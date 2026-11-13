@@ -1,0 +1,158 @@
+{
+ "asOf": "2026-11-10",
+ "failures": {},
+ "fallbacks": {},
+ "id": "7646995610591204360",
+ "lastAttempt": "2026-11-12T11:04:20+00:00",
+ "name": "Meu CEO Ama Minha Voz",
+ "requested": {
+  "end": "2026-11-10",
+  "start": "2026-10-12"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-12T11:04:25+00:00",
+   "data": [
+    {
+     "collectionId": "7654062586786403348",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    },
+    {
+     "averageDurationDate": "2026-11-10",
+     "averageDurationSeconds": 8.39,
+     "collectionId": "7649029282123682836",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    }
+   ],
+   "end": "2026-11-10",
+   "start": "2026-10-12"
+  },
+  "audience-stats": {
+   "checked": "2026-11-12T11:04:24+00:00",
+   "data": {
+    "age": {
+     "l3": 37.5537,
+     "l4": 24.0757,
+     "l5": 14.0585,
+     "unknown": 24.312199999999997
+    },
+    "gender": {
+     "female": 44.9205,
+     "gender_unknown": 24.9205,
+     "male": 30.1591
+    }
+   },
+   "end": "2026-11-10",
+   "start": "2026-10-12"
+  },
+  "traffic-added": {
+   "checked": "2026-11-12T11:04:25+00:00",
+   "data": [
+    {
+     "collectionId": "7654062586786403348",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 5
+    },
+    {
+     "collectionId": "7649029282123682836",
+     "com": 2,
+     "fav": 99,
+     "like": 526,
+     "qv": 41
+    }
+   ],
+   "end": "2026-11-10",
+   "start": "2026-10-12"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-12T11:04:25+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 0.6518
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 92.1229
+    },
+    {
+     "collectionId": null,
+     "key": "recommend",
+     "pct": 0.0186
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 0.4283
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 4.8603
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 0.6704
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 1.2477
+    },
+    {
+     "collectionId": "7649029282123682836",
+     "key": "other",
+     "pct": 0.6526
+    },
+    {
+     "collectionId": "7649029282123682836",
+     "key": "recommend",
+     "pct": 0.0186
+    },
+    {
+     "collectionId": "7649029282123682836",
+     "key": "search",
+     "pct": 0.4289
+    },
+    {
+     "collectionId": "7649029282123682836",
+     "key": "tab",
+     "pct": 0.6713
+    },
+    {
+     "collectionId": "7649029282123682836",
+     "key": "other_profile",
+     "pct": 1.1188
+    },
+    {
+     "collectionId": "7649029282123682836",
+     "key": "self_profile",
+     "pct": 4.8667
+    },
+    {
+     "collectionId": "7649029282123682836",
+     "key": "fyp",
+     "pct": 92.2431
+    },
+    {
+     "collectionId": "7654062586786403348",
+     "key": "other_profile",
+     "pct": 100.0
+    }
+   ],
+   "end": "2026-11-10",
+   "start": "2026-10-12"
+  }
+ },
+ "source": "contract_detail"
+}

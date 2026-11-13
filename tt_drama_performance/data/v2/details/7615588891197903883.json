@@ -1,60 +1,60 @@
 {
- "asOf": "2026-11-10",
+ "asOf": "2026-11-11",
  "failures": {},
  "fallbacks": {},
  "id": "7615588891197903883",
- "lastAttempt": "2026-11-12T11:04:46+00:00",
+ "lastAttempt": "2026-11-13T07:05:20+00:00",
  "name": "Dogfather第一季",
  "requested": {
-  "end": "2026-11-10",
-  "start": "2026-10-12"
+  "end": "2026-11-11",
+  "start": "2026-10-13"
  },
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-12T11:04:50+00:00",
+   "checked": "2026-11-13T07:05:27+00:00",
    "data": [
     {
-     "averageDurationDate": "2026-11-10",
-     "averageDurationSeconds": 848.0,
      "collectionId": "7616612191776723989",
      "handle": "altatv_app",
      "name": "AltaTV_APP",
      "region": "BR"
     },
     {
-     "averageDurationDate": "2026-11-10",
-     "averageDurationSeconds": 163.1,
+     "averageDurationDate": "2026-11-11",
+     "averageDurationSeconds": 248.67,
      "collectionId": "7616264089379099661",
      "handle": "altatvapp",
      "name": "Altatvapp",
      "region": "US"
     },
     {
+     "averageDurationDate": "2026-11-11",
+     "averageDurationSeconds": 3.5,
      "collectionId": "7616250072149562375",
      "handle": "altatvapp_shortdrama",
      "name": "altatvapp_shortdrama",
      "region": "CA"
     }
    ],
-   "end": "2026-11-10",
-   "start": "2026-10-12"
+   "end": "2026-11-11",
+   "start": "2026-10-13"
   },
   "audience-stats": {
-   "checked": "2026-11-12T11:04:49+00:00",
+   "checked": "2026-11-13T07:05:26+00:00",
    "data": {
     "age": null,
     "gender": {
-     "female": 31.8637,
-     "gender_unknown": 30.2605,
-     "male": 37.8758
+     "female": 31.6327,
+     "gender_unknown": 30.8163,
+     "male": 37.551
     }
    },
-   "end": "2026-11-10",
-   "start": "2026-10-12"
+   "end": "2026-11-11",
+   "start": "2026-10-13"
   },
   "traffic-added": {
-   "checked": "2026-11-12T11:04:50+00:00",
+   "checked": "2026-11-13T07:05:27+00:00",
    "data": [
     {
      "collectionId": "7616612191776723989",
@@ -68,51 +68,51 @@
      "com": 0,
      "fav": 5,
      "like": 5,
-     "qv": 156
+     "qv": 157
     },
     {
      "collectionId": "7616264089379099661",
      "com": 0,
      "fav": 2,
      "like": 0,
-     "qv": 680
+     "qv": 663
     }
    ],
-   "end": "2026-11-10",
-   "start": "2026-10-12"
+   "end": "2026-11-11",
+   "start": "2026-10-13"
   },
   "traffic-stats": {
-   "checked": "2026-11-12T11:04:50+00:00",
+   "checked": "2026-11-13T07:05:27+00:00",
    "data": [
     {
      "collectionId": null,
      "key": "other",
-     "pct": 19.0862
+     "pct": 18.7925
     },
     {
      "collectionId": null,
      "key": "tab",
-     "pct": 26.6028
+     "pct": 26.717
     },
     {
      "collectionId": null,
      "key": "fyp",
-     "pct": 5.2321
+     "pct": 5.3585
     },
     {
      "collectionId": null,
      "key": "self_profile",
-     "pct": 1.8423
+     "pct": 1.8868
     },
     {
      "collectionId": null,
      "key": "search",
-     "pct": 34.8563
+     "pct": 34.566
     },
     {
      "collectionId": null,
      "key": "other_profile",
-     "pct": 12.3803
+     "pct": 12.6792
     },
     {
      "collectionId": "7616250072149562375",
@@ -142,32 +142,32 @@
     {
      "collectionId": "7616264089379099661",
      "key": "other",
-     "pct": 23.648
+     "pct": 23.4183
     },
     {
      "collectionId": "7616264089379099661",
      "key": "fyp",
-     "pct": 0.4583
+     "pct": 0.4721
     },
     {
      "collectionId": "7616264089379099661",
      "key": "self_profile",
-     "pct": 1.0082
+     "pct": 1.0387
     },
     {
      "collectionId": "7616264089379099661",
      "key": "other_profile",
-     "pct": 2.3831
+     "pct": 2.4551
     },
     {
      "collectionId": "7616264089379099661",
      "key": "tab",
-     "pct": 33.0889
+     "pct": 33.4278
     },
     {
      "collectionId": "7616264089379099661",
      "key": "search",
-     "pct": 39.4134
+     "pct": 39.1879
     },
     {
      "collectionId": "7616612191776723989",
@@ -185,8 +185,8 @@
      "pct": 61.9048
     }
    ],
-   "end": "2026-11-10",
-   "start": "2026-10-12"
+   "end": "2026-11-11",
+   "start": "2026-10-13"
   }
  },
  "source": "contract_detail"
