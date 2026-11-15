@@ -1,0 +1,200 @@
+{
+ "asOf": "2026-11-12",
+ "failures": {},
+ "fallbacks": {},
+ "id": "7646307259500450824",
+ "lastAttempt": "2026-11-14T23:03:39+00:00",
+ "name": "My CEO Loves Voice",
+ "requested": {
+  "end": "2026-11-12",
+  "start": "2026-10-14"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-14T23:03:43+00:00",
+   "data": [
+    {
+     "averageDurationDate": "2026-11-12",
+     "averageDurationSeconds": 308.07,
+     "collectionId": "7646605226837890068",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    },
+    {
+     "averageDurationDate": "2026-11-12",
+     "averageDurationSeconds": 20.08,
+     "collectionId": "7650035975669928978",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    }
+   ],
+   "end": "2026-11-12",
+   "start": "2026-10-14"
+  },
+  "audience-stats": {
+   "checked": "2026-11-14T23:03:42+00:00",
+   "data": {
+    "age": {
+     "l3": 27.8572,
+     "l4": 13.9313,
+     "l5": 25.5542,
+     "unknown": 32.6573
+    },
+    "gender": {
+     "female": 27.7343,
+     "gender_unknown": 18.5019,
+     "male": 53.7638
+    }
+   },
+   "end": "2026-11-12",
+   "start": "2026-10-14"
+  },
+  "traffic-added": {
+   "checked": "2026-11-14T23:03:43+00:00",
+   "data": [
+    {
+     "collectionId": "7646605226837890068",
+     "com": 0,
+     "fav": 175,
+     "like": 222,
+     "qv": 4561
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "com": 5,
+     "fav": 186,
+     "like": 463,
+     "qv": 18200
+    }
+   ],
+   "end": "2026-11-12",
+   "start": "2026-10-14"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-14T23:03:43+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "follow",
+     "pct": 0.043
+    },
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 0.3541
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 0.4302
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 0.9305
+    },
+    {
+     "collectionId": null,
+     "key": "recommend",
+     "pct": 1.5708
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 4.0423
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 3.0981
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 89.531
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "other",
+     "pct": 0.3901
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "tab",
+     "pct": 0.3229
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "search",
+     "pct": 0.7571
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "recommend",
+     "pct": 0.913
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "other_profile",
+     "pct": 1.9795
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "self_profile",
+     "pct": 3.1903
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "fyp",
+     "pct": 92.4471
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "other",
+     "pct": 0.0225
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "follow",
+     "pct": 0.4387
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "tab",
+     "pct": 1.4173
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "search",
+     "pct": 2.5253
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "recommend",
+     "pct": 7.6209
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "self_profile",
+     "pct": 11.8785
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "other_profile",
+     "pct": 13.3858
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "fyp",
+     "pct": 62.7109
+    }
+   ],
+   "end": "2026-11-12",
+   "start": "2026-10-14"
+  }
+ },
+ "source": "contract_detail"
+}
