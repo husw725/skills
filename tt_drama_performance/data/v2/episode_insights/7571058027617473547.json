@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-12",
+ "asOf": "2026-11-13",
  "collectorVersion": 3,
  "failures": {
   "7595147703621782792": {
@@ -284,9 +284,10 @@
   }
  },
  "id": "7571058027617473547",
- "lastAttempt": "2026-11-15T07:06:49+00:00",
+ "lastAttempt": "2026-11-15T15:08:26+00:00",
+ "lastError": "HTTP 500 code 500",
  "materials": {
-  "checked": "2026-11-15T07:08:29+00:00",
+  "checked": "2026-11-15T15:08:44+00:00",
   "complete": true,
   "end": null,
   "rows": [],
@@ -2418,10 +2419,10 @@
   "total": 78
  },
  "name": "The Knight and the Influencer",
- "pending": true,
+ "pending": false,
  "requested": {
-  "end": "2026-11-12",
-  "start": "2026-10-14"
+  "end": "2026-11-13",
+  "start": "2026-10-15"
  },
  "schema": 2,
  "seconds": {},
