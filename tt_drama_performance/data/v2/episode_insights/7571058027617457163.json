@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-13",
+ "asOf": "2026-11-14",
  "collectorVersion": 3,
  "failures": {
   "7595561189648764168": {
@@ -244,7 +244,12 @@
   }
  },
  "id": "7571058027617457163",
- "lastAttempt": "2026-11-16T07:06:44+00:00",
+ "lastAttempt": "2026-11-16T15:02:21+00:00",
+ "lastError": "Page.goto: Target page, context or browser has been closed",
+ "materialError": {
+  "checked": "2026-11-16T15:02:21+00:00",
+  "reason": "Locator.count: Target page, context or browser has been closed"
+ },
  "materials": {
   "checked": "2026-11-16T07:08:35+00:00",
   "complete": true,
@@ -2594,7 +2599,7 @@
   "total": 80
  },
  "name": "Behind the Glory of the Runway",
- "pending": true,
+ "pending": false,
  "requested": {
   "end": "2026-11-13",
   "start": "2026-10-15"

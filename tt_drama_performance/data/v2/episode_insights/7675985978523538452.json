@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-13",
+ "asOf": "2026-11-14",
  "collectorVersion": 3,
  "failures": {
   "7696096867775532301": {
@@ -264,7 +264,12 @@
   }
  },
  "id": "7675985978523538452",
- "lastAttempt": "2026-11-15T11:25:51+00:00",
+ "lastAttempt": "2026-11-16T15:02:20+00:00",
+ "lastError": "Page.goto: Target page, context or browser has been closed",
+ "materialError": {
+  "checked": "2026-11-16T15:02:20+00:00",
+  "reason": "Locator.count: Target page, context or browser has been closed"
+ },
  "materials": {
   "checked": "2026-11-15T11:26:50+00:00",
   "complete": true,

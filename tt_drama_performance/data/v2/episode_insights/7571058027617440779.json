@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-13",
+ "asOf": "2026-11-14",
  "collectorVersion": 3,
  "failures": {
   "7595395894992850184": {
@@ -284,7 +284,12 @@
   }
  },
  "id": "7571058027617440779",
- "lastAttempt": "2026-11-16T07:04:55+00:00",
+ "lastAttempt": "2026-11-16T15:02:21+00:00",
+ "lastError": "Page.goto: Target page, context or browser has been closed",
+ "materialError": {
+  "checked": "2026-11-16T15:02:21+00:00",
+  "reason": "Locator.count: Target page, context or browser has been closed"
+ },
  "materials": {
   "checked": "2026-11-16T07:06:44+00:00",
   "complete": true,
@@ -2391,7 +2396,7 @@
   "total": 77
  },
  "name": "Thread of Fate",
- "pending": true,
+ "pending": false,
  "requested": {
   "end": "2026-11-13",
   "start": "2026-10-15"
