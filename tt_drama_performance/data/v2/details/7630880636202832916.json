@@ -1,12 +1,19 @@
 {
- "asOf": "2026-11-14",
+ "asOf": "2026-11-15",
  "failures": {
-  "page": "Page.goto: Target page, context or browser has been closed"
+  "accounts": "Locator.click: Timeout 8000ms exceeded.",
+  "audience-stats": "Locator.click: Timeout 8000ms exceeded.",
+  "traffic-added": "Locator.click: Timeout 8000ms exceeded.",
+  "traffic-stats": "Locator.click: Timeout 8000ms exceeded."
  },
  "fallbacks": {},
  "id": "7630880636202832916",
- "lastAttempt": "2026-11-16T15:02:19+00:00",
+ "lastAttempt": "2026-11-17T11:07:48+00:00",
  "name": "My Boss's Son Wants Me",
+ "requested": {
+  "end": "2026-11-15",
+  "start": "2026-10-17"
+ },
  "schema": 2,
  "sections": {},
  "source": "contract_detail"

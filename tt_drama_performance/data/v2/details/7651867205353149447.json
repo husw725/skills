@@ -1,16 +1,20 @@
 {
- "asOf": "2026-11-14",
+ "asOf": "2026-11-15",
  "failures": {
-  "page": "Page.goto: Target page, context or browser has been closed"
+  "audience-stats": "平台未返回观众画像，不按0填充"
  },
  "fallbacks": {},
  "id": "7651867205353149447",
- "lastAttempt": "2026-11-16T15:02:19+00:00",
+ "lastAttempt": "2026-11-17T11:05:05+00:00",
  "name": "CEO Loves My Voice",
+ "requested": {
+  "end": "2026-11-15",
+  "start": "2026-10-17"
+ },
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-15T11:03:09+00:00",
+   "checked": "2026-11-17T11:05:30+00:00",
    "data": [
     {
      "collectionId": "7655385474978272272",
@@ -25,11 +29,11 @@
      "region": "CA"
     }
    ],
-   "end": "2026-11-13",
-   "start": "2026-10-15"
+   "end": "2026-11-15",
+   "start": "2026-10-17"
   },
   "traffic-added": {
-   "checked": "2026-11-15T11:03:09+00:00",
+   "checked": "2026-11-17T11:05:30+00:00",
    "data": [
     {
      "collectionId": "7655385474978272272",
@@ -46,11 +50,11 @@
      "qv": 0
     }
    ],
-   "end": "2026-11-13",
-   "start": "2026-10-15"
+   "end": "2026-11-15",
+   "start": "2026-10-17"
   },
   "traffic-stats": {
-   "checked": "2026-11-15T11:03:09+00:00",
+   "checked": "2026-11-17T11:05:30+00:00",
    "data": [
     {
      "collectionId": null,
@@ -68,8 +72,8 @@
      "pct": 100.0
     }
    ],
-   "end": "2026-11-13",
-   "start": "2026-10-15"
+   "end": "2026-11-15",
+   "start": "2026-10-17"
   }
  },
  "source": "contract_detail"

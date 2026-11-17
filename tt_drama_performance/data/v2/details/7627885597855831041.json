@@ -1,12 +1,19 @@
 {
- "asOf": "2026-11-14",
+ "asOf": "2026-11-15",
  "failures": {
-  "page": "Page.goto: Target page, context or browser has been closed"
+  "accounts": "Locator.click: Timeout 8000ms exceeded.",
+  "audience-stats": "Locator.click: Timeout 8000ms exceeded.",
+  "traffic-added": "Locator.click: Timeout 8000ms exceeded.",
+  "traffic-stats": "Locator.click: Timeout 8000ms exceeded."
  },
  "fallbacks": {},
  "id": "7627885597855831041",
- "lastAttempt": "2026-11-16T15:02:19+00:00",
+ "lastAttempt": "2026-11-17T11:14:46+00:00",
  "name": "Tender Betrayal",
+ "requested": {
+  "end": "2026-11-15",
+  "start": "2026-10-17"
+ },
  "schema": 2,
  "sections": {},
  "source": "contract_detail"
