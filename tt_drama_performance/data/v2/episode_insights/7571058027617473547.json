@@ -284,7 +284,12 @@
   }
  },
  "id": "7571058027617473547",
- "lastAttempt": "2026-11-17T23:04:31+00:00",
+ "lastAttempt": "2026-11-18T03:05:37+00:00",
+ "lastError": "Locator.evaluate: Timeout 5000ms exceeded.",
+ "materialError": {
+  "checked": "2026-11-18T03:05:55+00:00",
+  "reason": "Locator.click: Timeout 8000ms exceeded."
+ },
  "materials": {
   "checked": "2026-11-17T23:06:12+00:00",
   "complete": true,
@@ -2418,7 +2423,7 @@
   "total": 78
  },
  "name": "The Knight and the Influencer",
- "pending": true,
+ "pending": false,
  "requested": {
   "end": "2026-11-15",
   "start": "2026-10-17"
