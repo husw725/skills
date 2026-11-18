@@ -1,12 +1,19 @@
 {
- "asOf": "2026-11-15",
+ "asOf": "2026-11-16",
  "failures": {
-  "page": "Page.goto: net::ERR_PROXY_CONNECTION_FAILED at https://www.tiktokdramacenter.com/series/7630880627486708757/performance/audience"
+  "accounts": "Locator.click: Timeout 8000ms exceeded.",
+  "audience-stats": "Locator.click: Timeout 8000ms exceeded.",
+  "traffic-added": "Locator.click: Timeout 8000ms exceeded.",
+  "traffic-stats": "Locator.click: Timeout 8000ms exceeded."
  },
  "fallbacks": {},
  "id": "7630880627486708757",
- "lastAttempt": "2026-11-17T11:10:32+00:00",
+ "lastAttempt": "2026-11-18T07:08:03+00:00",
  "name": "My Robot Boyfriend",
+ "requested": {
+  "end": "2026-11-16",
+  "start": "2026-10-18"
+ },
  "schema": 2,
  "sections": {},
  "source": "contract_detail"

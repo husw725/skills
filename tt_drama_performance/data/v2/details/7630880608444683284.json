@@ -1,12 +1,19 @@
 {
- "asOf": "2026-11-15",
+ "asOf": "2026-11-16",
  "failures": {
-  "page": "Page.goto: net::ERR_NETWORK_CHANGED at https://www.tiktokdramacenter.com/series/7630880608444683284/performance/audience"
+  "accounts": "Locator.click: Timeout 8000ms exceeded.",
+  "audience-stats": "Locator.click: Timeout 8000ms exceeded.",
+  "traffic-added": "Locator.click: Timeout 8000ms exceeded.",
+  "traffic-stats": "Locator.click: Timeout 8000ms exceeded."
  },
  "fallbacks": {},
  "id": "7630880608444683284",
- "lastAttempt": "2026-11-17T11:10:33+00:00",
+ "lastAttempt": "2026-11-18T07:09:17+00:00",
  "name": "My Wife's Best Friend Fell in Love with Me",
+ "requested": {
+  "end": "2026-11-16",
+  "start": "2026-10-18"
+ },
  "schema": 2,
  "sections": {},
  "source": "contract_detail"

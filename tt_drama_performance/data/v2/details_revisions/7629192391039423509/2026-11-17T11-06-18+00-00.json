@@ -1,0 +1,230 @@
+{
+ "asOf": "2026-11-15",
+ "failures": {},
+ "fallbacks": {},
+ "id": "7629192391039423509",
+ "lastAttempt": "2026-11-17T11:06:18+00:00",
+ "name": "Falling for a SUPERSTAR 2",
+ "requested": {
+  "end": "2026-11-15",
+  "start": "2026-10-17"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-17T11:06:27+00:00",
+   "data": [
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 3.0,
+     "collectionId": "7631469026207781908",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    },
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 361.66,
+     "collectionId": "7631428002102088724",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    },
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 18.12,
+     "collectionId": "7631417018008687636",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    }
+   ],
+   "end": "2026-11-15",
+   "start": "2026-10-17"
+  },
+  "audience-stats": {
+   "checked": "2026-11-17T11:06:25+00:00",
+   "data": {
+    "age": {
+     "l3": 19.5812,
+     "l4": 31.6829,
+     "l5": 17.4612,
+     "unknown": 31.2747
+    },
+    "gender": {
+     "female": 46.1285,
+     "gender_unknown": 30.3266,
+     "male": 23.5449
+    }
+   },
+   "end": "2026-11-15",
+   "start": "2026-10-17"
+  },
+  "traffic-added": {
+   "checked": "2026-11-17T11:06:28+00:00",
+   "data": [
+    {
+     "collectionId": "7631469026207781908",
+     "com": 0,
+     "fav": 1,
+     "like": 8,
+     "qv": 236
+    },
+    {
+     "collectionId": "7631417018008687636",
+     "com": 2,
+     "fav": 63,
+     "like": 164,
+     "qv": 4507
+    },
+    {
+     "collectionId": "7631428002102088724",
+     "com": 2,
+     "fav": 230,
+     "like": 710,
+     "qv": 28945
+    }
+   ],
+   "end": "2026-11-15",
+   "start": "2026-10-17"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-17T11:06:26+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 1.8542
+    },
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 2.0477
+    },
+    {
+     "collectionId": null,
+     "key": "recommend",
+     "pct": 40.5921
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 20.3208
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 7.5891
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 9.1625
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 18.4336
+    },
+    {
+     "collectionId": "7631417018008687636",
+     "key": "other",
+     "pct": 5.0893
+    },
+    {
+     "collectionId": "7631417018008687636",
+     "key": "tab",
+     "pct": 0.9184
+    },
+    {
+     "collectionId": "7631417018008687636",
+     "key": "other_profile",
+     "pct": 4.0361
+    },
+    {
+     "collectionId": "7631417018008687636",
+     "key": "fyp",
+     "pct": 5.0725
+    },
+    {
+     "collectionId": "7631417018008687636",
+     "key": "search",
+     "pct": 19.1018
+    },
+    {
+     "collectionId": "7631417018008687636",
+     "key": "self_profile",
+     "pct": 27.5278
+    },
+    {
+     "collectionId": "7631417018008687636",
+     "key": "recommend",
+     "pct": 38.2541
+    },
+    {
+     "collectionId": "7631428002102088724",
+     "key": "other",
+     "pct": 0.8727
+    },
+    {
+     "collectionId": "7631428002102088724",
+     "key": "fyp",
+     "pct": 0.6082
+    },
+    {
+     "collectionId": "7631428002102088724",
+     "key": "search",
+     "pct": 3.0346
+    },
+    {
+     "collectionId": "7631428002102088724",
+     "key": "tab",
+     "pct": 12.2773
+    },
+    {
+     "collectionId": "7631428002102088724",
+     "key": "self_profile",
+     "pct": 17.6655
+    },
+    {
+     "collectionId": "7631428002102088724",
+     "key": "other_profile",
+     "pct": 23.6719
+    },
+    {
+     "collectionId": "7631428002102088724",
+     "key": "recommend",
+     "pct": 41.8697
+    },
+    {
+     "collectionId": "7631469026207781908",
+     "key": "recommend",
+     "pct": 0.369
+    },
+    {
+     "collectionId": "7631469026207781908",
+     "key": "self_profile",
+     "pct": 1.107
+    },
+    {
+     "collectionId": "7631469026207781908",
+     "key": "search",
+     "pct": 11.8081
+    },
+    {
+     "collectionId": "7631469026207781908",
+     "key": "tab",
+     "pct": 22.5092
+    },
+    {
+     "collectionId": "7631469026207781908",
+     "key": "other_profile",
+     "pct": 64.2066
+    }
+   ],
+   "end": "2026-11-15",
+   "start": "2026-10-17"
+  }
+ },
+ "source": "contract_detail"
+}

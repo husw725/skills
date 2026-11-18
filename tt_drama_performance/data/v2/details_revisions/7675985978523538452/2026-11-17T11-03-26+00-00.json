@@ -1,0 +1,536 @@
+{
+ "asOf": "2026-11-15",
+ "failures": {},
+ "fallbacks": {},
+ "id": "7675985978523538452",
+ "lastAttempt": "2026-11-17T11:03:26+00:00",
+ "name": "Falling for the Superstar",
+ "requested": {
+  "end": "2026-11-15",
+  "start": "2026-10-17"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-17T11:03:37+00:00",
+   "data": [
+    {
+     "collectionId": "7696613407528719412",
+     "handle": "altatv_th",
+     "name": "AltaTV",
+     "region": "TH"
+    },
+    {
+     "collectionId": "7687047468705616917",
+     "handle": "altatv_id",
+     "name": "AltaTV",
+     "region": "ID"
+    },
+    {
+     "collectionId": "7684527852376773652",
+     "handle": "altatv_th",
+     "name": "AltaTV",
+     "region": "TH"
+    },
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 13.6,
+     "collectionId": "7684527807728620564",
+     "handle": "altatv_sa",
+     "name": "AltaTV",
+     "region": "SA"
+    },
+    {
+     "collectionId": "7681963920798798868",
+     "handle": "altatv_vn",
+     "name": "AltaTV",
+     "region": "VN"
+    },
+    {
+     "collectionId": "7684527834458854420",
+     "handle": "altatv_jp",
+     "name": "AltaTV",
+     "region": "JP"
+    },
+    {
+     "collectionId": "7687286765450892308",
+     "handle": "altatv_mx",
+     "name": "AltaTV",
+     "region": "MX"
+    },
+    {
+     "collectionId": "7678108228173403143",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    },
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 5.0,
+     "collectionId": "7684527823507166228",
+     "handle": "altatv_eg",
+     "name": "AltaTV",
+     "region": "EG"
+    },
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 50.0,
+     "collectionId": "7689156145504097288",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    },
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 22.33,
+     "collectionId": "7678302463954293780",
+     "handle": "altatv_mx",
+     "name": "AltaTV",
+     "region": "MX"
+    },
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 756.17,
+     "collectionId": "7676473324478125057",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    },
+    {
+     "averageDurationDate": "2026-11-15",
+     "averageDurationSeconds": 258.52,
+     "collectionId": "7676321279506813953",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    }
+   ],
+   "end": "2026-11-15",
+   "start": "2026-10-17"
+  },
+  "audience-stats": {
+   "checked": "2026-11-17T11:03:35+00:00",
+   "data": {
+    "age": {
+     "l3": 28.236,
+     "l4": 25.6109,
+     "l5": 14.7032,
+     "unknown": 31.4498
+    },
+    "gender": {
+     "female": 63.2309,
+     "gender_unknown": 17.1914,
+     "male": 19.5777
+    }
+   },
+   "end": "2026-11-15",
+   "start": "2026-10-17"
+  },
+  "traffic-added": {
+   "checked": "2026-11-17T11:03:37+00:00",
+   "data": [
+    {
+     "collectionId": "7696613407528719412",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 0
+    },
+    {
+     "collectionId": "7681963920798798868",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 1
+    },
+    {
+     "collectionId": "7684527834458854420",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 3
+    },
+    {
+     "collectionId": "7684527852376773652",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 0
+    },
+    {
+     "collectionId": "7687047468705616917",
+     "com": 0,
+     "fav": 0,
+     "like": 1,
+     "qv": 9
+    },
+    {
+     "collectionId": "7684527823507166228",
+     "com": 0,
+     "fav": 2,
+     "like": 1,
+     "qv": 26
+    },
+    {
+     "collectionId": "7687286765450892308",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 42
+    },
+    {
+     "collectionId": "7684527807728620564",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 35
+    },
+    {
+     "collectionId": "7678108228173403143",
+     "com": 0,
+     "fav": 0,
+     "like": 1,
+     "qv": 64
+    },
+    {
+     "collectionId": "7678302463954293780",
+     "com": 0,
+     "fav": 9,
+     "like": 7,
+     "qv": 301
+    },
+    {
+     "collectionId": "7689156145504097288",
+     "com": 1,
+     "fav": 42,
+     "like": 92,
+     "qv": 1938
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "com": 119,
+     "fav": 3516,
+     "like": 19086,
+     "qv": 716495
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "com": 719,
+     "fav": 15198,
+     "like": 46325,
+     "qv": 1384152
+    }
+   ],
+   "end": "2026-11-15",
+   "start": "2026-10-17"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-17T11:03:37+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 0.6324
+    },
+    {
+     "collectionId": null,
+     "key": "recommend",
+     "pct": 3.1917
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 15.4513
+    },
+    {
+     "collectionId": null,
+     "key": "follow",
+     "pct": 0.1224
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 2.8311
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 1.6161
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 74.2582
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 1.8967
+    },
+    {
+     "collectionId": "7678108228173403143",
+     "key": "fyp",
+     "pct": 2.5974
+    },
+    {
+     "collectionId": "7678108228173403143",
+     "key": "follow",
+     "pct": 5.1948
+    },
+    {
+     "collectionId": "7678108228173403143",
+     "key": "other_profile",
+     "pct": 16.8831
+    },
+    {
+     "collectionId": "7678108228173403143",
+     "key": "tab",
+     "pct": 16.8831
+    },
+    {
+     "collectionId": "7678108228173403143",
+     "key": "search",
+     "pct": 58.4416
+    },
+    {
+     "collectionId": "7678302463954293780",
+     "key": "other",
+     "pct": 0.1592
+    },
+    {
+     "collectionId": "7678302463954293780",
+     "key": "tab",
+     "pct": 0.1592
+    },
+    {
+     "collectionId": "7678302463954293780",
+     "key": "recommend",
+     "pct": 1.1146
+    },
+    {
+     "collectionId": "7678302463954293780",
+     "key": "search",
+     "pct": 2.0701
+    },
+    {
+     "collectionId": "7678302463954293780",
+     "key": "other_profile",
+     "pct": 4.9363
+    },
+    {
+     "collectionId": "7678302463954293780",
+     "key": "self_profile",
+     "pct": 32.0064
+    },
+    {
+     "collectionId": "7678302463954293780",
+     "key": "fyp",
+     "pct": 59.5541
+    },
+    {
+     "collectionId": "7681963920798798868",
+     "key": "search",
+     "pct": 33.3333
+    },
+    {
+     "collectionId": "7681963920798798868",
+     "key": "fyp",
+     "pct": 66.6667
+    },
+    {
+     "collectionId": "7684527807728620564",
+     "key": "self_profile",
+     "pct": 3.8961
+    },
+    {
+     "collectionId": "7684527807728620564",
+     "key": "other_profile",
+     "pct": 15.5844
+    },
+    {
+     "collectionId": "7684527807728620564",
+     "key": "search",
+     "pct": 18.1818
+    },
+    {
+     "collectionId": "7684527807728620564",
+     "key": "fyp",
+     "pct": 62.3377
+    },
+    {
+     "collectionId": "7684527823507166228",
+     "key": "fyp",
+     "pct": 7.4074
+    },
+    {
+     "collectionId": "7684527823507166228",
+     "key": "other_profile",
+     "pct": 11.1111
+    },
+    {
+     "collectionId": "7684527823507166228",
+     "key": "search",
+     "pct": 81.4815
+    },
+    {
+     "collectionId": "7684527834458854420",
+     "key": "search",
+     "pct": 100.0
+    },
+    {
+     "collectionId": "7684527852376773652",
+     "key": "self_profile",
+     "pct": 100.0
+    },
+    {
+     "collectionId": "7687047468705616917",
+     "key": "other_profile",
+     "pct": 12.5
+    },
+    {
+     "collectionId": "7687047468705616917",
+     "key": "recommend",
+     "pct": 12.5
+    },
+    {
+     "collectionId": "7687047468705616917",
+     "key": "fyp",
+     "pct": 75.0
+    },
+    {
+     "collectionId": "7687286765450892308",
+     "key": "fyp",
+     "pct": 16.3934
+    },
+    {
+     "collectionId": "7687286765450892308",
+     "key": "self_profile",
+     "pct": 22.9508
+    },
+    {
+     "collectionId": "7687286765450892308",
+     "key": "search",
+     "pct": 27.8689
+    },
+    {
+     "collectionId": "7687286765450892308",
+     "key": "other_profile",
+     "pct": 32.7869
+    },
+    {
+     "collectionId": "7689156145504097288",
+     "key": "other",
+     "pct": 0.7453
+    },
+    {
+     "collectionId": "7689156145504097288",
+     "key": "other_profile",
+     "pct": 0.559
+    },
+    {
+     "collectionId": "7689156145504097288",
+     "key": "fyp",
+     "pct": 0.8075
+    },
+    {
+     "collectionId": "7689156145504097288",
+     "key": "self_profile",
+     "pct": 5.1967
+    },
+    {
+     "collectionId": "7689156145504097288",
+     "key": "search",
+     "pct": 31.2836
+    },
+    {
+     "collectionId": "7689156145504097288",
+     "key": "tab",
+     "pct": 61.4079
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "key": "follow",
+     "pct": 0.176
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "key": "tab",
+     "pct": 0.1843
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "key": "other",
+     "pct": 0.5534
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "key": "recommend",
+     "pct": 0.9706
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "key": "other_profile",
+     "pct": 1.8505
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "key": "search",
+     "pct": 2.1443
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "key": "self_profile",
+     "pct": 12.0679
+    },
+    {
+     "collectionId": "7676473324478125057",
+     "key": "fyp",
+     "pct": 82.053
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "key": "follow",
+     "pct": 0.0951
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "key": "other",
+     "pct": 0.6728
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "key": "search",
+     "pct": 1.6847
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "key": "tab",
+     "pct": 2.1872
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "key": "other_profile",
+     "pct": 3.3364
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "key": "recommend",
+     "pct": 4.3389
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "key": "self_profile",
+     "pct": 17.2071
+    },
+    {
+     "collectionId": "7676321279506813953",
+     "key": "fyp",
+     "pct": 70.4778
+    }
+   ],
+   "end": "2026-11-15",
+   "start": "2026-10-17"
+  }
+ },
+ "source": "contract_detail"
+}
