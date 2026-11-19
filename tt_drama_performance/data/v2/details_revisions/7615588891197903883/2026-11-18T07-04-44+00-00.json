@@ -1,0 +1,190 @@
+{
+ "asOf": "2026-11-16",
+ "failures": {},
+ "fallbacks": {},
+ "id": "7615588891197903883",
+ "lastAttempt": "2026-11-18T07:04:44+00:00",
+ "name": "Dogfather第一季",
+ "requested": {
+  "end": "2026-11-16",
+  "start": "2026-10-18"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-18T07:04:50+00:00",
+   "data": [
+    {
+     "averageDurationDate": "2026-11-16",
+     "averageDurationSeconds": 0.0,
+     "collectionId": "7616612191776723989",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    },
+    {
+     "averageDurationDate": "2026-11-16",
+     "averageDurationSeconds": 0.6,
+     "collectionId": "7616264089379099661",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    },
+    {
+     "averageDurationDate": "2026-11-16",
+     "averageDurationSeconds": 745.0,
+     "collectionId": "7616250072149562375",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    }
+   ],
+   "end": "2026-11-16",
+   "start": "2026-10-18"
+  },
+  "audience-stats": {
+   "checked": "2026-11-18T07:04:49+00:00",
+   "data": {
+    "age": null,
+    "gender": {
+     "female": 29.8246,
+     "gender_unknown": 32.4561,
+     "male": 37.7193
+    }
+   },
+   "end": "2026-11-16",
+   "start": "2026-10-18"
+  },
+  "traffic-added": {
+   "checked": "2026-11-18T07:04:50+00:00",
+   "data": [
+    {
+     "collectionId": "7616612191776723989",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 38
+    },
+    {
+     "collectionId": "7616250072149562375",
+     "com": 0,
+     "fav": 4,
+     "like": 4,
+     "qv": 128
+    },
+    {
+     "collectionId": "7616264089379099661",
+     "com": 0,
+     "fav": 2,
+     "like": 0,
+     "qv": 688
+    }
+   ],
+   "end": "2026-11-16",
+   "start": "2026-10-18"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-18T07:04:50+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 20.8944
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 27.7564
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 5.7826
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 1.6962
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 33.1534
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 10.717
+    },
+    {
+     "collectionId": "7616250072149562375",
+     "key": "search",
+     "pct": 1.8634
+    },
+    {
+     "collectionId": "7616250072149562375",
+     "key": "self_profile",
+     "pct": 6.2112
+    },
+    {
+     "collectionId": "7616250072149562375",
+     "key": "fyp",
+     "pct": 43.4783
+    },
+    {
+     "collectionId": "7616250072149562375",
+     "key": "other_profile",
+     "pct": 48.4472
+    },
+    {
+     "collectionId": "7616264089379099661",
+     "key": "other",
+     "pct": 24.9081
+    },
+    {
+     "collectionId": "7616264089379099661",
+     "key": "fyp",
+     "pct": 0.4596
+    },
+    {
+     "collectionId": "7616264089379099661",
+     "key": "self_profile",
+     "pct": 1.011
+    },
+    {
+     "collectionId": "7616264089379099661",
+     "key": "other_profile",
+     "pct": 2.2059
+    },
+    {
+     "collectionId": "7616264089379099661",
+     "key": "tab",
+     "pct": 33.0882
+    },
+    {
+     "collectionId": "7616264089379099661",
+     "key": "search",
+     "pct": 38.3272
+    },
+    {
+     "collectionId": "7616612191776723989",
+     "key": "self_profile",
+     "pct": 2.0833
+    },
+    {
+     "collectionId": "7616612191776723989",
+     "key": "search",
+     "pct": 20.8333
+    },
+    {
+     "collectionId": "7616612191776723989",
+     "key": "other_profile",
+     "pct": 77.0833
+    }
+   ],
+   "end": "2026-11-16",
+   "start": "2026-10-18"
+  }
+ },
+ "source": "contract_detail"
+}

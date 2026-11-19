@@ -1,6 +1,7 @@
 {
- "checked": "2026-11-19T03:05:45+00:00",
+ "checked": "2026-11-19T07:28:57+00:00",
  "failureChecks": {
+  "7594322862937429003": "2026-11-19T07:27:53+00:00",
   "7627885597855831041": "2026-11-18T07:30:26+00:00",
   "7627885607771280385": "2026-11-18T07:30:31+00:00",
   "7629192391039423509": "2026-11-19T03:04:10+00:00",
@@ -16,6 +17,7 @@
   "7685678473231143956": "2026-11-18T23:01:32+00:00"
  },
  "failures": {
+  "7594322862937429003": "Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=\"Date range\")\n",
   "7627885597855831041": "HTTP 422 code 422",
   "7627885607771280385": "HTTP 422 code 422",
   "7629192391039423509": "Page.goto: net::ERR_ABORTED at https://www.tiktokdramacenter.com/series/7629192391039423509/performance/core\nCall log:\n  - navigating to \"https://www.tiktokdramacenter.com/series/7629192391039423509/performance/core\", waiting until \"domcontentloaded\"\n",
@@ -31,7 +33,7 @@
   "7685678473231143956": "Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=\"Confirm\", exact=True)\n    - locator resolved to <button type=\"button\" aria-disabled=\"false\" class=\"semi-button semi-button-primary semi-button-light\">…</button>\n  - attempting click action\n    - waiting for element to be visible, enabled and stable\n    - element is visible, enabled and stable\n    - scrolling into view if needed\n  - element was detached from the DOM, retrying\n"
  },
  "requestedStart": "2026-03-01",
- "saved": 30,
+ "saved": 29,
  "schema": 2,
  "source": "contract_chart",
  "titles": 43
