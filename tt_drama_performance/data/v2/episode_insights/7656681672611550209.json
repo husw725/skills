@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-18",
+ "asOf": "2026-11-19",
  "collectorVersion": 3,
  "failures": {
   "7696996846224411924": {
@@ -8,8 +8,12 @@
   }
  },
  "id": "7656681672611550209",
- "lastAttempt": "2026-11-20T03:36:28+00:00",
- "lastError": "HTTP 200 code -1",
+ "lastAttempt": "2026-11-21T07:42:22+00:00",
+ "lastError": "等待平台分集数据超时",
+ "materialError": {
+  "checked": "2026-11-21T07:42:56+00:00",
+  "reason": "等待平台分集数据超时"
+ },
  "materials": {
   "checked": "2026-11-20T03:37:06+00:00",
   "complete": true,
@@ -3314,8 +3318,8 @@
  "name": "Princess Of Mars",
  "pending": false,
  "requested": {
-  "end": "2026-11-18",
-  "start": "2026-10-20"
+  "end": "2026-11-19",
+  "start": "2026-10-21"
  },
  "schema": 2,
  "seconds": {

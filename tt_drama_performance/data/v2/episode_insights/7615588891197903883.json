@@ -1,9 +1,14 @@
 {
- "asOf": "2026-11-18",
+ "asOf": "2026-11-19",
  "collectorVersion": 3,
  "failures": {},
  "id": "7615588891197903883",
- "lastAttempt": "2026-11-20T03:42:42+00:00",
+ "lastAttempt": "2026-11-21T07:48:08+00:00",
+ "lastError": "HTTP 200 code -1",
+ "materialError": {
+  "checked": "2026-11-21T07:48:20+00:00",
+  "reason": "HTTP 500 code 500"
+ },
  "materials": {
   "checked": "2026-11-20T03:43:09+00:00",
   "complete": true,
@@ -841,8 +846,8 @@
  "name": "Dogfather第一季",
  "pending": false,
  "requested": {
-  "end": "2026-11-18",
-  "start": "2026-10-20"
+  "end": "2026-11-19",
+  "start": "2026-10-21"
  },
  "schema": 2,
  "seconds": {

@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-18",
+ "asOf": "2026-11-19",
  "collectorVersion": 3,
  "failures": {
   "7696096867775532301": {
@@ -264,7 +264,12 @@
   }
  },
  "id": "7675985978523538452",
- "lastAttempt": "2026-11-20T03:31:05+00:00",
+ "lastAttempt": "2026-11-21T07:35:10+00:00",
+ "lastError": "HTTP 200 code -1",
+ "materialError": {
+  "checked": "2026-11-21T07:35:24+00:00",
+  "reason": "HTTP 500 code 500"
+ },
  "materials": {
   "checked": "2026-11-20T03:32:06+00:00",
   "complete": true,
@@ -2023,8 +2028,8 @@
  "name": "Falling for the Superstar",
  "pending": false,
  "requested": {
-  "end": "2026-11-18",
-  "start": "2026-10-20"
+  "end": "2026-11-19",
+  "start": "2026-10-21"
  },
  "schema": 2,
  "seconds": {

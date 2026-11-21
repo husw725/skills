@@ -1,0 +1,220 @@
+{
+ "asOf": "2026-11-18",
+ "failures": {
+  "audience-stats": "平台未返回观众画像，不按0填充"
+ },
+ "fallbacks": {},
+ "id": "7571058027617506315",
+ "lastAttempt": "2026-11-20T03:08:57+00:00",
+ "name": "Teaching my Robot Boyfriend How to Love",
+ "requested": {
+  "end": "2026-11-18",
+  "start": "2026-10-20"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-20T03:09:13+00:00",
+   "data": [
+    {
+     "collectionId": "7595056185670374408",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    },
+    {
+     "averageDurationDate": "2026-11-18",
+     "averageDurationSeconds": 3.0,
+     "collectionId": "7572412213517063186",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    },
+    {
+     "averageDurationDate": "2026-11-18",
+     "averageDurationSeconds": 696.2,
+     "collectionId": "7397963288400942123",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    },
+    {
+     "averageDurationDate": "2026-11-18",
+     "averageDurationSeconds": 521.86,
+     "collectionId": "7595400305400091666",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    }
+   ],
+   "end": "2026-11-18",
+   "start": "2026-10-20"
+  },
+  "audience-stats": {
+   "checked": "2026-11-18T07:09:16+00:00",
+   "data": {
+    "age": null,
+    "gender": {
+     "female": 45.5189,
+     "gender_unknown": 23.8208,
+     "male": 30.6604
+    }
+   },
+   "end": "2026-11-16",
+   "start": "2026-10-18"
+  },
+  "traffic-added": {
+   "checked": "2026-11-20T03:09:13+00:00",
+   "data": [
+    {
+     "collectionId": "7595056185670374408",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 0
+    },
+    {
+     "collectionId": "7572412213517063186",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 158
+    },
+    {
+     "collectionId": "7595400305400091666",
+     "com": 0,
+     "fav": 2,
+     "like": 7,
+     "qv": 194
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "com": 0,
+     "fav": 10,
+     "like": 303,
+     "qv": 1829
+    }
+   ],
+   "end": "2026-11-18",
+   "start": "2026-10-20"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-20T03:09:13+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 4.4209
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 1.3557
+    },
+    {
+     "collectionId": null,
+     "key": "recommend",
+     "pct": 0.0589
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 0.3537
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 64.4268
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 9.8143
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 19.5697
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "key": "other",
+     "pct": 2.8488
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "key": "recommend",
+     "pct": 0.073
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "key": "tab",
+     "pct": 0.4383
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "key": "fyp",
+     "pct": 1.2418
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "key": "search",
+     "pct": 2.8123
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "key": "self_profile",
+     "pct": 17.9693
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "key": "other_profile",
+     "pct": 74.6165
+    },
+    {
+     "collectionId": "7572412213517063186",
+     "key": "other_profile",
+     "pct": 4.7619
+    },
+    {
+     "collectionId": "7572412213517063186",
+     "key": "self_profile",
+     "pct": 23.3766
+    },
+    {
+     "collectionId": "7572412213517063186",
+     "key": "search",
+     "pct": 71.8615
+    },
+    {
+     "collectionId": "7595400305400091666",
+     "key": "other",
+     "pct": 16.9811
+    },
+    {
+     "collectionId": "7595400305400091666",
+     "key": "fyp",
+     "pct": 2.8302
+    },
+    {
+     "collectionId": "7595400305400091666",
+     "key": "search",
+     "pct": 21.2264
+    },
+    {
+     "collectionId": "7595400305400091666",
+     "key": "self_profile",
+     "pct": 27.8302
+    },
+    {
+     "collectionId": "7595400305400091666",
+     "key": "other_profile",
+     "pct": 31.1321
+    }
+   ],
+   "end": "2026-11-18",
+   "start": "2026-10-20"
+  }
+ },
+ "source": "contract_detail"
+}
