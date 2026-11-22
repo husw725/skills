@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-19",
+ "asOf": "2026-11-20",
  "collectorVersion": 3,
  "failures": {
   "7615892096930549005": {
@@ -8,7 +8,8 @@
   }
  },
  "id": "7615580190361719864",
- "lastAttempt": "2026-11-21T07:48:20+00:00",
+ "lastAttempt": "2026-11-22T07:48:33+00:00",
+ "lastError": "本轮分集采集预算已用完，后续继续",
  "materials": {
   "checked": "2026-11-21T07:49:01+00:00",
   "complete": true,
@@ -926,10 +927,10 @@
   "total": 33
  },
  "name": "MAFIA HUSBAND, DETECTIVE BOYFRIEND",
- "pending": false,
+ "pending": true,
  "requested": {
-  "end": "2026-11-19",
-  "start": "2026-10-21"
+  "end": "2026-11-20",
+  "start": "2026-10-22"
  },
  "schema": 2,
  "seconds": {
