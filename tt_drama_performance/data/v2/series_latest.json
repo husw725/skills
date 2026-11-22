@@ -1,5 +1,5 @@
 {
- "checked": "2026-11-22T19:04:02+00:00",
+ "checked": "2026-11-22T23:03:13+00:00",
  "failureChecks": {
   "7627885597855831041": "2026-11-22T19:03:53+00:00",
   "7627885607771280385": "2026-11-22T19:03:56+00:00",
@@ -11,7 +11,8 @@
   "7630880624383595541": "2026-11-22T19:03:39+00:00",
   "7630880624383611925": "2026-11-22T19:03:25+00:00",
   "7630880627486708757": "2026-11-22T19:03:28+00:00",
-  "7630880636202832916": "2026-11-22T19:03:08+00:00"
+  "7630880636202832916": "2026-11-22T19:03:08+00:00",
+  "7652270026233287688": "2026-11-22T23:02:21+00:00"
  },
  "failures": {
   "7627885597855831041": "HTTP 422 code 422",
@@ -24,10 +25,11 @@
   "7630880624383595541": "HTTP 422 code 422",
   "7630880624383611925": "HTTP 422 code 422",
   "7630880627486708757": "HTTP 422 code 422",
-  "7630880636202832916": "HTTP 422 code 422"
+  "7630880636202832916": "HTTP 422 code 422",
+  "7652270026233287688": "Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=\"Confirm\", exact=True)\n    - locator resolved to <button type=\"button\" aria-disabled=\"false\" class=\"semi-button semi-button-primary semi-button-light\">…</button>\n  - attempting click action\n    - waiting for element to be visible, enabled and stable\n    - element is visible, enabled and stable\n    - scrolling into view if needed\n    - done scrolling\n    - element is not visible\n  - retrying click action\n    - waiting for element to be visible, enabled and stable\n  - element was detached from the DOM, retrying\n"
  },
  "requestedStart": "2026-03-01",
- "saved": 32,
+ "saved": 31,
  "schema": 2,
  "source": "contract_chart",
  "titles": 43
