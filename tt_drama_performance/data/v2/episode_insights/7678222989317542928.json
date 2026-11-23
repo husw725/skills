@@ -1,13 +1,14 @@
 {
- "asOf": "2026-11-20",
+ "asOf": "2026-11-21",
  "collectorVersion": 3,
  "failures": {},
  "id": "7678222989317542928",
- "lastAttempt": "2026-11-22T07:31:03+00:00",
+ "lastAttempt": "2026-11-23T03:30:29+00:00",
+ "lastError": "等待平台分集数据超时",
  "materials": {
-  "checked": "2026-11-22T07:31:42+00:00",
+  "checked": "2026-11-23T03:30:55+00:00",
   "complete": true,
-  "end": "2026-11-20",
+  "end": "2026-11-21",
   "rows": [
    {
     "account": {
@@ -17,7 +18,7 @@
     },
     "clicks": 0,
     "durationSeconds": 166.883,
-    "impressions": 98,
+    "impressions": 99,
     "itemId": "7703419250093952269",
     "published": "2026-11-02",
     "title": "They Bullied the Wrong Heiress"
@@ -30,7 +31,7 @@
     },
     "clicks": 2,
     "durationSeconds": 188.547,
-    "impressions": 226,
+    "impressions": 227,
     "itemId": "7703419262953737485",
     "published": "2026-11-02",
     "title": "They Bullied the Wrong Heiress"
@@ -54,17 +55,17 @@
      "name": "altatvapp_shortdrama",
      "region": "CA"
     },
-    "clicks": 0,
+    "clicks": null,
     "durationSeconds": 166.883,
-    "impressions": 84,
+    "impressions": null,
     "itemId": "7703410056578075912",
     "published": "2026-11-02",
     "title": "They Bullied the Wrong Heiress"
    }
   ],
-  "start": "2026-10-22",
-  "statsPartial": false,
-  "statsRows": 4,
+  "start": "2026-10-23",
+  "statsPartial": true,
+  "statsRows": 3,
   "total": 4
  },
  "metrics": {

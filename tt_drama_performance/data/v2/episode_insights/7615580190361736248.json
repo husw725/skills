@@ -1,9 +1,10 @@
 {
- "asOf": "2026-11-20",
+ "asOf": "2026-11-21",
  "collectorVersion": 3,
  "failures": {},
  "id": "7615580190361736248",
- "lastAttempt": "2026-11-22T07:46:50+00:00",
+ "lastAttempt": "2026-11-23T03:47:06+00:00",
+ "lastError": "本轮分集采集预算已用完，后续继续",
  "materialError": {
   "checked": "2026-11-22T07:47:37+00:00",
   "reason": "HTTP 500 code 500"
@@ -708,10 +709,10 @@
   "total": 25
  },
  "name": "Dogfather第二季",
- "pending": false,
+ "pending": true,
  "requested": {
-  "end": "2026-11-20",
-  "start": "2026-10-22"
+  "end": "2026-11-21",
+  "start": "2026-10-23"
  },
  "schema": 2,
  "seconds": {

@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-20",
+ "asOf": "2026-11-21",
  "collectorVersion": 3,
  "failures": {
   "7709888523758865716": {
@@ -8,11 +8,12 @@
   }
  },
  "id": "7685678473231143956",
- "lastAttempt": "2026-11-22T07:29:54+00:00",
+ "lastAttempt": "2026-11-23T03:29:22+00:00",
+ "lastError": "等待平台分集数据超时",
  "materials": {
-  "checked": "2026-11-22T07:30:28+00:00",
+  "checked": "2026-11-23T03:29:47+00:00",
   "complete": true,
-  "end": "2026-11-20",
+  "end": "2026-11-21",
   "rows": [
    {
     "account": {
@@ -33,9 +34,9 @@
      "name": "Altatvapp",
      "region": "US"
     },
-    "clicks": 3,
+    "clicks": null,
     "durationSeconds": 166.883,
-    "impressions": 254,
+    "impressions": null,
     "itemId": "7703766777892850958",
     "published": "2026-11-03",
     "title": "They Bullied the Wrong Heiress"
@@ -145,9 +146,9 @@
     "title": "Undercover in the Dungeon"
    }
   ],
-  "start": "2026-10-22",
+  "start": "2026-10-23",
   "statsPartial": true,
-  "statsRows": 4,
+  "statsRows": 3,
   "total": 10
  },
  "metrics": {
