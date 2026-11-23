@@ -1,11 +1,52 @@
 {
- "asOf": "2026-11-20",
+ "asOf": "2026-11-21",
  "collectorVersion": 3,
- "failures": {},
+ "failures": {
+  "7616618566753864980": {
+   "checked": "2026-11-23T07:06:55+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618569496890645": {
+   "checked": "2026-11-23T07:05:39+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618570172140821": {
+   "checked": "2026-11-23T07:06:13+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618572730699029": {
+   "checked": "2026-11-23T07:05:56+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618575024934164": {
+   "checked": "2026-11-23T07:06:46+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618590598368533": {
+   "checked": "2026-11-23T07:06:04+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618593844808981": {
+   "checked": "2026-11-23T07:06:38+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618596373908757": {
+   "checked": "2026-11-23T07:06:21+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618611393760532": {
+   "checked": "2026-11-23T07:06:29+00:00",
+   "reason": "等待平台分集数据超时"
+  },
+  "7616618613969030420": {
+   "checked": "2026-11-23T07:05:47+00:00",
+   "reason": "等待平台分集数据超时"
+  }
+ },
  "id": "7615588891197903883",
- "lastAttempt": "2026-11-22T07:47:37+00:00",
+ "lastAttempt": "2026-11-23T07:05:20+00:00",
  "materials": {
-  "checked": "2026-11-22T07:48:33+00:00",
+  "checked": "2026-11-23T07:06:56+00:00",
   "complete": true,
   "end": null,
   "rows": [],
@@ -15,23 +56,23 @@
   "total": 0
  },
  "metrics": {
-  "checked": "2026-11-22T07:47:49+00:00",
+  "checked": "2026-11-23T07:05:31+00:00",
   "complete": true,
   "cursors": [
    0,
    10,
    20
   ],
-  "end": "2026-11-20",
+  "end": "2026-11-21",
   "rows": [
    {
     "added": {
      "com": 0,
      "fav": 4,
      "like": 1,
-     "qv": 148
+     "qv": 144
     },
-    "clicks": 289914,
+    "clicks": 289918,
     "cumulative": {
      "com": 26,
      "fav": 537,
@@ -40,9 +81,9 @@
     },
     "durationSeconds": 9.95,
     "episode": 1,
-    "finishRate": 0.02999,
+    "finishRate": 0.029989,
     "highlight": false,
-    "impressions": 2884813,
+    "impressions": 2885065,
     "itemId": "7616618579005328660",
     "itemIds": [
      "7616264995747220743",
@@ -56,7 +97,7 @@
      "com": 0,
      "fav": 1,
      "like": 0,
-     "qv": 103
+     "qv": 100
     },
     "clicks": 46627,
     "cumulative": {
@@ -83,7 +124,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 128
+     "qv": 124
     },
     "clicks": 273687,
     "cumulative": {
@@ -110,7 +151,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 68
+     "qv": 62
     },
     "clicks": 51395,
     "cumulative": {
@@ -137,7 +178,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 46
+     "qv": 41
     },
     "clicks": 27777,
     "cumulative": {
@@ -164,7 +205,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 34
+     "qv": 29
     },
     "clicks": 26953,
     "cumulative": {
@@ -299,7 +340,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 17
+     "qv": 16
     },
     "clicks": 18208,
     "cumulative": {
@@ -326,7 +367,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 14
+     "qv": 13
     },
     "clicks": 17389,
     "cumulative": {
@@ -353,7 +394,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 14
+     "qv": 13
     },
     "clicks": 16916,
     "cumulative": {
@@ -380,7 +421,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 12
+     "qv": 11
     },
     "clicks": 16854,
     "cumulative": {
@@ -407,7 +448,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 16
+     "qv": 15
     },
     "clicks": 16131,
     "cumulative": {
@@ -434,7 +475,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 15
+     "qv": 14
     },
     "clicks": 15280,
     "cumulative": {
@@ -461,7 +502,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 15
+     "qv": 14
     },
     "clicks": 15614,
     "cumulative": {
@@ -488,7 +529,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 12
+     "qv": 11
     },
     "clicks": 15374,
     "cumulative": {
@@ -515,7 +556,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 13
+     "qv": 12
     },
     "clicks": 32946,
     "cumulative": {
@@ -544,16 +585,16 @@
      "like": 0,
      "qv": 12
     },
-    "clicks": 17614,
+    "clicks": 17615,
     "cumulative": {
      "com": 4,
      "fav": 48,
      "like": 390,
      "qv": 16825
     },
-    "durationSeconds": 67.59,
+    "durationSeconds": 67.58,
     "episode": 20,
-    "finishRate": 0.538345,
+    "finishRate": 0.538318,
     "highlight": false,
     "impressions": 1190455,
     "itemId": "7616618566753864980",
@@ -569,7 +610,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 8
+     "qv": 7
     },
     "clicks": 15189,
     "cumulative": {
@@ -596,7 +637,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 6
+     "qv": 5
     },
     "clicks": 14540,
     "cumulative": {
@@ -677,7 +718,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 5
+     "qv": 4
     },
     "clicks": 13938,
     "cumulative": {
@@ -835,14 +876,14 @@
     "versionCount": 3
    }
   ],
-  "start": "2026-10-22",
+  "start": "2026-10-23",
   "total": 30
  },
  "name": "Dogfather第一季",
  "pending": false,
  "requested": {
-  "end": "2026-11-20",
-  "start": "2026-10-22"
+  "end": "2026-11-21",
+  "start": "2026-10-23"
  },
  "schema": 2,
  "seconds": {

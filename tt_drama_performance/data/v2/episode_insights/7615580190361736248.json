@@ -3,10 +3,9 @@
  "collectorVersion": 3,
  "failures": {},
  "id": "7615580190361736248",
- "lastAttempt": "2026-11-23T03:47:06+00:00",
- "lastError": "本轮分集采集预算已用完，后续继续",
+ "lastAttempt": "2026-11-23T07:04:50+00:00",
  "materialError": {
-  "checked": "2026-11-22T07:47:37+00:00",
+  "checked": "2026-11-23T07:05:20+00:00",
   "reason": "HTTP 500 code 500"
  },
  "materials": {
@@ -20,34 +19,34 @@
   "total": 0
  },
  "metrics": {
-  "checked": "2026-11-22T07:47:12+00:00",
+  "checked": "2026-11-23T07:04:57+00:00",
   "complete": true,
   "cursors": [
    0,
    10,
    20
   ],
-  "end": "2026-11-20",
+  "end": "2026-11-21",
   "rows": [
    {
     "added": {
      "com": 0,
      "fav": 1,
      "like": 2,
-     "qv": 36
+     "qv": 33
     },
-    "clicks": 153717,
+    "clicks": 153719,
     "cumulative": {
      "com": 15,
      "fav": 195,
      "like": 1139,
-     "qv": 21023
+     "qv": 21024
     },
     "durationSeconds": 5.31,
     "episode": 1,
     "finishRate": 0.014948,
     "highlight": false,
-    "impressions": 816828,
+    "impressions": 816832,
     "itemId": "7626311274388917524",
     "itemIds": [
      "7626289170767711508",
@@ -61,7 +60,7 @@
      "com": 0,
      "fav": 0,
      "like": 1,
-     "qv": 14
+     "qv": 11
     },
     "clicks": 32326,
     "cumulative": {
@@ -279,7 +278,7 @@
      "like": 0,
      "qv": 2
     },
-    "clicks": 21265,
+    "clicks": 21266,
     "cumulative": {
      "com": 7,
      "fav": 38,
@@ -288,9 +287,9 @@
     },
     "durationSeconds": 22.52,
     "episode": 10,
-    "finishRate": 0.150277,
+    "finishRate": 0.150271,
     "highlight": false,
-    "impressions": 478922,
+    "impressions": 478923,
     "itemId": "7626311289240931604",
     "itemIds": [
      "7626289188043787540",
@@ -705,11 +704,11 @@
     "versionCount": 3
    }
   ],
-  "start": "2026-10-22",
+  "start": "2026-10-23",
   "total": 25
  },
  "name": "Dogfather第二季",
- "pending": true,
+ "pending": false,
  "requested": {
   "end": "2026-11-21",
   "start": "2026-10-23"
@@ -717,7 +716,7 @@
  "schema": 2,
  "seconds": {
   "7626289170767711508": {
-   "checked": "2026-11-21T07:47:50+00:00",
+   "checked": "2026-11-23T07:04:59+00:00",
    "dataThrough": null,
    "episode": 1,
    "highlight": false,
@@ -1297,7 +1296,7 @@
    ]
   },
   "7626289171375688980": {
-   "checked": "2026-11-21T07:47:51+00:00",
+   "checked": "2026-11-23T07:05:00+00:00",
    "dataThrough": null,
    "episode": 2,
    "highlight": false,
@@ -1917,7 +1916,7 @@
    ]
   },
   "7626289173217004820": {
-   "checked": "2026-11-21T07:47:57+00:00",
+   "checked": "2026-11-23T07:05:06+00:00",
    "dataThrough": null,
    "episode": 5,
    "highlight": false,
@@ -2857,7 +2856,7 @@
    ]
   },
   "7626289174953397525": {
-   "checked": "2026-11-21T07:47:52+00:00",
+   "checked": "2026-11-23T07:05:02+00:00",
    "dataThrough": null,
    "episode": 3,
    "highlight": false,
@@ -3597,7 +3596,7 @@
    ]
   },
   "7626289176345988372": {
-   "checked": "2026-11-21T07:48:02+00:00",
+   "checked": "2026-11-23T07:05:10+00:00",
    "dataThrough": null,
    "episode": 8,
    "highlight": false,
@@ -4297,7 +4296,7 @@
    ]
   },
   "7626289176379411733": {
-   "checked": "2026-11-21T07:47:58+00:00",
+   "checked": "2026-11-23T07:05:07+00:00",
    "dataThrough": null,
    "episode": 6,
    "highlight": false,
@@ -5053,7 +5052,7 @@
    ]
   },
   "7626289179370179860": {
-   "checked": "2026-11-21T07:47:55+00:00",
+   "checked": "2026-11-23T07:05:04+00:00",
    "dataThrough": null,
    "episode": 4,
    "highlight": false,
@@ -5537,7 +5536,7 @@
    ]
   },
   "7626289184134679829": {
-   "checked": "2026-11-21T07:48:03+00:00",
+   "checked": "2026-11-23T07:05:16+00:00",
    "dataThrough": null,
    "episode": 9,
    "highlight": false,
@@ -6221,7 +6220,7 @@
    ]
   },
   "7626289184856100116": {
-   "checked": "2026-11-21T07:48:00+00:00",
+   "checked": "2026-11-23T07:05:09+00:00",
    "dataThrough": null,
    "episode": 7,
    "highlight": false,
@@ -7285,7 +7284,7 @@
    ]
   },
   "7626289188043787540": {
-   "checked": "2026-11-21T07:48:05+00:00",
+   "checked": "2026-11-23T07:05:18+00:00",
    "dataThrough": null,
    "episode": 10,
    "highlight": false,
