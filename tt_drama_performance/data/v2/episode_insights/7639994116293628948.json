@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-21",
+ "asOf": "2026-11-22",
  "collectorVersion": 3,
  "failures": {
   "7679760289402719509": {
@@ -12,7 +12,12 @@
   }
  },
  "id": "7639994116293628948",
- "lastAttempt": "2026-11-23T03:37:55+00:00",
+ "lastAttempt": "2026-11-24T07:40:57+00:00",
+ "lastError": "Locator.evaluate: Timeout 5000ms exceeded.",
+ "materialError": {
+  "checked": "2026-11-24T07:41:36+00:00",
+  "reason": "等待平台分集数据超时"
+ },
  "materials": {
   "checked": "2026-11-23T03:38:55+00:00",
   "complete": true,
@@ -2767,8 +2772,8 @@
  "name": "My CEO Loves My Voice",
  "pending": false,
  "requested": {
-  "end": "2026-11-21",
-  "start": "2026-10-23"
+  "end": "2026-11-22",
+  "start": "2026-10-24"
  },
  "schema": 2,
  "seconds": {

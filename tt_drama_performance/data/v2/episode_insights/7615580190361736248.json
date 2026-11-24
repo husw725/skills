@@ -1,9 +1,9 @@
 {
- "asOf": "2026-11-21",
+ "asOf": "2026-11-22",
  "collectorVersion": 3,
  "failures": {},
  "id": "7615580190361736248",
- "lastAttempt": "2026-11-23T07:04:50+00:00",
+ "lastAttempt": "2026-11-24T07:50:14+00:00",
  "materialError": {
   "checked": "2026-11-23T07:05:20+00:00",
   "reason": "HTTP 500 code 500"
@@ -19,23 +19,23 @@
   "total": 0
  },
  "metrics": {
-  "checked": "2026-11-23T07:04:57+00:00",
+  "checked": "2026-11-24T07:50:28+00:00",
   "complete": true,
   "cursors": [
    0,
    10,
    20
   ],
-  "end": "2026-11-21",
+  "end": "2026-11-22",
   "rows": [
    {
     "added": {
      "com": 0,
      "fav": 1,
      "like": 2,
-     "qv": 33
+     "qv": 31
     },
-    "clicks": 153719,
+    "clicks": 153722,
     "cumulative": {
      "com": 15,
      "fav": 195,
@@ -44,9 +44,9 @@
     },
     "durationSeconds": 5.31,
     "episode": 1,
-    "finishRate": 0.014948,
+    "finishRate": 0.014947,
     "highlight": false,
-    "impressions": 816832,
+    "impressions": 816833,
     "itemId": "7626311274388917524",
     "itemIds": [
      "7626289170767711508",
@@ -60,7 +60,7 @@
      "com": 0,
      "fav": 0,
      "like": 1,
-     "qv": 11
+     "qv": 10
     },
     "clicks": 32326,
     "cumulative": {
@@ -87,7 +87,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 11
+     "qv": 10
     },
     "clicks": 28927,
     "cumulative": {
@@ -168,7 +168,7 @@
      "com": 0,
      "fav": 0,
      "like": 0,
-     "qv": 6
+     "qv": 5
     },
     "clicks": 16239,
     "cumulative": {
@@ -704,14 +704,14 @@
     "versionCount": 3
    }
   ],
-  "start": "2026-10-23",
+  "start": "2026-10-24",
   "total": 25
  },
  "name": "Dogfather第二季",
- "pending": false,
+ "pending": true,
  "requested": {
-  "end": "2026-11-21",
-  "start": "2026-10-23"
+  "end": "2026-11-22",
+  "start": "2026-10-24"
  },
  "schema": 2,
  "seconds": {

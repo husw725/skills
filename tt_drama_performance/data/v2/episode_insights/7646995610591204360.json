@@ -1,9 +1,14 @@
 {
- "asOf": "2026-11-21",
+ "asOf": "2026-11-22",
  "collectorVersion": 3,
  "failures": {},
  "id": "7646995610591204360",
- "lastAttempt": "2026-11-23T03:42:43+00:00",
+ "lastAttempt": "2026-11-24T07:46:23+00:00",
+ "lastError": "Locator.evaluate: Timeout 5000ms exceeded.",
+ "materialError": {
+  "checked": "2026-11-24T07:46:37+00:00",
+  "reason": "HTTP 500 code 500"
+ },
  "materials": {
   "checked": "2026-11-23T03:43:25+00:00",
   "complete": true,
@@ -1333,8 +1338,8 @@
  "name": "Meu CEO Ama Minha Voz",
  "pending": false,
  "requested": {
-  "end": "2026-11-21",
-  "start": "2026-10-23"
+  "end": "2026-11-22",
+  "start": "2026-10-24"
  },
  "schema": 2,
  "seconds": {

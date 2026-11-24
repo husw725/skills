@@ -1,18 +1,18 @@
 {
- "asOf": "2026-11-21",
+ "asOf": "2026-11-22",
  "failures": {},
  "fallbacks": {},
  "id": "7646995610591204360",
- "lastAttempt": "2026-11-23T03:04:23+00:00",
+ "lastAttempt": "2026-11-24T07:05:09+00:00",
  "name": "Meu CEO Ama Minha Voz",
  "requested": {
-  "end": "2026-11-21",
-  "start": "2026-10-23"
+  "end": "2026-11-22",
+  "start": "2026-10-24"
  },
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-23T03:04:30+00:00",
+   "checked": "2026-11-24T07:05:20+00:00",
    "data": [
     {
      "collectionId": "7654062586786403348",
@@ -21,37 +21,37 @@
      "region": "BR"
     },
     {
-     "averageDurationDate": "2026-11-21",
-     "averageDurationSeconds": 10.57,
+     "averageDurationDate": "2026-11-22",
+     "averageDurationSeconds": 12.85,
      "collectionId": "7649029282123682836",
      "handle": "altatv_app",
      "name": "AltaTV_APP",
      "region": "BR"
     }
    ],
-   "end": "2026-11-21",
-   "start": "2026-10-23"
+   "end": "2026-11-22",
+   "start": "2026-10-24"
   },
   "audience-stats": {
-   "checked": "2026-11-23T03:04:29+00:00",
+   "checked": "2026-11-24T07:05:18+00:00",
    "data": {
     "age": {
-     "l3": 39.9825,
-     "l4": 20.6032,
-     "l5": 12.3124,
-     "unknown": 27.1019
+     "l3": 39.9914,
+     "l4": 20.348,
+     "l5": 12.2519,
+     "unknown": 27.4087
     },
     "gender": {
-     "female": 38.8302,
-     "gender_unknown": 25.2063,
-     "male": 35.9635
+     "female": 38.5351,
+     "gender_unknown": 25.3855,
+     "male": 36.0794
     }
    },
-   "end": "2026-11-21",
-   "start": "2026-10-23"
+   "end": "2026-11-22",
+   "start": "2026-10-24"
   },
   "traffic-added": {
-   "checked": "2026-11-23T03:04:30+00:00",
+   "checked": "2026-11-24T07:05:20+00:00",
    "data": [
     {
      "collectionId": "7654062586786403348",
@@ -62,87 +62,77 @@
     },
     {
      "collectionId": "7649029282123682836",
-     "com": 6,
-     "fav": 145,
-     "like": 812,
-     "qv": 4
+     "com": 8,
+     "fav": 154,
+     "like": 833,
+     "qv": 3
     }
    ],
-   "end": "2026-11-21",
-   "start": "2026-10-23"
+   "end": "2026-11-22",
+   "start": "2026-10-24"
   },
   "traffic-stats": {
-   "checked": "2026-11-23T03:04:30+00:00",
+   "checked": "2026-11-24T07:05:20+00:00",
    "data": [
     {
      "collectionId": null,
      "key": "other",
-     "pct": 1.1226
+     "pct": 1.1313
     },
     {
      "collectionId": null,
      "key": "fyp",
-     "pct": 88.8362
+     "pct": 88.7482
     },
     {
      "collectionId": null,
      "key": "recommend",
-     "pct": 0.0125
+     "pct": 0.0123
     },
     {
      "collectionId": null,
      "key": "search",
-     "pct": 0.7235
+     "pct": 0.6763
     },
     {
      "collectionId": null,
      "key": "self_profile",
-     "pct": 7.1723
-    },
-    {
-     "collectionId": null,
-     "key": "tab",
-     "pct": 0.0125
+     "pct": 7.2799
     },
     {
      "collectionId": null,
      "key": "other_profile",
-     "pct": 2.1205
+     "pct": 2.152
     },
     {
      "collectionId": "7649029282123682836",
      "key": "other",
-     "pct": 1.1235
+     "pct": 1.1322
     },
     {
      "collectionId": "7649029282123682836",
      "key": "recommend",
-     "pct": 0.0125
-    },
-    {
-     "collectionId": "7649029282123682836",
-     "key": "tab",
-     "pct": 0.0125
+     "pct": 0.0123
     },
     {
      "collectionId": "7649029282123682836",
      "key": "search",
-     "pct": 0.724
+     "pct": 0.6768
     },
     {
      "collectionId": "7649029282123682836",
      "key": "other_profile",
-     "pct": 2.0472
+     "pct": 2.0797
     },
     {
      "collectionId": "7649029282123682836",
      "key": "self_profile",
-     "pct": 7.1776
+     "pct": 7.2853
     },
     {
      "collectionId": "7649029282123682836",
      "key": "fyp",
-     "pct": 88.9028
+     "pct": 88.8137
     },
     {
      "collectionId": "7654062586786403348",
@@ -150,8 +140,8 @@
      "pct": 100.0
     }
    ],
-   "end": "2026-11-21",
-   "start": "2026-10-23"
+   "end": "2026-11-22",
+   "start": "2026-10-24"
   }
  },
  "source": "contract_detail"
