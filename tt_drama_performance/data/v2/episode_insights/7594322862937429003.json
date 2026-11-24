@@ -1,21 +1,21 @@
 {
- "asOf": "2026-11-21",
+ "asOf": "2026-11-22",
  "collectorVersion": 3,
  "failures": {
   "7595772643039644935": {
-   "checked": "2026-11-23T07:10:41+00:00",
+   "checked": "2026-11-24T11:10:10+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772646038523154": {
-   "checked": "2026-11-23T07:09:51+00:00",
+   "checked": "2026-11-24T11:09:20+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772650484468999": {
-   "checked": "2026-11-23T07:10:58+00:00",
+   "checked": "2026-11-24T11:10:27+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772655798619400": {
-   "checked": "2026-11-23T07:09:59+00:00",
+   "checked": "2026-11-24T11:09:28+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772657178512648": {
@@ -27,11 +27,11 @@
    "reason": "等待平台分集数据超时"
   },
   "7595772660055805191": {
-   "checked": "2026-11-23T07:11:06+00:00",
+   "checked": "2026-11-24T11:10:35+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772660911541522": {
-   "checked": "2026-11-23T07:10:08+00:00",
+   "checked": "2026-11-24T11:09:37+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772661213515016": {
@@ -51,7 +51,7 @@
    "reason": "等待平台分集数据超时"
   },
   "7595772662740290823": {
-   "checked": "2026-11-23T07:10:16+00:00",
+   "checked": "2026-11-24T11:09:45+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772662752808199": {
@@ -63,11 +63,11 @@
    "reason": "等待平台分集数据超时"
   },
   "7595772663486762247": {
-   "checked": "2026-11-23T07:10:50+00:00",
+   "checked": "2026-11-24T11:10:18+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772669744647431": {
-   "checked": "2026-11-23T07:10:33+00:00",
+   "checked": "2026-11-24T11:10:02+00:00",
    "reason": "等待平台分集数据超时"
   },
   "7595772672215141640": {
@@ -191,14 +191,14 @@
    "reason": "等待平台分集数据超时"
   },
   "7595795819366731016": {
-   "checked": "2026-11-23T07:10:24+00:00",
+   "checked": "2026-11-24T11:09:53+00:00",
    "reason": "等待平台分集数据超时"
   }
  },
  "id": "7594322862937429003",
- "lastAttempt": "2026-11-23T07:09:31+00:00",
+ "lastAttempt": "2026-11-24T11:08:54+00:00",
  "materials": {
-  "checked": "2026-11-23T07:11:08+00:00",
+  "checked": "2026-11-24T11:10:37+00:00",
   "complete": true,
   "end": null,
   "rows": [],
@@ -208,7 +208,7 @@
   "total": 0
  },
  "metrics": {
-  "checked": "2026-11-23T07:09:43+00:00",
+  "checked": "2026-11-24T11:09:12+00:00",
   "complete": true,
   "cursors": [
    0,
@@ -217,27 +217,27 @@
    30,
    40
   ],
-  "end": "2026-11-21",
+  "end": "2026-11-22",
   "rows": [
    {
     "added": {
      "com": 0,
      "fav": 52,
-     "like": 21,
-     "qv": 489
+     "like": 22,
+     "qv": 486
     },
-    "clicks": 67521,
+    "clicks": 67525,
     "cumulative": {
      "com": 8,
-     "fav": 814,
-     "like": 1333,
-     "qv": 33161
+     "fav": 815,
+     "like": 1334,
+     "qv": 33164
     },
-    "durationSeconds": 20.3,
+    "durationSeconds": 20.31,
     "episode": 1,
-    "finishRate": 0.131013,
+    "finishRate": 0.131003,
     "highlight": false,
-    "impressions": 1370709,
+    "impressions": 1371181,
     "itemId": "7595772646038523154",
     "itemIds": [
      "7594353200472329486",
@@ -250,21 +250,21 @@
     "added": {
      "com": 0,
      "fav": 7,
-     "like": 5,
-     "qv": 303
+     "like": 6,
+     "qv": 299
     },
-    "clicks": 40592,
+    "clicks": 40593,
     "cumulative": {
      "com": 5,
      "fav": 183,
-     "like": 811,
-     "qv": 28448
+     "like": 812,
+     "qv": 28450
     },
-    "durationSeconds": 32.29,
+    "durationSeconds": 32.3,
     "episode": 2,
-    "finishRate": 0.202971,
+    "finishRate": 0.202963,
     "highlight": false,
-    "impressions": 1310718,
+    "impressions": 1311217,
     "itemId": "7595772655798619400",
     "itemIds": [
      "7594353216482020622",
@@ -278,20 +278,20 @@
      "com": 0,
      "fav": 1,
      "like": 4,
-     "qv": 272
+     "qv": 271
     },
-    "clicks": 31268,
+    "clicks": 31269,
     "cumulative": {
      "com": 5,
      "fav": 76,
      "like": 494,
-     "qv": 25682
+     "qv": 25685
     },
     "durationSeconds": 19.05,
     "episode": 3,
-    "finishRate": 0.253361,
+    "finishRate": 0.253341,
     "highlight": false,
-    "impressions": 595572,
+    "impressions": 595788,
     "itemId": "7595772660911541522",
     "itemIds": [
      "7594353242654510350",
@@ -307,18 +307,18 @@
      "like": 3,
      "qv": 255
     },
-    "clicks": 38402,
+    "clicks": 38403,
     "cumulative": {
      "com": 6,
      "fav": 70,
      "like": 562,
-     "qv": 24040
+     "qv": 24044
     },
-    "durationSeconds": 17.06,
+    "durationSeconds": 17.07,
     "episode": 4,
-    "finishRate": 0.198113,
+    "finishRate": 0.198095,
     "highlight": false,
-    "impressions": 655112,
+    "impressions": 655361,
     "itemId": "7595772662740290823",
     "itemIds": [
      "7594353221909449997",
@@ -330,22 +330,22 @@
    {
     "added": {
      "com": 0,
-     "fav": 3,
+     "fav": 2,
      "like": 4,
-     "qv": 287
+     "qv": 283
     },
-    "clicks": 41743,
+    "clicks": 41744,
     "cumulative": {
      "com": 7,
      "fav": 103,
      "like": 588,
-     "qv": 24470
+     "qv": 24473
     },
-    "durationSeconds": 24.57,
+    "durationSeconds": 24.58,
     "episode": 5,
-    "finishRate": 0.136971,
+    "finishRate": 0.136962,
     "highlight": false,
-    "impressions": 1025819,
+    "impressions": 1026126,
     "itemId": "7595795819366731016",
     "itemIds": [
      "7594353238623669518",
@@ -357,22 +357,22 @@
    {
     "added": {
      "com": 0,
-     "fav": 4,
-     "like": 7,
+     "fav": 5,
+     "like": 9,
      "qv": 270
     },
-    "clicks": 80246,
+    "clicks": 80247,
     "cumulative": {
      "com": 13,
-     "fav": 1056,
-     "like": 2300,
-     "qv": 28868
+     "fav": 1057,
+     "like": 2302,
+     "qv": 28871
     },
     "durationSeconds": 22.19,
     "episode": 6,
-    "finishRate": 0.121935,
+    "finishRate": 0.121931,
     "highlight": false,
-    "impressions": 1780398,
+    "impressions": 1780847,
     "itemId": "7595772669744647431",
     "itemIds": [
      "7594353236128075021",
@@ -386,20 +386,20 @@
      "com": 0,
      "fav": 4,
      "like": 8,
-     "qv": 278
+     "qv": 277
     },
-    "clicks": 35436,
+    "clicks": 35437,
     "cumulative": {
      "com": 5,
      "fav": 179,
      "like": 820,
-     "qv": 28531
+     "qv": 28533
     },
-    "durationSeconds": 29.72,
+    "durationSeconds": 29.74,
     "episode": 7,
-    "finishRate": 0.248423,
+    "finishRate": 0.248411,
     "highlight": false,
-    "impressions": 1053280,
+    "impressions": 1053782,
     "itemId": "7595772643039644935",
     "itemIds": [
      "7594353263579827469",
@@ -412,21 +412,21 @@
     "added": {
      "com": 0,
      "fav": 4,
-     "like": 7,
-     "qv": 277
+     "like": 8,
+     "qv": 276
     },
-    "clicks": 54108,
+    "clicks": 54109,
     "cumulative": {
      "com": 6,
      "fav": 270,
-     "like": 1186,
-     "qv": 26916
+     "like": 1187,
+     "qv": 26917
     },
-    "durationSeconds": 35.95,
+    "durationSeconds": 35.96,
     "episode": 8,
-    "finishRate": 0.167995,
+    "finishRate": 0.167993,
     "highlight": false,
-    "impressions": 1945235,
+    "impressions": 1946017,
     "itemId": "7595772663486762247",
     "itemIds": [
      "7594353237398998327",
@@ -439,21 +439,21 @@
     "added": {
      "com": 0,
      "fav": 4,
-     "like": 4,
+     "like": 5,
      "qv": 240
     },
-    "clicks": 46903,
+    "clicks": 46905,
     "cumulative": {
      "com": 9,
      "fav": 228,
-     "like": 1184,
-     "qv": 26920
+     "like": 1185,
+     "qv": 26922
     },
-    "durationSeconds": 30.11,
+    "durationSeconds": 30.12,
     "episode": 9,
-    "finishRate": 0.196469,
+    "finishRate": 0.196455,
     "highlight": false,
-    "impressions": 1412404,
+    "impressions": 1412963,
     "itemId": "7595772650484468999",
     "itemIds": [
      "7594353204595412237",
@@ -469,18 +469,18 @@
      "like": 8,
      "qv": 263
     },
-    "clicks": 38874,
+    "clicks": 38876,
     "cumulative": {
      "com": 11,
      "fav": 242,
      "like": 1039,
-     "qv": 32719
+     "qv": 32721
     },
-    "durationSeconds": 33.87,
+    "durationSeconds": 33.88,
     "episode": 10,
-    "finishRate": 0.286197,
+    "finishRate": 0.286185,
     "highlight": false,
-    "impressions": 1316733,
+    "impressions": 1317213,
     "itemId": "7595772660055805191",
     "itemIds": [
      "7594353236161678606",
@@ -494,20 +494,20 @@
      "com": 0,
      "fav": 5,
      "like": 9,
-     "qv": 271
+     "qv": 270
     },
-    "clicks": 41844,
+    "clicks": 41846,
     "cumulative": {
      "com": 18,
      "fav": 541,
      "like": 1291,
-     "qv": 32486
+     "qv": 32487
     },
-    "durationSeconds": 41.01,
+    "durationSeconds": 41.02,
     "episode": 11,
-    "finishRate": 0.264012,
+    "finishRate": 0.264002,
     "highlight": false,
-    "impressions": 1715929,
+    "impressions": 1716590,
     "itemId": "7595772657178512648",
     "itemIds": [
      "7594353265408511287",
@@ -521,20 +521,20 @@
      "com": 0,
      "fav": 3,
      "like": 4,
-     "qv": 237
+     "qv": 235
     },
-    "clicks": 25016,
+    "clicks": 25017,
     "cumulative": {
      "com": 8,
      "fav": 129,
      "like": 723,
-     "qv": 30360
+     "qv": 30361
     },
-    "durationSeconds": 57.81,
+    "durationSeconds": 57.82,
     "episode": 12,
-    "finishRate": 0.375369,
+    "finishRate": 0.375357,
     "highlight": false,
-    "impressions": 1446076,
+    "impressions": 1446586,
     "itemId": "7595772657203776786",
     "itemIds": [
      "7594353246098017549",
@@ -548,20 +548,20 @@
      "com": 0,
      "fav": 2,
      "like": 2,
-     "qv": 233
+     "qv": 231
     },
-    "clicks": 24908,
+    "clicks": 24909,
     "cumulative": {
      "com": 12,
      "fav": 88,
      "like": 653,
-     "qv": 28131
+     "qv": 28132
     },
-    "durationSeconds": 42.28,
+    "durationSeconds": 42.29,
     "episode": 13,
-    "finishRate": 0.38987,
+    "finishRate": 0.389857,
     "highlight": false,
-    "impressions": 1053125,
+    "impressions": 1053510,
     "itemId": "7595772672215141640",
     "itemIds": [
      "7594353278352133390",
@@ -575,20 +575,20 @@
      "com": 0,
      "fav": 5,
      "like": 4,
-     "qv": 231
+     "qv": 229
     },
-    "clicks": 41547,
+    "clicks": 41548,
     "cumulative": {
      "com": 10,
      "fav": 231,
      "like": 1126,
-     "qv": 30296
+     "qv": 30297
     },
-    "durationSeconds": 46.3,
+    "durationSeconds": 46.31,
     "episode": 14,
-    "finishRate": 0.266801,
+    "finishRate": 0.266795,
     "highlight": false,
-    "impressions": 1923480,
+    "impressions": 1924159,
     "itemId": "7595772662752808199",
     "itemIds": [
      "7594353275357482253",
@@ -604,18 +604,18 @@
      "like": 2,
      "qv": 219
     },
-    "clicks": 26402,
+    "clicks": 26403,
     "cumulative": {
      "com": 9,
      "fav": 109,
      "like": 659,
-     "qv": 29483
+     "qv": 29484
     },
-    "durationSeconds": 28.47,
+    "durationSeconds": 28.48,
     "episode": 15,
-    "finishRate": 0.412786,
+    "finishRate": 0.412773,
     "highlight": false,
-    "impressions": 751682,
+    "impressions": 751865,
     "itemId": "7595772662950006023",
     "itemIds": [
      "7594353261201640717",
@@ -631,18 +631,18 @@
      "like": 3,
      "qv": 224
     },
-    "clicks": 24381,
+    "clicks": 24382,
     "cumulative": {
      "com": 2,
      "fav": 106,
      "like": 691,
-     "qv": 28351
+     "qv": 28352
     },
-    "durationSeconds": 50.63,
+    "durationSeconds": 50.65,
     "episode": 16,
-    "finishRate": 0.397335,
+    "finishRate": 0.397321,
     "highlight": false,
-    "impressions": 1234476,
+    "impressions": 1234835,
     "itemId": "7595772661213515016",
     "itemIds": [
      "7594353224627391799",
@@ -658,18 +658,18 @@
      "like": 1,
      "qv": 209
     },
-    "clicks": 23723,
+    "clicks": 23724,
     "cumulative": {
      "com": 7,
      "fav": 80,
      "like": 590,
-     "qv": 27343
+     "qv": 27344
     },
-    "durationSeconds": 32.85,
+    "durationSeconds": 32.86,
     "episode": 17,
-    "finishRate": 0.459837,
+    "finishRate": 0.45982,
     "highlight": false,
-    "impressions": 779325,
+    "impressions": 779560,
     "itemId": "7595772661540736264",
     "itemIds": [
      "7594353196617846029",
@@ -685,18 +685,18 @@
      "like": 3,
      "qv": 227
     },
-    "clicks": 38394,
+    "clicks": 38395,
     "cumulative": {
      "com": 8,
      "fav": 184,
      "like": 1130,
-     "qv": 26734
+     "qv": 26735
     },
-    "durationSeconds": 21.01,
+    "durationSeconds": 21.02,
     "episode": 18,
-    "finishRate": 0.308757,
+    "finishRate": 0.30875,
     "highlight": false,
-    "impressions": 806824,
+    "impressions": 806974,
     "itemId": "7595772662308211975",
     "itemIds": [
      "7594353244751596813",
@@ -712,18 +712,18 @@
      "like": 4,
      "qv": 227
     },
-    "clicks": 23757,
+    "clicks": 23758,
     "cumulative": {
      "com": 6,
      "fav": 159,
      "like": 756,
-     "qv": 26768
+     "qv": 26769
     },
-    "durationSeconds": 51.78,
+    "durationSeconds": 51.79,
     "episode": 19,
-    "finishRate": 0.407013,
+    "finishRate": 0.406998,
     "highlight": false,
-    "impressions": 1230154,
+    "impressions": 1230454,
     "itemId": "7595772661591002375",
     "itemIds": [
      "7594353188225043726",
@@ -739,18 +739,18 @@
      "like": 4,
      "qv": 224
     },
-    "clicks": 22835,
+    "clicks": 22836,
     "cumulative": {
      "com": 2,
      "fav": 144,
      "like": 766,
-     "qv": 26608
+     "qv": 26609
     },
-    "durationSeconds": 75.08,
+    "durationSeconds": 75.1,
     "episode": 20,
-    "finishRate": 0.420145,
+    "finishRate": 0.42013,
     "highlight": false,
-    "impressions": 1714408,
+    "impressions": 1715006,
     "itemId": "7595772672382979335",
     "itemIds": [
      "7594353322753019191",
@@ -766,7 +766,7 @@
      "like": 1,
      "qv": 210
     },
-    "clicks": 40366,
+    "clicks": 40367,
     "cumulative": {
      "com": 5,
      "fav": 188,
@@ -775,9 +775,9 @@
     },
     "durationSeconds": 21.46,
     "episode": 21,
-    "finishRate": 0.287584,
+    "finishRate": 0.287578,
     "highlight": false,
-    "impressions": 866121,
+    "impressions": 866389,
     "itemId": "7595772672894569735",
     "itemIds": [
      "7594405254980963591",
@@ -792,18 +792,18 @@
      "like": 1,
      "qv": 219
     },
-    "clicks": 175234,
+    "clicks": 175235,
     "cumulative": {
      "com": 20,
      "fav": 359,
      "like": 2653,
-     "qv": 47723
+     "qv": 47724
     },
     "durationSeconds": 22.72,
     "episode": 22,
-    "finishRate": 0.161311,
+    "finishRate": 0.16131,
     "highlight": false,
-    "impressions": 3980539,
+    "impressions": 3980885,
     "itemId": "7595772674333281543",
     "itemIds": [
      "7594353272194862350",
@@ -819,18 +819,18 @@
      "like": 2,
      "qv": 212
     },
-    "clicks": 41121,
+    "clicks": 41122,
     "cumulative": {
      "com": 8,
      "fav": 161,
      "like": 1264,
-     "qv": 46971
+     "qv": 46972
     },
     "durationSeconds": 34.61,
     "episode": 23,
-    "finishRate": 0.354443,
+    "finishRate": 0.354436,
     "highlight": false,
-    "impressions": 1423118,
+    "impressions": 1423324,
     "itemId": "7595772675654520071",
     "itemIds": [
      "7594353239089319182",
@@ -846,18 +846,18 @@
      "like": 5,
      "qv": 212
     },
-    "clicks": 38426,
+    "clicks": 38427,
     "cumulative": {
      "com": 22,
      "fav": 204,
      "like": 1298,
-     "qv": 43661
+     "qv": 43662
     },
     "durationSeconds": 52.42,
     "episode": 24,
-    "finishRate": 0.375807,
+    "finishRate": 0.375798,
     "highlight": false,
-    "impressions": 2014102,
+    "impressions": 2014440,
     "itemId": "7595772676694723847",
     "itemIds": [
      "7594353343275732238",
@@ -871,20 +871,20 @@
      "com": 0,
      "fav": 2,
      "like": 3,
-     "qv": 232
+     "qv": 231
     },
-    "clicks": 51388,
+    "clicks": 51389,
     "cumulative": {
      "com": 8,
      "fav": 243,
      "like": 1281,
-     "qv": 42088
+     "qv": 42089
     },
-    "durationSeconds": 44.62,
+    "durationSeconds": 44.63,
     "episode": 25,
-    "finishRate": 0.350423,
+    "finishRate": 0.350417,
     "highlight": false,
-    "impressions": 2293156,
+    "impressions": 2293562,
     "itemId": "7595772679534218514",
     "itemIds": [
      "7594353301861190926",
@@ -900,18 +900,18 @@
      "like": 2,
      "qv": 223
     },
-    "clicks": 93249,
+    "clicks": 93251,
     "cumulative": {
      "com": 7,
      "fav": 481,
      "like": 2524,
-     "qv": 44984
+     "qv": 44985
     },
     "durationSeconds": 25.22,
     "episode": 26,
-    "finishRate": 0.311864,
+    "finishRate": 0.311856,
     "highlight": false,
-    "impressions": 2351326,
+    "impressions": 2351589,
     "itemId": "7595772678401821960",
     "itemIds": [
      "7594353342915104014",
@@ -925,20 +925,20 @@
      "com": 0,
      "fav": 1,
      "like": 3,
-     "qv": 205
+     "qv": 204
     },
-    "clicks": 69700,
+    "clicks": 69701,
     "cumulative": {
      "com": 8,
      "fav": 368,
      "like": 2222,
-     "qv": 77710
+     "qv": 77711
     },
-    "durationSeconds": 83.76,
+    "durationSeconds": 83.77,
     "episode": 27,
-    "finishRate": 0.388139,
+    "finishRate": 0.388134,
     "highlight": false,
-    "impressions": 5838316,
+    "impressions": 5839157,
     "itemId": "7595772679282543880",
     "itemIds": [
      "7594353245632449847",
@@ -952,20 +952,20 @@
      "com": 0,
      "fav": 3,
      "like": 6,
-     "qv": 217
+     "qv": 215
     },
-    "clicks": 71672,
+    "clicks": 71673,
     "cumulative": {
      "com": 16,
      "fav": 318,
      "like": 1993,
-     "qv": 72923
+     "qv": 72924
     },
-    "durationSeconds": 61.33,
+    "durationSeconds": 61.34,
     "episode": 28,
-    "finishRate": 0.298318,
+    "finishRate": 0.298315,
     "highlight": false,
-    "impressions": 4395963,
+    "impressions": 4396533,
     "itemId": "7595772680389905682",
     "itemIds": [
      "7594353267761564942",
@@ -979,20 +979,20 @@
      "com": 0,
      "fav": 2,
      "like": 3,
-     "qv": 225
+     "qv": 223
     },
-    "clicks": 66669,
+    "clicks": 66670,
     "cumulative": {
      "com": 5,
      "fav": 179,
      "like": 1330,
-     "qv": 69903
+     "qv": 69904
     },
     "durationSeconds": 22.92,
     "episode": 29,
-    "finishRate": 0.350555,
+    "finishRate": 0.350551,
     "highlight": false,
-    "impressions": 1527962,
+    "impressions": 1528238,
     "itemId": "7595772685594922248",
     "itemIds": [
      "7594353294546324749",
@@ -1008,18 +1008,18 @@
      "like": 6,
      "qv": 201
     },
-    "clicks": 57773,
+    "clicks": 57774,
     "cumulative": {
      "com": 15,
      "fav": 241,
      "like": 1832,
-     "qv": 65671
+     "qv": 65672
     },
-    "durationSeconds": 44.81,
+    "durationSeconds": 44.82,
     "episode": 30,
-    "finishRate": 0.326047,
+    "finishRate": 0.326042,
     "highlight": false,
-    "impressions": 2588816,
+    "impressions": 2589210,
     "itemId": "7595772680737983762",
     "itemIds": [
      "7594353286438817038",
@@ -1033,20 +1033,20 @@
      "com": 0,
      "fav": 5,
      "like": 5,
-     "qv": 226
+     "qv": 228
     },
-    "clicks": 54919,
+    "clicks": 54921,
     "cumulative": {
      "com": 10,
      "fav": 332,
      "like": 1560,
-     "qv": 64063
+     "qv": 64066
     },
-    "durationSeconds": 39.41,
+    "durationSeconds": 39.42,
     "episode": 31,
-    "finishRate": 0.207157,
+    "finishRate": 0.207144,
     "highlight": false,
-    "impressions": 2164489,
+    "impressions": 2164917,
     "itemId": "7595772680515669256",
     "itemIds": [
      "7594353317522705719",
@@ -1060,20 +1060,20 @@
      "com": 0,
      "fav": 3,
      "like": 5,
-     "qv": 202
+     "qv": 204
     },
-    "clicks": 81366,
+    "clicks": 81369,
     "cumulative": {
      "com": 3,
      "fav": 417,
      "like": 1804,
-     "qv": 58119
+     "qv": 58122
     },
     "durationSeconds": 32.48,
     "episode": 32,
-    "finishRate": 0.242561,
+    "finishRate": 0.242548,
     "highlight": false,
-    "impressions": 2642668,
+    "impressions": 2643061,
     "itemId": "7595772687293762823",
     "itemIds": [
      "7594353429842021687",
@@ -1089,18 +1089,18 @@
      "like": 3,
      "qv": 203
     },
-    "clicks": 47539,
+    "clicks": 47540,
     "cumulative": {
      "com": 7,
      "fav": 155,
      "like": 1269,
-     "qv": 53728
+     "qv": 53729
     },
-    "durationSeconds": 56.6,
+    "durationSeconds": 56.61,
     "episode": 33,
-    "finishRate": 0.291204,
+    "finishRate": 0.291199,
     "highlight": false,
-    "impressions": 2690760,
+    "impressions": 2691155,
     "itemId": "7595772687037893896",
     "itemIds": [
      "7594353238439251255",
@@ -1114,20 +1114,20 @@
      "com": 0,
      "fav": 3,
      "like": 5,
-     "qv": 205
+     "qv": 204
     },
-    "clicks": 160226,
+    "clicks": 160229,
     "cumulative": {
      "com": 39,
      "fav": 373,
      "like": 3352,
-     "qv": 54789
+     "qv": 54790
     },
     "durationSeconds": 18.37,
     "episode": 34,
-    "finishRate": 0.191047,
+    "finishRate": 0.191044,
     "highlight": false,
-    "impressions": 2943746,
+    "impressions": 2943941,
     "itemId": "7595772696621763847",
     "itemIds": [
      "7594353257670036791",
@@ -1143,18 +1143,18 @@
      "like": 5,
      "qv": 210
     },
-    "clicks": 58180,
+    "clicks": 58181,
     "cumulative": {
      "com": 4,
      "fav": 270,
      "like": 1386,
-     "qv": 54462
+     "qv": 54463
     },
     "durationSeconds": 29.57,
     "episode": 35,
-    "finishRate": 0.244374,
+    "finishRate": 0.24437,
     "highlight": false,
-    "impressions": 1720141,
+    "impressions": 1720399,
     "itemId": "7595772696269540626",
     "itemIds": [
      "7594353356575870222",
@@ -1170,18 +1170,18 @@
      "like": 3,
      "qv": 197
     },
-    "clicks": 45165,
+    "clicks": 45166,
     "cumulative": {
      "com": 1,
      "fav": 103,
      "like": 1089,
-     "qv": 51054
+     "qv": 51055
     },
-    "durationSeconds": 37.07,
+    "durationSeconds": 37.08,
     "episode": 36,
-    "finishRate": 0.324266,
+    "finishRate": 0.32426,
     "highlight": false,
-    "impressions": 1674491,
+    "impressions": 1674799,
     "itemId": "7595772692008111378",
     "itemIds": [
      "7594353357544770829",
@@ -1197,18 +1197,18 @@
      "like": 5,
      "qv": 196
     },
-    "clicks": 44691,
+    "clicks": 44693,
     "cumulative": {
      "com": 1,
      "fav": 141,
      "like": 1304,
-     "qv": 49191
+     "qv": 49192
     },
-    "durationSeconds": 52.08,
+    "durationSeconds": 52.09,
     "episode": 37,
-    "finishRate": 0.428275,
+    "finishRate": 0.428258,
     "highlight": false,
-    "impressions": 2327491,
+    "impressions": 2327874,
     "itemId": "7595772697276058887",
     "itemIds": [
      "7594353243027672333",
@@ -1224,18 +1224,18 @@
      "like": 2,
      "qv": 194
     },
-    "clicks": 42173,
+    "clicks": 42174,
     "cumulative": {
      "com": 8,
      "fav": 120,
      "like": 1046,
-     "qv": 47782
+     "qv": 47783
     },
-    "durationSeconds": 41.46,
+    "durationSeconds": 41.47,
     "episode": 38,
-    "finishRate": 0.286972,
+    "finishRate": 0.286966,
     "highlight": false,
-    "impressions": 1748372,
+    "impressions": 1748746,
     "itemId": "7595772684542463240",
     "itemIds": [
      "7594353221091511565",
@@ -1251,18 +1251,18 @@
      "like": 2,
      "qv": 195
     },
-    "clicks": 43684,
+    "clicks": 43685,
     "cumulative": {
      "com": 3,
      "fav": 123,
      "like": 999,
-     "qv": 46948
+     "qv": 46949
     },
-    "durationSeconds": 31.57,
+    "durationSeconds": 31.58,
     "episode": 39,
-    "finishRate": 0.27687,
+    "finishRate": 0.276864,
     "highlight": false,
-    "impressions": 1379216,
+    "impressions": 1379477,
     "itemId": "7595772696349232391",
     "itemIds": [
      "7594353253891001613",
@@ -1276,20 +1276,20 @@
      "com": 0,
      "fav": 3,
      "like": 5,
-     "qv": 206
+     "qv": 205
     },
-    "clicks": 138106,
+    "clicks": 138107,
     "cumulative": {
      "com": 7,
      "fav": 1196,
      "like": 2889,
-     "qv": 50407
+     "qv": 50408
     },
     "durationSeconds": 19.43,
     "episode": 40,
-    "finishRate": 0.188308,
+    "finishRate": 0.188307,
     "highlight": false,
-    "impressions": 2683230,
+    "impressions": 2683516,
     "itemId": "7595772697162910994",
     "itemIds": [
      "7594353262220872974",
@@ -1303,20 +1303,20 @@
      "com": 0,
      "fav": 1,
      "like": 6,
-     "qv": 189
+     "qv": 190
     },
-    "clicks": 49113,
+    "clicks": 49114,
     "cumulative": {
      "com": 3,
      "fav": 164,
      "like": 1355,
-     "qv": 50506
+     "qv": 50508
     },
-    "durationSeconds": 52.08,
+    "durationSeconds": 52.09,
     "episode": 41,
-    "finishRate": 0.406624,
+    "finishRate": 0.406609,
     "highlight": false,
-    "impressions": 2557744,
+    "impressions": 2558155,
     "itemId": "7595772694927314194",
     "itemIds": [
      "7594353290146565390",
@@ -1330,20 +1330,20 @@
      "com": 0,
      "fav": 1,
      "like": 3,
-     "qv": 189
+     "qv": 191
     },
-    "clicks": 67953,
+    "clicks": 67954,
     "cumulative": {
      "com": 9,
      "fav": 226,
      "like": 1723,
-     "qv": 50008
+     "qv": 50011
     },
     "durationSeconds": 24.26,
     "episode": 42,
-    "finishRate": 0.408603,
+    "finishRate": 0.408587,
     "highlight": false,
-    "impressions": 1648256,
+    "impressions": 1648504,
     "itemId": "7595772693249658120",
     "itemIds": [
      "7594353291891346743",
@@ -1357,20 +1357,20 @@
      "com": 0,
      "fav": 4,
      "like": 5,
-     "qv": 208
+     "qv": 209
     },
-    "clicks": 46754,
+    "clicks": 46755,
     "cumulative": {
      "com": 3,
      "fav": 141,
      "like": 1344,
-     "qv": 51349
+     "qv": 51351
     },
-    "durationSeconds": 58.24,
+    "durationSeconds": 58.25,
     "episode": 43,
-    "finishRate": 0.515537,
+    "finishRate": 0.515518,
     "highlight": false,
-    "impressions": 2722760,
+    "impressions": 2723301,
     "itemId": "7595772696965745927",
     "itemIds": [
      "7594353285046324493",
@@ -1386,18 +1386,18 @@
      "like": 7,
      "qv": 203
     },
-    "clicks": 46013,
+    "clicks": 46016,
     "cumulative": {
      "com": 13,
      "fav": 184,
      "like": 1580,
-     "qv": 49137
+     "qv": 49138
     },
-    "durationSeconds": 80.02,
+    "durationSeconds": 80.03,
     "episode": 44,
-    "finishRate": 0.450021,
+    "finishRate": 0.449994,
     "highlight": false,
-    "impressions": 3682073,
+    "impressions": 3682738,
     "itemId": "7595772697628445960",
     "itemIds": [
      "7594353250904722743",
@@ -1413,18 +1413,18 @@
      "like": 4,
      "qv": 192
     },
-    "clicks": 44582,
+    "clicks": 44583,
     "cumulative": {
      "com": 6,
      "fav": 131,
      "like": 1243,
-     "qv": 47425
+     "qv": 47426
     },
-    "durationSeconds": 58.63,
+    "durationSeconds": 58.64,
     "episode": 45,
-    "finishRate": 0.586482,
+    "finishRate": 0.58647,
     "highlight": false,
-    "impressions": 2613745,
+    "impressions": 2614260,
     "itemId": "7595772699897613576",
     "itemIds": [
      "7594353290347941133",
@@ -1440,18 +1440,18 @@
      "like": 4,
      "qv": 205
     },
-    "clicks": 43403,
+    "clicks": 43404,
     "cumulative": {
      "com": 8,
      "fav": 162,
      "like": 1341,
-     "qv": 46144
+     "qv": 46145
     },
-    "durationSeconds": 65.86,
+    "durationSeconds": 65.88,
     "episode": 46,
-    "finishRate": 0.513156,
+    "finishRate": 0.513145,
     "highlight": false,
-    "impressions": 2858688,
+    "impressions": 2859320,
     "itemId": "7595772702581869831",
     "itemIds": [
      "7594353266222238989",
@@ -1467,18 +1467,18 @@
      "like": 3,
      "qv": 189
     },
-    "clicks": 44881,
+    "clicks": 44882,
     "cumulative": {
      "com": 6,
      "fav": 157,
      "like": 1254,
-     "qv": 45246
+     "qv": 45247
     },
-    "durationSeconds": 55.01,
+    "durationSeconds": 55.02,
     "episode": 47,
-    "finishRate": 0.49118,
+    "finishRate": 0.49117,
     "highlight": false,
-    "impressions": 2468759,
+    "impressions": 2469251,
     "itemId": "7595772702422535442",
     "itemIds": [
      "7594353287588007182",
@@ -1492,20 +1492,20 @@
      "com": 0,
      "fav": 0,
      "like": 9,
-     "qv": 218
+     "qv": 220
     },
-    "clicks": 41906,
+    "clicks": 41909,
     "cumulative": {
      "com": 30,
      "fav": 227,
      "like": 1803,
-     "qv": 47472
+     "qv": 47477
     },
-    "durationSeconds": 71.59,
+    "durationSeconds": 71.6,
     "episode": 48,
-    "finishRate": 0.228549,
+    "finishRate": 0.228525,
     "highlight": false,
-    "impressions": 3000065,
+    "impressions": 3000763,
     "itemId": "7595772695988538631",
     "itemIds": [
      "7594353298170285326",
@@ -1515,14 +1515,14 @@
     "versionCount": 3
    }
   ],
-  "start": "2026-10-23",
+  "start": "2026-10-24",
   "total": 48
  },
  "name": "Revenge of the Wedding Planner",
  "pending": false,
  "requested": {
-  "end": "2026-11-21",
-  "start": "2026-10-23"
+  "end": "2026-11-22",
+  "start": "2026-10-24"
  },
  "schema": 2,
  "seconds": {},
