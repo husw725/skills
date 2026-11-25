@@ -3,7 +3,11 @@
  "collectorVersion": 3,
  "failures": {},
  "id": "7571058027617522699",
- "lastAttempt": "2026-11-25T07:48:28+00:00",
+ "lastAttempt": "2026-11-25T11:05:58+00:00",
+ "materialError": {
+  "checked": "2026-11-25T11:07:00+00:00",
+  "reason": "等待平台分集数据超时"
+ },
  "materials": {
   "checked": "2026-11-24T11:11:23+00:00",
   "complete": true,
@@ -1355,7 +1359,7 @@
   "total": 103
  },
  "metrics": {
-  "checked": "2026-11-25T07:48:45+00:00",
+  "checked": "2026-11-25T11:06:20+00:00",
   "complete": true,
   "cursors": [
    0,
@@ -2258,12 +2262,13 @@
     "finishRate": 0.060993,
     "highlight": false,
     "impressions": 10957,
-    "itemId": "7701931756655627528",
+    "itemId": "7712031684648242440",
     "itemIds": [
      "7701924679262440717",
-     "7701931756655627528"
+     "7701931756655627528",
+     "7712031684648242440"
     ],
-    "versionCount": 2
+    "versionCount": 3
    },
    {
     "added": {
@@ -3487,7 +3492,7 @@
   "total": 73
  },
  "name": "Taste of You",
- "pending": true,
+ "pending": false,
  "requested": {
   "end": "2026-11-23",
   "start": "2026-10-25"
@@ -8224,7 +8229,7 @@
    ]
   },
   "7694493239734209800": {
-   "checked": "2026-11-20T03:47:50+00:00",
+   "checked": "2026-11-25T11:06:38+00:00",
    "dataThrough": null,
    "episode": 19,
    "highlight": false,
@@ -10555,7 +10560,7 @@
    ]
   },
   "7694493243123289351": {
-   "checked": "2026-11-20T03:47:41+00:00",
+   "checked": "2026-11-25T11:06:27+00:00",
    "dataThrough": null,
    "episode": 14,
    "highlight": false,
@@ -11311,7 +11316,7 @@
    ]
   },
   "7694493243215580424": {
-   "checked": "2026-11-20T03:47:43+00:00",
+   "checked": "2026-11-25T11:06:29+00:00",
    "dataThrough": null,
    "episode": 15,
    "highlight": false,
@@ -13807,7 +13812,7 @@
    ]
   },
   "7694493245451078920": {
-   "checked": "2026-11-20T03:47:45+00:00",
+   "checked": "2026-11-25T11:06:31+00:00",
    "dataThrough": null,
    "episode": 16,
    "highlight": false,
@@ -14843,7 +14848,7 @@
    ]
   },
   "7694493246025682183": {
-   "checked": "2026-11-20T03:47:40+00:00",
+   "checked": "2026-11-25T11:06:24+00:00",
    "dataThrough": null,
    "episode": 13,
    "highlight": false,
@@ -15831,7 +15836,7 @@
    ]
   },
   "7694493247028088082": {
-   "checked": "2026-11-20T03:47:51+00:00",
+   "checked": "2026-11-25T11:06:40+00:00",
    "dataThrough": null,
    "episode": 20,
    "highlight": false,
@@ -16715,7 +16720,7 @@
    ]
   },
   "7694493247246175506": {
-   "checked": "2026-11-20T03:47:38+00:00",
+   "checked": "2026-11-25T11:06:22+00:00",
    "dataThrough": null,
    "episode": 12,
    "highlight": false,
@@ -17421,7 +17426,7 @@
    ]
   },
   "7694493250220002578": {
-   "checked": "2026-11-20T03:47:46+00:00",
+   "checked": "2026-11-25T11:06:33+00:00",
    "dataThrough": null,
    "episode": 17,
    "highlight": false,
@@ -18963,7 +18968,7 @@
    ]
   },
   "7694493257257979144": {
-   "checked": "2026-11-20T03:47:48+00:00",
+   "checked": "2026-11-25T11:06:35+00:00",
    "dataThrough": null,
    "episode": 18,
    "highlight": false,
@@ -19545,7 +19550,7 @@
    ]
   },
   "7694493261250956552": {
-   "checked": "2026-11-12T03:46:34+00:00",
+   "checked": "2026-11-25T11:06:45+00:00",
    "dataThrough": null,
    "episode": 21,
    "highlight": false,

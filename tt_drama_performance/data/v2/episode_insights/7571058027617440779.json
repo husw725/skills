@@ -1,5 +1,5 @@
 {
- "asOf": "2026-11-22",
+ "asOf": "2026-11-23",
  "collectorVersion": 3,
  "failures": {
   "7595395894992850184": {
@@ -284,7 +284,12 @@
   }
  },
  "id": "7571058027617440779",
- "lastAttempt": "2026-11-25T03:04:24+00:00",
+ "lastAttempt": "2026-11-25T11:08:55+00:00",
+ "lastError": "Locator.evaluate: Timeout 5000ms exceeded.",
+ "materialError": {
+  "checked": "2026-11-25T11:09:21+00:00",
+  "reason": "Locator.click: Timeout 8000ms exceeded."
+ },
  "materials": {
   "checked": "2026-11-25T03:06:07+00:00",
   "complete": true,
@@ -2391,10 +2396,10 @@
   "total": 77
  },
  "name": "Thread of Fate",
- "pending": true,
+ "pending": false,
  "requested": {
-  "end": "2026-11-22",
-  "start": "2026-10-24"
+  "end": "2026-11-23",
+  "start": "2026-10-25"
  },
  "schema": 2,
  "seconds": {},
