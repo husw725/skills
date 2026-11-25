@@ -1,20 +1,20 @@
 {
- "asOf": "2026-11-22",
+ "asOf": "2026-11-23",
  "failures": {
   "audience-stats": "平台未返回观众画像，不按0填充"
  },
  "fallbacks": {},
  "id": "7571058027617506315",
- "lastAttempt": "2026-11-24T07:10:52+00:00",
+ "lastAttempt": "2026-11-25T07:10:25+00:00",
  "name": "Teaching my Robot Boyfriend How to Love",
  "requested": {
-  "end": "2026-11-22",
-  "start": "2026-10-24"
+  "end": "2026-11-23",
+  "start": "2026-10-25"
  },
  "schema": 2,
  "sections": {
   "accounts": {
-   "checked": "2026-11-24T07:11:15+00:00",
+   "checked": "2026-11-25T07:10:51+00:00",
    "data": [
     {
      "collectionId": "7595056185670374408",
@@ -29,24 +29,24 @@
      "region": "BR"
     },
     {
-     "averageDurationDate": "2026-11-22",
-     "averageDurationSeconds": 102.33,
+     "averageDurationDate": "2026-11-23",
+     "averageDurationSeconds": 418.67,
      "collectionId": "7397963288400942123",
      "handle": "altatvapp",
      "name": "Altatvapp",
      "region": "US"
     },
     {
-     "averageDurationDate": "2026-11-22",
-     "averageDurationSeconds": 3.0,
+     "averageDurationDate": "2026-11-23",
+     "averageDurationSeconds": 755.82,
      "collectionId": "7595400305400091666",
      "handle": "altatvapp_shortdrama",
      "name": "altatvapp_shortdrama",
      "region": "CA"
     }
    ],
-   "end": "2026-11-22",
-   "start": "2026-10-24"
+   "end": "2026-11-23",
+   "start": "2026-10-25"
   },
   "audience-stats": {
    "checked": "2026-11-18T07:09:16+00:00",
@@ -62,7 +62,7 @@
    "start": "2026-10-18"
   },
   "traffic-added": {
-   "checked": "2026-11-24T07:11:14+00:00",
+   "checked": "2026-11-25T07:10:47+00:00",
    "data": [
     {
      "collectionId": "7595056185670374408",
@@ -80,94 +80,104 @@
     },
     {
      "collectionId": "7595400305400091666",
-     "com": 0,
+     "com": 1,
      "fav": 3,
-     "like": 4,
-     "qv": 248
+     "like": 52,
+     "qv": 428
     },
     {
      "collectionId": "7397963288400942123",
      "com": 0,
      "fav": 9,
-     "like": 306,
-     "qv": 1829
+     "like": 419,
+     "qv": 1927
     }
    ],
-   "end": "2026-11-22",
-   "start": "2026-10-24"
+   "end": "2026-11-23",
+   "start": "2026-10-25"
   },
   "traffic-stats": {
-   "checked": "2026-11-24T07:11:14+00:00",
+   "checked": "2026-11-25T07:10:47+00:00",
    "data": [
     {
      "collectionId": null,
      "key": "other",
-     "pct": 4.3834
+     "pct": 3.9391
+    },
+    {
+     "collectionId": null,
+     "key": "follow",
+     "pct": 0.709
     },
     {
      "collectionId": null,
      "key": "fyp",
-     "pct": 1.2274
+     "pct": 5.3309
     },
     {
      "collectionId": null,
      "key": "recommend",
-     "pct": 0.0584
+     "pct": 0.0525
     },
     {
      "collectionId": null,
      "key": "tab",
-     "pct": 0.3507
+     "pct": 0.2889
     },
     {
      "collectionId": null,
      "key": "other_profile",
-     "pct": 65.3127
+     "pct": 60.0578
     },
     {
      "collectionId": null,
      "key": "search",
-     "pct": 10.3448
+     "pct": 11.8172
     },
     {
      "collectionId": null,
      "key": "self_profile",
-     "pct": 18.3226
+     "pct": 17.8046
     },
     {
      "collectionId": "7397963288400942123",
      "key": "other",
-     "pct": 2.8975
+     "pct": 2.764
     },
     {
      "collectionId": "7397963288400942123",
      "key": "recommend",
-     "pct": 0.0743
+     "pct": 0.0709
+    },
+    {
+     "collectionId": "7397963288400942123",
+     "key": "follow",
+     "pct": 0.1063
     },
     {
      "collectionId": "7397963288400942123",
      "key": "tab",
-     "pct": 0.4458
+     "pct": 0.3898
     },
     {
      "collectionId": "7397963288400942123",
      "key": "fyp",
-     "pct": 0.9658
+     "pct": 1.949
     },
     {
      "collectionId": "7397963288400942123",
      "key": "search",
-     "pct": 3.0089
+     "pct": 6.2013
     },
     {
      "collectionId": "7397963288400942123",
      "key": "self_profile",
-     "pct": 16.9391
+     "pct": 18.0369
     },
     {
      "collectionId": "7397963288400942123",
      "key": "other_profile",
-     "pct": 75.6686
+     "pct": 70.4819
     },
     {
      "collectionId": "7572412213517063186",
@@ -187,31 +197,36 @@
     {
      "collectionId": "7595400305400091666",
      "key": "other",
-     "pct": 14.4289
+     "pct": 9.5364
     },
     {
      "collectionId": "7595400305400091666",
-     "key": "fyp",
-     "pct": 3.2064
+     "key": "follow",
+     "pct": 3.1788
     },
     {
      "collectionId": "7595400305400091666",
      "key": "search",
-     "pct": 21.2425
+     "pct": 14.3046
     },
     {
      "collectionId": "7595400305400091666",
      "key": "self_profile",
-     "pct": 23.6473
+     "pct": 15.3642
+    },
+    {
+     "collectionId": "7595400305400091666",
+     "key": "fyp",
+     "pct": 19.6026
     },
     {
      "collectionId": "7595400305400091666",
      "key": "other_profile",
-     "pct": 37.4749
+     "pct": 38.0132
     }
    ],
-   "end": "2026-11-22",
-   "start": "2026-10-24"
+   "end": "2026-11-23",
+   "start": "2026-10-25"
   }
  },
  "source": "contract_detail"

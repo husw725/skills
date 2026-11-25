@@ -1,0 +1,205 @@
+{
+ "asOf": "2026-11-22",
+ "failures": {},
+ "fallbacks": {},
+ "id": "7646307259500450824",
+ "lastAttempt": "2026-11-24T07:04:46+00:00",
+ "name": "My CEO Loves Voice",
+ "requested": {
+  "end": "2026-11-22",
+  "start": "2026-10-24"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-24T07:05:07+00:00",
+   "data": [
+    {
+     "averageDurationDate": "2026-11-22",
+     "averageDurationSeconds": 56.8,
+     "collectionId": "7646605226837890068",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    },
+    {
+     "averageDurationDate": "2026-11-22",
+     "averageDurationSeconds": 41.19,
+     "collectionId": "7650035975669928978",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    }
+   ],
+   "end": "2026-11-22",
+   "start": "2026-10-24"
+  },
+  "audience-stats": {
+   "checked": "2026-11-24T07:04:54+00:00",
+   "data": {
+    "age": {
+     "l3": 36.71,
+     "l4": 13.1684,
+     "l5": 12.1735,
+     "unknown": 37.948
+    },
+    "gender": {
+     "female": 45.187,
+     "gender_unknown": 18.4775,
+     "male": 36.3355
+    }
+   },
+   "end": "2026-11-22",
+   "start": "2026-10-24"
+  },
+  "traffic-added": {
+   "checked": "2026-11-24T07:05:09+00:00",
+   "data": [
+    {
+     "collectionId": "7646605226837890068",
+     "com": 0,
+     "fav": 454,
+     "like": 539,
+     "qv": 15003
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "com": 30,
+     "fav": 1296,
+     "like": 2631,
+     "qv": 86551
+    }
+   ],
+   "end": "2026-11-22",
+   "start": "2026-10-24"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-24T07:05:09+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "other",
+     "pct": 0.3933
+    },
+    {
+     "collectionId": null,
+     "key": "follow",
+     "pct": 0.0624
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 0.1106
+    },
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 0.4174
+    },
+    {
+     "collectionId": null,
+     "key": "recommend",
+     "pct": 0.6022
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 2.5432
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 4.8032
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 91.0676
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "other",
+     "pct": 0.0193
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "follow",
+     "pct": 0.3347
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "tab",
+     "pct": 0.4699
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "search",
+     "pct": 1.2145
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "recommend",
+     "pct": 3.6714
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "other_profile",
+     "pct": 5.3279
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "self_profile",
+     "pct": 14.591
+    },
+    {
+     "collectionId": "7646605226837890068",
+     "key": "fyp",
+     "pct": 74.3713
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "other",
+     "pct": 0.4287
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "follow",
+     "pct": 0.0366
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "tab",
+     "pct": 0.0765
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "recommend",
+     "pct": 0.3111
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "search",
+     "pct": 0.3418
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "other_profile",
+     "pct": 2.2792
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "self_profile",
+     "pct": 3.8751
+    },
+    {
+     "collectionId": "7650035975669928978",
+     "key": "fyp",
+     "pct": 92.6509
+    }
+   ],
+   "end": "2026-11-22",
+   "start": "2026-10-24"
+  }
+ },
+ "source": "contract_detail"
+}
