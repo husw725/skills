@@ -1,0 +1,216 @@
+{
+ "asOf": "2026-11-23",
+ "failures": {
+  "audience-stats": "平台未返回观众画像，不按0填充"
+ },
+ "fallbacks": {},
+ "id": "7571058027617457163",
+ "lastAttempt": "2026-11-25T07:15:13+00:00",
+ "name": "Behind the Glory of the Runway",
+ "requested": {
+  "end": "2026-11-23",
+  "start": "2026-10-25"
+ },
+ "schema": 2,
+ "sections": {
+  "accounts": {
+   "checked": "2026-11-25T07:15:38+00:00",
+   "data": [
+    {
+     "collectionId": "7572504198349198343",
+     "handle": "altatv_app",
+     "name": "AltaTV_APP",
+     "region": "BR"
+    },
+    {
+     "averageDurationDate": "2026-11-23",
+     "averageDurationSeconds": 672.0,
+     "collectionId": "7377447588670264366",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    },
+    {
+     "collectionId": "7572081746498458679",
+     "handle": "altatvapp",
+     "name": "Altatvapp",
+     "region": "US"
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "handle": "altatvapp_shortdrama",
+     "name": "altatvapp_shortdrama",
+     "region": "CA"
+    }
+   ],
+   "end": "2026-11-23",
+   "start": "2026-10-25"
+  },
+  "traffic-added": {
+   "checked": "2026-11-25T07:15:38+00:00",
+   "data": [
+    {
+     "collectionId": "7572081746498458679",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 2
+    },
+    {
+     "collectionId": "7572504198349198343",
+     "com": 0,
+     "fav": 0,
+     "like": 0,
+     "qv": 31
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "com": 0,
+     "fav": 3,
+     "like": 15,
+     "qv": 78
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "com": 0,
+     "fav": 2,
+     "like": 5,
+     "qv": 287
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "com": 0,
+     "fav": 8,
+     "like": 93,
+     "qv": 1016
+    }
+   ],
+   "end": "2026-11-23",
+   "start": "2026-10-25"
+  },
+  "traffic-stats": {
+   "checked": "2026-11-25T07:15:39+00:00",
+   "data": [
+    {
+     "collectionId": null,
+     "key": "search",
+     "pct": 7.1104
+    },
+    {
+     "collectionId": null,
+     "key": "tab",
+     "pct": 0.0504
+    },
+    {
+     "collectionId": null,
+     "key": "fyp",
+     "pct": 2.3197
+    },
+    {
+     "collectionId": null,
+     "key": "other_profile",
+     "pct": 85.4261
+    },
+    {
+     "collectionId": null,
+     "key": "self_profile",
+     "pct": 5.0933
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "self_profile",
+     "pct": 0.5327
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "fyp",
+     "pct": 3.1202
+    },
+    {
+     "collectionId": "7377447588670264366",
+     "key": "other_profile",
+     "pct": 96.347
+    },
+    {
+     "collectionId": "7572081746498458679",
+     "key": "other_profile",
+     "pct": 8.3333
+    },
+    {
+     "collectionId": "7572081746498458679",
+     "key": "search",
+     "pct": 33.3333
+    },
+    {
+     "collectionId": "7572081746498458679",
+     "key": "self_profile",
+     "pct": 58.3333
+    },
+    {
+     "collectionId": "7572504198349198343",
+     "key": "search",
+     "pct": 2.9412
+    },
+    {
+     "collectionId": "7572504198349198343",
+     "key": "self_profile",
+     "pct": 2.9412
+    },
+    {
+     "collectionId": "7572504198349198343",
+     "key": "other_profile",
+     "pct": 94.1176
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "tab",
+     "pct": 0.361
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "search",
+     "pct": 1.444
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "self_profile",
+     "pct": 7.5812
+    },
+    {
+     "collectionId": "7595020140685874184",
+     "key": "other_profile",
+     "pct": 90.6137
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "fyp",
+     "pct": 1.4451
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "self_profile",
+     "pct": 18.7861
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "search",
+     "pct": 38.1503
+    },
+    {
+     "collectionId": "7595422030091064328",
+     "key": "other_profile",
+     "pct": 41.6185
+    }
+   ],
+   "end": "2026-11-23",
+   "start": "2026-10-25"
+  }
+ },
+ "source": "contract_detail"
+}
